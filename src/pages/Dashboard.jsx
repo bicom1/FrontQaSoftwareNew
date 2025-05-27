@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Bell, Settings, User, BarChart2, PieChart, Activity, Users as UsersIcon, Briefcase, Search, Menu, X } from 'lucide-react';
+import AgentForm from './AgentForm'; 
+import EscalationForm from './EscalationForm';
+import PpcForm from './PpcForm';
+import { Bell, Settings, User, BarChart2, PieChart, Activity, Users as UsersIcon, Briefcase, Search, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target } from 'lucide-react';
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -12,6 +15,7 @@ const Dashboard = () => {
   ]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [formsExpanded, setFormsExpanded] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -24,19 +28,31 @@ const Dashboard = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <Overview />;
-      case 'analytics':
-        return <Analytics />;
-      case 'users':
-        return <UsersManagement />;
-      case 'projects':
-        return <Projects />;
-      default:
-        return <Overview />;
-    }
-  };
+  switch (activeTab) {
+    case 'overview':
+      return <Overview />;
+    case 'analytics':
+      return <Analytics />;
+    case 'users':
+      return <UsersManagement />;
+    case 'projects':
+      return <Projects />;
+    case 'agent':
+      return <AgentForm />; 
+    case 'escalation':
+      return <EscalationForm />;
+    case 'ppc':
+      return <PpcForm />;
+    default:
+      return <Overview />;
+  }
+};
+
+  // Handle Forms button click - only toggle dropdown, don't change content
+const handleFormsClick = () => {
+  setFormsExpanded(!formsExpanded);
+};
+
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh' }}>
@@ -86,6 +102,46 @@ const Dashboard = () => {
             <Briefcase size={20} />
             {sidebarOpen && <span className="ms-2">Projects</span>}
           </button>
+          {/* Forms button with expandable sub-menu */}
+        <button 
+          className={`btn text-start mb-2 d-flex align-items-center ${['agent', 'escalation', 'ppc'].includes(activeTab) ? 'btn-primary' : 'btn-dark'}`}
+          onClick={handleFormsClick}
+        >
+          <Briefcase size={20} />
+          {sidebarOpen && <span className="ms-2">Forms</span>}
+          {sidebarOpen && (
+            <span className="ms-auto">
+              {formsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </span>
+          )}
+        </button>
+
+        {/* Sub-menu items for Forms */}
+        {formsExpanded && sidebarOpen && (
+          <div className="ms-3">
+            <button 
+              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'agent' ? 'btn-primary' : 'btn-dark'}`}
+              onClick={() => setActiveTab('agent')}
+            >
+              <User size={20} />
+              <span className="ms-2">Agent</span>
+            </button>
+            <button 
+              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'escalation' ? 'btn-primary' : 'btn-dark'}`}
+              onClick={() => setActiveTab('escalation')}
+            >
+              <ArrowUp size={20} />
+              <span className="ms-2">Escalation</span>
+            </button>
+            <button 
+              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'ppc' ? 'btn-primary' : 'btn-dark'}`}
+              onClick={() => setActiveTab('ppc')}
+            >
+              <Target size={20} />
+              <span className="ms-2">PPC</span>
+            </button>
+          </div>
+        )}
         </div>
 
         <div className="mt-auto">
