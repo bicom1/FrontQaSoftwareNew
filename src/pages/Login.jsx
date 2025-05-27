@@ -81,25 +81,27 @@ function Login({ setIsLoggedIn }) {
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Mock credentials check
-        if (formData.email === "admin@example.com" && formData.password === "admin123") {
-          // Save email if remember me is checked
-          if (rememberMe) {
-            localStorage.setItem("rememberedEmail", formData.email);
+          const response = await LoginApi(formData);
+        
+          if (response.status === 200 && response.data.success) {
+            // Save email if remember me is checked
+            if (rememberMe) {
+              localStorage.setItem("rememberedEmail", formData.email);
+            } else {
+              localStorage.removeItem("rememberedEmail");
+            }
+        
+            toast.success("Login successful! Redirecting...");
+            setTimeout(() => {
+              setIsLoggedIn(true);
+            }, 1500);
           } else {
-            localStorage.removeItem("rememberedEmail");
+            toast.error("Invalid email or password");
           }
-          
-          toast.success("Login successful! Redirecting...");
-          setTimeout(() => {
-            setIsLoggedIn(true);
-          }, 1500);
-        } else {
-          toast.error("Invalid email or password");
+        } catch (error) {
+          toast.error("An error occurred. Please try again.");
         }
-      } catch (error) {
-        toast.error("An error occurred. Please try again.");
-      } finally {
+         finally {
         setIsSubmitting(false);
       }
     }
