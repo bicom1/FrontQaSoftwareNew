@@ -24,3 +24,25 @@ export const LoginApi = async (data) => {
     });
     return res;
   };
+  export const evaluationApi = async (data) => {
+    let token = cookie.get("bictoken");
+    const res = await axios.post(`${baseUrl}/evaluations`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return res;
+};
+
+
+export const escalationApi = async (data) => {
+  let token = cookie.get("bictoken");
+  const res = await axios.post(`${baseUrl}/escalations`, data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return res;
+};
