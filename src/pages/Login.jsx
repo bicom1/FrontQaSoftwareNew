@@ -3,9 +3,6 @@ import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaInfoCircle, FaCheck } from "react-icons/fa";
-import { LoginApi } from "../features/userApis";
-
-
 
 function Login({ setIsLoggedIn }) {
   const [formData, setFormData] = useState({
@@ -84,27 +81,25 @@ function Login({ setIsLoggedIn }) {
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-          const response = await LoginApi(formData);
-        
-          if (response.status === 200 && response.data.success) {
-            // Save email if remember me is checked
-            if (rememberMe) {
-              localStorage.setItem("rememberedEmail", formData.email);
-            } else {
-              localStorage.removeItem("rememberedEmail");
-            }
-        
-            toast.success("Login successful! Redirecting...");
-            setTimeout(() => {
-              setIsLoggedIn(true);
-            }, 1500);
+        // Mock credentials check
+        if (formData.email === "admin@example.com" && formData.password === "admin123") {
+          // Save email if remember me is checked
+          if (rememberMe) {
+            localStorage.setItem("rememberedEmail", formData.email);
           } else {
-            toast.error("Invalid email or password");
+            localStorage.removeItem("rememberedEmail");
           }
-        } catch (error) {
-          toast.error("An error occurred. Please try again.");
+          
+          toast.success("Login successful! Redirecting...");
+          setTimeout(() => {
+            setIsLoggedIn(true);
+          }, 1500);
+        } else {
+          toast.error("Invalid email or password");
         }
-         finally {
+      } catch (error) {
+        toast.error("An error occurred. Please try again.");
+      } finally {
         setIsSubmitting(false);
       }
     }
