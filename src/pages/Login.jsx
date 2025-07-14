@@ -1,115 +1,84 @@
-// src/pages/Login.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaInfoCircle, FaCheck } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaEnvelope, FaLock } from "react-icons/fa";
+import { LoginApi, forgotPasswordApi } from "../features/userApis";
+import { useNavigate } from "react-router-dom";
 
 function Login({ setIsLoggedIn }) {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   const [focusedField, setFocusedField] = useState(null);
   const [isButtonHovered, setIsButtonHovered] = useState(false);
   const [isForgotPasswordHovered, setIsForgotPasswordHovered] = useState(false);
-  const [isSignupHovered, setIsSignupHovered] = useState(false);
 
-  // Check for saved credentials on component mount
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("rememberedEmail");
-    if (savedEmail) {
-      setFormData(prev => ({ ...prev, email: savedEmail }));
-      setRememberMe(true);
-    }
-  }, []);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    
-    // Clear error when user starts typing
-    if (formErrors[name]) {
-      setFormErrors({
-        ...formErrors,
-        [name]: "",
-      });
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateForm = () => {
-    let errors = {};
-    let isValid = true;
-
-    // Email validation using regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email) {
-      errors.email = "Email address is required";
-      isValid = false;
-    } else if (!emailRegex.test(formData.email)) {
-      errors.email = "Please enter a valid email address";
-      isValid = false;
-    }
-
-    // Password validation
-    if (!formData.password) {
-      errors.password = "Password is required";
-      isValid = false;
-    } else if (formData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
-      isValid = false;
-    }
-
+    let errors = {};
+    if (!formData.email) errors.email = "Email is required";
+    else if (!emailRegex.test(formData.email)) errors.email = "Invalid email";
+    if (!formData.password) errors.password = "Password is required";
+    else if (formData.password.length < 6)
+      errors.password = "Minimum 6 characters required";
     setFormErrors(errors);
-    return isValid;
+    return Object.keys(errors).length === 0;
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
-    if (validateForm()) {
-      setIsSubmitting(true);
-      
-      try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock credentials check
-        if (formData.email === "admin@example.com" && formData.password === "admin123") {
-          // Save email if remember me is checked
-          if (rememberMe) {
-            localStorage.setItem("rememberedEmail", formData.email);
-          } else {
-            localStorage.removeItem("rememberedEmail");
-          }
-          
-          toast.success("Login successful! Redirecting...");
-          setTimeout(() => {
-            setIsLoggedIn(true);
-          }, 1500);
-        } else {
-          toast.error("Invalid email or password");
-        }
-      } catch (error) {
-        toast.error("An error occurred. Please try again.");
-      } finally {
-        setIsSubmitting(false);
+    if (!validateForm()) return;
+  
+    setIsSubmitting(true);
+    try {
+      const res = await LoginApi(formData);
+  
+      if (res.data.success) {
+        // ✅ Save token
+        localStorage.setItem("bictoken", res.data.token);
+  
+        // ✅ Save user info — this fixes the AgentForm issue
+        localStorage.setItem("user", JSON.stringify(res.data.user)); // ⬅️ Make sure your API returns this
+  
+        toast.success("Login successful!");
+        setTimeout(() => {
+          setIsLoggedIn(true);
+          navigate("/dashboard");
+        }, 1000);
+      } else {
+        toast.error(res.data.message || "Invalid credentials");
       }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Login failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  
+
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      toast.error("Enter your email first");
+      return;
+    }
+    try {
+      const res = await forgotPasswordApi({ email: formData.email });
+      toast.info(res.data.message || "Reset link sent to your email");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Error sending reset link");
     }
   };
 
-  const handleForgotPassword = () => {
-    toast.info("Password reset link sent to your email address");
-  };
-
-  // Custom style objects
   const styles = {
     container: {
       display: "flex",
@@ -130,14 +99,6 @@ function Login({ setIsLoggedIn }) {
       transition: "all 0.3s ease",
       position: "relative",
       overflow: "hidden",
-    },
-    cardBefore: {
-      content: "''",
-      position: "absolute",
-      top: "0",
-      left: "0",
-      width: "6px",
-      height: "100%",
     },
     header: {
       textAlign: "center",
@@ -185,7 +146,9 @@ function Login({ setIsLoggedIn }) {
       width: "100%",
       padding: "15px 45px",
       borderRadius: "8px",
-      border: "1px solid #e0e0e0",
+      borderWidth: "1px",
+      borderStyle: "solid",
+      borderColor: "#e0e0e0",
       fontSize: "16px",
       transition: "all 0.3s ease",
       outline: "none",
@@ -226,19 +189,6 @@ function Login({ setIsLoggedIn }) {
       transform: "translateY(-2px)",
       boxShadow: "0 6px 15px rgba(37, 117, 252, 0.35)",
     },
-    buttonBefore: {
-      content: "''",
-      position: "absolute",
-      top: "0",
-      left: "-100%",
-      width: "100%",
-      height: "100%",
-      background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-      transition: "all 0.6s ease",
-    },
-    buttonBeforeHover: {
-      left: "100%",
-    },
     forgotPassword: {
       textAlign: "right",
       marginTop: "15px",
@@ -256,38 +206,6 @@ function Login({ setIsLoggedIn }) {
     forgotPasswordLinkHover: {
       color: "#6a11cb",
       transform: "translateX(3px)",
-    },
-    checkboxGroup: {
-      display: "flex",
-      alignItems: "center",
-      marginBottom: "25px",
-    },
-    checkbox: {
-      appearance: "none",
-      width: "20px",
-      height: "20px",
-      border: "2px solid #d1d1d1",
-      borderRadius: "5px",
-      marginRight: "10px",
-      position: "relative",
-      cursor: "pointer",
-      transition: "all 0.3s ease",
-    },
-    checkboxChecked: {
-      border: "2px solid #2575fc",
-      backgroundColor: "#2575fc",
-    },
-    checkboxIcon: {
-      position: "absolute",
-      top: "2px",
-      left: "2px",
-      color: "#ffffff",
-      fontSize: "14px",
-    },
-    checkboxLabel: {
-      fontSize: "14px",
-      color: "#555",
-      fontWeight: "500",
     },
     icon: {
       position: "absolute",
@@ -307,71 +225,39 @@ function Login({ setIsLoggedIn }) {
       right: "15px",
       cursor: "pointer",
     },
-    divider: {
-      display: "flex",
-      alignItems: "center",
-      marginTop: "25px",
-      marginBottom: "20px",
-    },
-    dividerLine: {
-      flex: "1",
-      height: "1px",
-      backgroundColor: "#e0e0e0",
-    },
-    dividerText: {
-      padding: "0 15px",
-      color: "#777",
-      fontSize: "14px",
-    },
-    signupText: {
-      marginTop: "25px", 
-      textAlign: "center", 
-      fontSize: "15px", 
-      color: "#555",
-      fontWeight: "500",
-    },
-    signupLink: {
-      color: "#2575fc", 
-      cursor: "pointer",
-      fontWeight: "600",
-      marginLeft: "5px",
-      transition: "all 0.3s ease",
-    },
-    signupLinkHover: {
-      color: "#6a11cb",
-      textDecoration: "underline",
-    },
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <div style={styles.cardBefore}></div>
         <h2 style={styles.header}>
           Welcome Back
           <span style={styles.headerUnderline}></span>
         </h2>
-        
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} noValidate>
           <div style={styles.formGroup}>
-            <label style={styles.label}>Email Address</label>
-            <div 
+            <label style={styles.label} htmlFor="email">
+              Email Address
+            </label>
+            <div
               style={{
                 ...styles.inputGroup,
-                ...(focusedField === "email" ? styles.inputGroupFocus : {})
+                ...(focusedField === "email" ? styles.inputGroupFocus : {}),
               }}
             >
-              <FaEnvelope 
+              <FaEnvelope
                 style={{
                   ...styles.icon,
                   ...styles.leftIcon,
-                  ...(focusedField === "email" ? styles.iconFocus : {})
-                }} 
+                  ...(focusedField === "email" ? styles.iconFocus : {}),
+                }}
               />
               <input
-                type="text"
+                id="email"
+                type="email"
                 name="email"
                 placeholder="Enter your email"
+                autoComplete="email"
                 value={formData.email}
                 onChange={handleChange}
                 onFocus={() => setFocusedField("email")}
@@ -379,37 +265,38 @@ function Login({ setIsLoggedIn }) {
                 style={{
                   ...styles.input,
                   ...(focusedField === "email" ? styles.inputFocus : {}),
-                  ...(formErrors.email ? styles.inputError : {})
+                  ...(formErrors.email ? styles.inputError : {}),
                 }}
               />
             </div>
             {formErrors.email && (
-              <div style={styles.errorText}>
-                <FaEnvelope style={{ marginRight: "6px", fontSize: "12px" }} />
-                {formErrors.email}
-              </div>
+              <div style={styles.errorText}>{formErrors.email}</div>
             )}
           </div>
-          
+
           <div style={styles.formGroup}>
-            <label style={styles.label}>Password</label>
-            <div 
+            <label style={styles.label} htmlFor="password">
+              Password
+            </label>
+            <div
               style={{
                 ...styles.inputGroup,
-                ...(focusedField === "password" ? styles.inputGroupFocus : {})
+                ...(focusedField === "password" ? styles.inputGroupFocus : {}),
               }}
             >
-              <FaLock 
+              <FaLock
                 style={{
                   ...styles.icon,
                   ...styles.leftIcon,
-                  ...(focusedField === "password" ? styles.iconFocus : {})
-                }} 
+                  ...(focusedField === "password" ? styles.iconFocus : {}),
+                }}
               />
               <input
+                id="password"
                 type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 value={formData.password}
                 onChange={handleChange}
                 onFocus={() => setFocusedField("password")}
@@ -417,93 +304,62 @@ function Login({ setIsLoggedIn }) {
                 style={{
                   ...styles.input,
                   ...(focusedField === "password" ? styles.inputFocus : {}),
-                  ...(formErrors.password ? styles.inputError : {})
+                  ...(formErrors.password ? styles.inputError : {}),
                 }}
               />
-              <div 
+              <div
                 onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  ...styles.icon,
-                  ...styles.rightIcon,
-                  ...(focusedField === "password" ? styles.iconFocus : {})
+                style={{ ...styles.icon, ...styles.rightIcon }}
+                role="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") setShowPassword(!showPassword);
                 }}
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </div>
             </div>
             {formErrors.password && (
-              <div style={styles.errorText}>
-                <FaLock style={{ marginRight: "6px", fontSize: "12px" }} />
-                {formErrors.password}
-              </div>
+              <div style={styles.errorText}>{formErrors.password}</div>
             )}
           </div>
-          
-          <div style={styles.checkboxGroup}>
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={() => setRememberMe(!rememberMe)}
-              style={{
-                ...styles.checkbox,
-                ...(rememberMe ? styles.checkboxChecked : {})
-              }}
-            />
-            {rememberMe && (
-              <div style={styles.checkboxIcon}>✓</div>
-            )}
-            <label htmlFor="rememberMe" style={styles.checkboxLabel}>
-              Remember me
-            </label>
-          </div>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             style={{
               ...styles.button,
               ...(isButtonHovered ? styles.buttonHover : {}),
-              ...(isSubmitting ? { opacity: 0.7, cursor: "not-allowed" } : {})
+              ...(isSubmitting ? { opacity: 0.6, cursor: "not-allowed" } : {}),
             }}
             disabled={isSubmitting}
             onMouseEnter={() => setIsButtonHovered(true)}
             onMouseLeave={() => setIsButtonHovered(false)}
           >
-            <div 
-              style={{
-                ...styles.buttonBefore,
-                ...(isButtonHovered ? styles.buttonBeforeHover : {})
-              }}
-            ></div>
             {isSubmitting ? "Logging in..." : "Login"}
           </button>
-          
+
           <div style={styles.forgotPassword}>
-            <span 
+            <span
               onClick={handleForgotPassword}
               style={{
                 ...styles.forgotPasswordLink,
-                ...(isForgotPasswordHovered ? styles.forgotPasswordLinkHover : {})
+                ...(isForgotPasswordHovered ? styles.forgotPasswordLinkHover : {}),
               }}
               onMouseEnter={() => setIsForgotPasswordHovered(true)}
               onMouseLeave={() => setIsForgotPasswordHovered(false)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") handleForgotPassword();
+              }}
             >
               Forgot Password?
             </span>
           </div>
         </form>
-        
-        
       </div>
-      <ToastContainer 
-        position="top-right" 
-        autoClose={3000} 
-        hideProgressBar={false} 
-        closeOnClick
-        pauseOnHover
-        draggable
-        theme="colored"
-      />
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
     </div>
   );
 }

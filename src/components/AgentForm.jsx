@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, User, Mail, Hash, Users, MessageSquare, Star, FileText, Award, TrendingUp, Clock, Calendar } from 'lucide-react';
+import { createEvaluationsApi } from '../features/evaluationApi';
 
 const AgentForm = () => {
   const [evaluation, setEvaluation] = useState({
-    email: "user@example.com",
-    leadId: "",
+    email: "",          
+    leadID: "",         
     agentName: "",
     teamleader: "",
     mod: "",
@@ -15,7 +16,7 @@ const AgentForm = () => {
     closing: "",
     bonus: "",
     evaluationsummary: "",
-    rating: 0
+    rating: 0,
   });
 
   const [userRate, setUserRate] = useState({
@@ -27,7 +28,6 @@ const AgentForm = () => {
     bonus: { rateVal: 0 },
   });
 
-  // Static team leaders data
   const teamLeaders = [
     { _id: "1", leadName: "John Smith" },
     { _id: "2", leadName: "Sarah Johnson" },
@@ -42,13 +42,54 @@ const AgentForm = () => {
     }));
   };
 
-  const handleSubmit = () => {
-    // Calculate total rating
+  const handleSubmit = async () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user || !user._id) {
+      alert("User is not authenticated or user data is missing. Please log in.");
+      return;
+    }
+
     const total = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
-    
-    console.log("Form submitted:", { ...evaluation, rating: total });
-    alert("Evaluation submitted successfully! Thank you for your feedback.");
+
+    const payload = {
+      owner: user._id,
+      useremail: evaluation.email,
+      evaluatedby: user.email,
+      leadID: evaluation.leadID,        // make sure this matches your backend schema
+      agentName: evaluation.agentName,
+      mod: evaluation.mod,
+      teamleader: evaluation.teamleader,
+      greetings: evaluation.greetings,
+      accuracy: evaluation.accuracy,
+      building: evaluation.building,
+      presenting: evaluation.presenting,
+      closing: evaluation.closing,
+      bonus: evaluation.bonus,
+      evaluationsummary: evaluation.evaluationsummary,
+      rating: total,
+    };
+
+    try {
+      const res = await createEvaluationsApi(payload);
+      alert("Evaluation saved!");
+      console.log("Saved evaluation:", res);
+    } catch (err) {
+      console.error("Failed to save evaluation:", err);
+      alert("Error saving evaluation.");
+    }
   };
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user && user.email) {
+      setEvaluation(prev => ({
+        ...prev,
+        email: user.email
+      }));
+    }
+  }, []);
+  
 
   const currentRating = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
   const maxRating = 96;
@@ -143,12 +184,7 @@ const AgentForm = () => {
   };
 
   const performanceLevel = getPerformanceLevel(ratingPercentage);
-  const today = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   return (
     <>
       <style jsx>{`
@@ -405,12 +441,12 @@ const AgentForm = () => {
                         Lead ID
                       </label>
                       <input
-                        type="text"
-                        className="form-control form-control-modern"
-                        placeholder="Enter Lead ID"
-                        value={evaluation.leadId}
-                        onChange={(e) => handleChange("leadId", e.target.value)}
-                      />
+            type="text"
+            className="form-control form-control-modern"
+            placeholder="Enter Lead ID"
+            value={evaluation.leadID}
+            onChange={(e) => handleChange("leadID", e.target.value)}  // fixed from leadId to leadID
+          />
                     </div>
 
                     {/* Agent Name */}

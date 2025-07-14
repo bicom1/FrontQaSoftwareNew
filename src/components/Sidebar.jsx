@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart2, Activity, Users as UsersIcon, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target } from 'lucide-react';
+import { getProfileApi } from '../features/userApis';
 
 const Sidebar = ({ 
   sidebarOpen, 
@@ -12,11 +13,27 @@ const Sidebar = ({
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-
-  // Handle Forms button click - only toggle dropdown, don't change content
   const handleFormsClick = () => {
     setFormsExpanded(!formsExpanded);
   };
+
+    const [profile, setProfile] = useState(null);
+  
+
+    useEffect(() => {
+      const fetchProfile = async () => {
+        try {
+          const res = await getProfileApi();
+          console.log("Fetched user profile:", res);
+          setProfile(res.data); // Save profile data
+        } catch (err) {
+          console.error("Failed to fetch user profile:", err);
+        }
+      };
+      fetchProfile();
+    }, []);
+ 
+  
 
   return (
     <div 
@@ -114,11 +131,12 @@ const Sidebar = ({
               className="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
               style={{ width: '40px', height: '40px' }}
             >
-              <span className="fw-bold">JD</span>
+              <span className="text-capitalize fw-bold">{profile?.name?.charAt(0) || "L"}</span>
+
             </div>
             <div>
-              <div className="fw-bold">John Doe</div>
-              <div className="small">Administrator</div>
+              <div className="text-capitalize fw-bold">{profile?.name || "Loading..."}</div>
+              <div className="text-capitalize small">{profile?.role || "Loading..."}</div>
             </div>
           </div>
         )}

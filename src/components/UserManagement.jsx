@@ -1,7 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
+import { getallusersApi } from '../features/userApis';
 
 const UserManagement = () => {
+  const [getUser, setGetUser] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
+
+  useEffect(() => {
+    const fetchUserDetail = async () => {
+      try {
+        const res = await getallusersApi();
+        console.log("Fetched all users:", res.data);
+        setGetUser(res.data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+      }
+    };
+    fetchUserDetail();
+  }, []);
+
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = getUser.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(getUser.length / usersPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -24,8 +53,7 @@ const UserManagement = () => {
               <select className="form-select">
                 <option>All Roles</option>
                 <option>Administrator</option>
-                <option>Editor</option>
-                <option>Viewer</option>
+                <option>Agent</option>
               </select>
             </div>
             <div className="col-12 col-md-3">
@@ -41,56 +69,55 @@ const UserManagement = () => {
             </div>
           </div>
         </div>
+
         <div className="card-body p-0">
           <div className="table-responsive">
             <table className="table table-hover align-middle mb-0">
               <thead className="bg-light">
                 <tr>
-                  <th scope="col" className="ps-3">
+                  <th className="ps-3">
                     <div className="form-check">
-                      <input className="form-check-input" type="checkbox" id="selectAll" />
+                      <input className="form-check-input" type="checkbox" />
                     </div>
                   </th>
-                  <th scope="col">User</th>
-                  <th scope="col">Role</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Last Login</th>
-                  <th scope="col" className="text-end pe-3">Actions</th>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th className="text-end pe-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {[1, 2, 3, 4, 5].map(i => (
-                  <tr key={i}>
+                {currentUsers.map((user, index) => (
+                  <tr key={user._id}>
                     <td className="ps-3">
                       <div className="form-check">
-                        <input className="form-check-input" type="checkbox" id={`select${i}`} />
+                        <input className="form-check-input" type="checkbox" id={`select${index}`} />
                       </div>
                     </td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <div 
-                          className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                        <div
+                          className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
                           style={{ width: '40px', height: '40px' }}
                         >
-                          <span className="fw-bold">{`U${i}`}</span>
+                          <span className="fw-bold">{user.name?.charAt(0).toUpperCase()}</span>
                         </div>
                         <div>
-                          <div className="fw-bold">{`User ${i}`}</div>
-                          <div className="text-muted small">{`user${i}@example.com`}</div>
+                          <div className="fw-bold">{user.name}</div>
+                          <div className="text-muted small">{user.email}</div>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <span className={`badge ${i % 3 === 0 ? 'bg-primary' : i % 3 === 1 ? 'bg-info' : 'bg-secondary'}`}>
-                        {i % 3 === 0 ? 'Administrator' : i % 3 === 1 ? 'Editor' : 'Viewer'}
-                      </span>
+                      <span className="badge bg-info text-capitalize">{user.role}</span>
                     </td>
                     <td>
-                      <span className={`badge ${i % 2 === 0 ? 'bg-success' : 'bg-warning text-dark'}`}>
-                        {i % 2 === 0 ? 'Active' : 'Pending'}
+                      <span className={`badge ${user.isVerified ? 'bg-success' : 'bg-warning text-dark'}`}>
+                        {user.isVerified ? 'Active' : 'Pending'}
                       </span>
                     </td>
-                    <td>{`${i} ${i === 1 ? 'hour' : 'hours'} ago`}</td>
+                    <td>{new Date(user.createdAt).toLocaleString()}</td>
                     <td className="text-end pe-3">
                       <div className="btn-group btn-group-sm">
                         <button className="btn btn-outline-secondary">Edit</button>
@@ -103,25 +130,24 @@ const UserManagement = () => {
             </table>
           </div>
         </div>
+
         <div className="card-footer bg-white p-3">
           <div className="d-flex justify-content-between align-items-center">
-            <div>Showing 1 to 5 of 42 entries</div>
+            <div>
+              Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, getUser.length)} of {getUser.length} entries
+            </div>
             <nav>
               <ul className="pagination pagination-sm mb-0">
-                <li className="page-item disabled">
-                  <a className="page-link" href="#" tabIndex="-1">Previous</a>
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button className="page-link" onClick={() => handlePageChange(currentPage - 1)}>Previous</button>
                 </li>
-                <li className="page-item active">
-                  <a className="page-link" href="#">1</a>
-                </li>
-                <li className="page-item">
-                  <a className="page-link" href="#">2</a>
-                </li>
-                <li className="page-item">
-                  <a className="page-link" href="#">3</a>
-                </li>
-                <li className="page-item">
-                  <a className="page-link" href="#">Next</a>
+                {[...Array(totalPages)].map((_, idx) => (
+                  <li key={idx} className={`page-item ${currentPage === idx + 1 ? 'active' : ''}`}>
+                    <button className="page-link" onClick={() => handlePageChange(idx + 1)}>{idx + 1}</button>
+                  </li>
+                ))}
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button className="page-link" onClick={() => handlePageChange(currentPage + 1)}>Next</button>
                 </li>
               </ul>
             </nav>

@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bell, Settings, User, Search, Menu, X, LogOut, UserCircle, Palette } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { getProfileApi } from '../features/userApis';
+
+
 
 const Header = ({ 
   sidebarOpen,
@@ -9,13 +13,43 @@ const Header = ({
   showNotifications,
   setShowNotifications,
   showUserMenu,
-  setShowUserMenu
+  setShowUserMenu,
+  setIsLoggedIn
 }) => {
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
+  const [profile, setProfile] = useState(null);
+
+const navigate = useNavigate();
+
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const res = await getProfileApi();
+      console.log("Fetched user profile:", res);
+      setProfile(res.data); // Save profile data
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err);
+    }
+  };
+  fetchProfile();
+}, []);
+
+
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("token");
+    setIsLoggedIn(false); 
+    setShowUserMenu(false);
+    navigate("/");
+  };
+  
+  
+  
 
   return (
     <header className="bg-white border-bottom shadow-sm px-4 py-3 d-flex align-items-center justify-content-between position-sticky top-0" style={{ zIndex: 1020, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
@@ -182,7 +216,7 @@ const Header = ({
             <div className="d-flex align-items-center justify-content-center rounded-circle bg-white" style={{ width: '24px', height: '24px' }}>
               <User size={14} className="text-primary" />
             </div>
-            <span className="d-none d-lg-inline text-white fw-medium" style={{ fontSize: '14px' }}>John Doe</span>
+            <span className="text-capitalize d-none d-lg-inline text-white fw-medium" style={{ fontSize: '14px' }}>{profile?.name || "Loading..."}</span>
           </button>
           
           {showUserMenu && (
@@ -208,8 +242,8 @@ const Header = ({
                       <User size={20} className="text-primary" />
                     </div>
                     <div>
-                      <div className="text-white fw-semibold" style={{ fontSize: '14px' }}>John Doe</div>
-                      <div className="text-white-50" style={{ fontSize: '12px' }}>Administrator</div>
+                      <div className="text-capitalize fw-semibold" style={{ fontSize: '14px' }}>{profile?.name || "Loading..."}</div>
+                      <div className='text-capitalize' style={{ fontSize: '12px' }}>{profile?.role || "Loading..."}</div>
                     </div>
                   </div>
                 </div>
@@ -225,10 +259,14 @@ const Header = ({
                     <span style={{ fontSize: '14px' }}>Settings</span>
                   </button>
                   <div className="dropdown-divider mx-3 my-2"></div>
-                  <button className="dropdown-item d-flex align-items-center px-4 py-2 border-0 text-danger hover-bg-danger-light transition-all">
-                    <LogOut size={16} className="me-3" />
-                    <span style={{ fontSize: '14px' }}>Logout</span>
-                  </button>
+                  <button 
+  onClick={handleLogout}
+  className="dropdown-item d-flex align-items-center px-4 py-2 border-0 text-danger hover-bg-danger-light transition-all"
+>
+  <LogOut size={16} className="me-3" />
+  <span style={{ fontSize: '14px' }}>Logout</span>
+</button>
+
                 </div>
               </div>
             </>
@@ -236,7 +274,7 @@ const Header = ({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .hover-lift:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -252,7 +290,8 @@ const Header = ({
         
         .hover-underline:hover {
           text-decoration: underline !important;
-        }
+        }import { useNavigate } from 'react-router-dom';
+
         
         .transition-all {
           transition: all 0.2s ease;

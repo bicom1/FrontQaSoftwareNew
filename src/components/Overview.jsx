@@ -1,7 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart2, PieChart } from 'lucide-react';
+import { totalUserCountApi } from '../features/userApis';
 
-const overview = () => {
+    
+
+
+const Overview = () => {
+
+  const [totalUsers, setTotalUsers] = useState(null);
+
+  useEffect(() => {
+    const fetchTotalUsers = async () => {
+      try {
+        const count = await totalUserCountApi();
+        setTotalUsers(count);
+      } catch (err) {
+        console.error("Failed to fetch total users:", err);
+      }
+    };
+    fetchTotalUsers();
+  }, []);
+  
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -23,8 +42,7 @@ const overview = () => {
             <div className="card-body">
               <h6 className="text-muted">Total Users</h6>
               <div className="d-flex align-items-center">
-                <h2 className="mb-0">1,284</h2>
-                <span className="badge bg-success ms-2">+12%</span>
+                <h2 className="mb-0">{totalUsers ?? "Loading..."}</h2>
               </div>
               <div className="text-muted small mt-2">Compared to last week</div>
             </div>
@@ -224,4 +242,4 @@ const overview = () => {
   );
 };
 
-export default overview;
+export default Overview;
