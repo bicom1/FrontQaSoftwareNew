@@ -1,16 +1,27 @@
-import axios from "axios";
 import { baseUrl } from "../features/config";
 
-// const getAuthToken = () => localStorage.getItem("bictoken");
+export const createEscalationApi = async (formData) => {
+  try {
+    const response = await fetch(`${baseUrl}/api/escalations/upload`, {
+      method: 'POST',
+      body: formData,
+    
+    });
 
-
-export const createEscalationsApi = async (payload) => {
-    try {
-      const response = await axios.post(`${baseUrl}/api/escalations/`, payload);
-      return response.data;
-    } catch (error) {
-      console.error('Escalation API error:', error.response?.data || error.message);
-      throw error;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to submit escalation');
     }
-  };
+
+    const data = await response.json();
+    alert("Escalation submitted successfully!");
+    return data;
+    
+  } catch (error) {
+    console.error('API Error:', error);
+    alert(`Error: ${error.message || 'Failed to submit escalation'}`);
+   
+  }
+};
+
   
