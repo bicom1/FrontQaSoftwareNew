@@ -1,37 +1,112 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart2, PieChart } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, Cell,
+} from 'recharts';
 import { totalUserCountApi } from '../features/userApis';
+import { totalEscalationCountsApi, getEscalationAnalyticsApi, overviewAnalyticsRangeApi } from '../features/escalationsApi';
+import { totalEvaluationCountsApi, getEvaluationAnalyticsApi } from '../features/evaluationApi';
+import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/marketingApi';
 
-    
-
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
 const Overview = () => {
-
   const [totalUsers, setTotalUsers] = useState(null);
+  const [totalEscalationCounts, setTotalEscalationCounts] = useState(null);
+  const [totalEvaluationCounts, setTotalEvaluationCounts] = useState(null);
+  const [totalMarketingCounts, setTotalMarketingCounts] = useState(null);
+
+  const [escalationAnalytics, setEscalationAnalytics] = useState(null);
+  const [evaluationAnalytics, setEvaluationAnalytics] = useState(null);
+  const [marketingAnalytics, setMarketingAnalytics] = useState(null);
+
+  // Chart data states
+  const [evaluationRatingRangeData, setEvaluationRatingRangeData] = useState([]);
+  const [marketingSourceData, setMarketingSourceData] = useState([]);
+  const [escalationSeverityData, setEscalationSeverityData] = useState([]);
+  const [timeRange, setTimeRange] = useState('7d'); // default 'Last 7 days'
+
 
   useEffect(() => {
-    const fetchTotalUsers = async () => {
+    const fetchAllData = async () => {
       try {
-        const count = await totalUserCountApi();
-        setTotalUsers(count);
+        const [
+          users,
+          escalations,
+          evaluations,
+          marketing,
+          escalationAnalyticsData,
+          evaluationAnalyticsData,
+          marketingAnalyticsData,
+        ] = await Promise.all([
+          totalUserCountApi(timeRange),
+          totalEscalationCountsApi(timeRange),
+          totalEvaluationCountsApi(timeRange),
+          totalMarketingCountsApi(timeRange),
+          getEscalationAnalyticsApi(timeRange),
+          getEvaluationAnalyticsApi(timeRange),
+          getMarketingAnalyticsApi(timeRange),
+          overviewAnalyticsRangeApi(timeRange)
+        ]);
+
+        setTotalUsers(users);
+        setTotalEscalationCounts(escalations);
+        setTotalEvaluationCounts(evaluations);
+        setTotalMarketingCounts(marketing);
+
+        setEscalationAnalytics(escalationAnalyticsData);
+        setEvaluationAnalytics({
+          averageScore: evaluationAnalyticsData.avgRating,
+          totalEvaluations: evaluationAnalyticsData.total,
+        });
+        setMarketingAnalytics(marketingAnalyticsData);
+
+        // Transform evaluation ratingRanges for BarChart
+        if (evaluationAnalyticsData.ratingRanges) {
+          const ratingRangeArray = Object.entries(evaluationAnalyticsData.ratingRanges).map(
+            ([range, count]) => ({ name: range, count })
+          );
+          setEvaluationRatingRangeData(ratingRangeArray);
+        }
+
+        // Transform marketing sourceCounts for PieChart
+        if (marketingAnalyticsData.sourceCounts) {
+          const marketingSourcesArray = Object.entries(marketingAnalyticsData.sourceCounts).map(
+            ([source, count]) => ({ name: source, value: count })
+          );
+          setMarketingSourceData(marketingSourcesArray);
+        }
+
+        // Transform escalation severityCounts for PieChart
+        if (escalationAnalyticsData.severityCounts) {
+          const escalationSeverityArray = Object.entries(escalationAnalyticsData.severityCounts).map(
+            ([severity, count]) => ({ name: severity, value: count })
+          );
+          setEscalationSeverityData(escalationSeverityArray);
+        }
       } catch (err) {
-        console.error("Failed to fetch total users:", err);
+        console.error('Failed to fetch data:', err);
       }
     };
-    fetchTotalUsers();
-  }, []);
-  
+
+    fetchAllData();
+  }, [timeRange]);
+
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4>Dashboard Overview</h4>
         <div>
-          <select className="form-select form-select-sm">
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>This month</option>
-            <option>Last quarter</option>
-          </select>
+        <select
+  className="form-select form-select-sm"
+  value={timeRange}
+  onChange={(e) => setTimeRange(e.target.value)}
+>
+  <option value="7d">Last 7 days</option>
+  <option value="30d">Last 30 days</option>
+  <option value="month">This month</option>
+  <option value="quarter">Last quarter</option>
+</select>
         </div>
       </div>
 
@@ -42,7 +117,8 @@ const Overview = () => {
             <div className="card-body">
               <h6 className="text-muted">Total Users</h6>
               <div className="d-flex align-items-center">
-                <h2 className="mb-0">{totalUsers ?? "Loading..."}</h2>
+                <h2 className="mb-0">{totalUsers ?? 'Loading...'}</h2>
+                <span className="badge bg-success ms-2">+8%</span>
               </div>
               <div className="text-muted small mt-2">Compared to last week</div>
             </div>
@@ -52,10 +128,10 @@ const Overview = () => {
         <div className="col-12 col-md-6 col-lg-3">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-body">
-              <h6 className="text-muted">Active Projects</h6>
+              <h6 className="text-muted">Total Escalation Forms</h6>
               <div className="d-flex align-items-center">
-                <h2 className="mb-0">42</h2>
-                <span className="badge bg-danger ms-2">-3%</span>
+                <h2 className="mb-0">{totalEscalationCounts ?? 'Loading...'}</h2>
+                <span className="badge bg-success ms-2">+8%</span>
               </div>
               <div className="text-muted small mt-2">2 projects completed this week</div>
             </div>
@@ -65,9 +141,9 @@ const Overview = () => {
         <div className="col-12 col-md-6 col-lg-3">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-body">
-              <h6 className="text-muted">Total Revenue</h6>
+              <h6 className="text-muted">Total Evaluation Forms</h6>
               <div className="d-flex align-items-center">
-                <h2 className="mb-0">$86,589</h2>
+                <h2 className="mb-0">{totalEvaluationCounts ?? 'Loading...'}</h2>
                 <span className="badge bg-success ms-2">+8%</span>
               </div>
               <div className="text-muted small mt-2">$10,234 this month</div>
@@ -78,9 +154,9 @@ const Overview = () => {
         <div className="col-12 col-md-6 col-lg-3">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-body">
-              <h6 className="text-muted">Tasks Completed</h6>
+              <h6 className="text-muted">Total Marketing Forms</h6>
               <div className="d-flex align-items-center">
-                <h2 className="mb-0">187</h2>
+                <h2 className="mb-0">{totalMarketingCounts ?? 'Loading...'}</h2>
                 <span className="badge bg-success ms-2">+24%</span>
               </div>
               <div className="text-muted small mt-2">32 tasks pending</div>
@@ -89,48 +165,146 @@ const Overview = () => {
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Analytics Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-12 col-lg-8">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-white d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Performance Overview</h5>
-              <div className="btn-group btn-group-sm">
-                <button className="btn btn-outline-secondary active">Daily</button>
-                <button className="btn btn-outline-secondary">Weekly</button>
-                <button className="btn btn-outline-secondary">Monthly</button>
-              </div>
-            </div>
+        {/* Evaluation Analytics */}
+        <div className="col-12 col-lg-4">
+          <div className="card border-0 shadow-sm h-100">
             <div className="card-body">
-              <div className="text-center py-5 text-muted bg-light rounded">
-                <BarChart2 size={40} className="mb-2" />
-                <p>Chart area - Performance metrics visualization</p>
+              <h6 className="text-muted">Evaluation Score Avg</h6>
+              <h2>{evaluationAnalytics ? evaluationAnalytics.averageScore : 'Loading...'}</h2>
+              <div className="text-muted small mt-2">
+                From {evaluationAnalytics ? evaluationAnalytics.totalEvaluations : 0} evaluations
               </div>
             </div>
           </div>
         </div>
 
+        {/* Escalation Analytics */}
         <div className="col-12 col-lg-4">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-white d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Traffic Sources</h5>
-              <button className="btn btn-sm btn-link text-decoration-none">View Details</button>
-            </div>
+          <div className="card border-0 shadow-sm h-100">
             <div className="card-body">
-              <div className="text-center py-5 text-muted bg-light rounded">
-                <PieChart size={40} className="mb-2" />
-                <p>Chart area - Traffic source breakdown</p>
+              <h6 className="text-muted">Escalations Summary</h6>
+              <h2>{escalationAnalytics ? escalationAnalytics.total : 'Loading...'}</h2>
+              <div className="text-muted small mt-2">
+                Urgent Actions: {escalationAnalytics?.severityCounts?.['Urgent Action required'] ?? 0}
+              </div>
+              <div className="text-muted small mt-1">
+                High Severity: {escalationAnalytics?.severityCounts?.High ?? 0}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Marketing Analytics */}
+        <div className="col-12 col-lg-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <h6 className="text-muted">Marketing Leads Quality</h6>
+              <h2>{marketingAnalytics ? marketingAnalytics.total : 'Loading...'}</h2>
+              <div className="text-muted small mt-2">
+                High Quality: {marketingAnalytics?.qualityCounts?.High ?? 0}
+              </div>
+              <div className="text-muted small mt-1">
+                Medium Quality: {marketingAnalytics?.qualityCounts?.Medium ?? 0}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Activity & Tasks */}
+      {/* Charts */}
+     
+      <div className="row g-3 mb-4">
+      <div className="col-12 col-lg-6 card border-0 shadow-sm mb-4">
+        <div className="card-header">
+          <h5>Evaluation Rating Ranges</h5>
+        </div>
+        <div className="card-body">
+          {evaluationRatingRangeData.length > 0 ? (
+            <BarChart
+              width={600}
+              height={300}
+              data={evaluationRatingRangeData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#8884d8" />
+            </BarChart>
+          ) : (
+            <p>Loading Evaluation Chart...</p>
+          )}
+        </div>
+      </div>
+
+      {/* Marketing Source Pie Chart */}
+      <div className="col-12 col-lg-6 card border-0 shadow-sm mb-4">
+        <div className="card-header">
+          <h5>Marketing Lead Sources</h5>
+        </div>
+        <div className="card-body">
+          {marketingSourceData.length > 0 ? (
+            <PieChart width={400} height={300}>
+              <Pie
+                data={marketingSourceData}
+                cx={200}
+                cy={150}
+                label
+                outerRadius={100}
+                fill="#82ca9d"
+                dataKey="value"
+              >
+                {marketingSourceData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          ) : (
+            <p>Loading Marketing Chart...</p>
+          )}
+        </div>
+      </div>
+      </div>
+     
+
+      {/* Escalation Severity Pie Chart */}
       <div className="row g-3">
-        <div className="col-12 col-lg-6">
+       
+      <div className="col-12 col-lg-6  card border-0 shadow-sm mb-4">
+        <div className="card-header">
+          <h5>Escalation Severity Distribution</h5>
+        </div>
+        <div className="card-body">
+          {escalationSeverityData.length > 0 ? (
+            <PieChart width={400} height={300}>
+              <Pie
+                data={escalationSeverityData}
+                cx={200}
+                cy={150}
+                label
+                outerRadius={100}
+                fill="#FF8042"
+                dataKey="value"
+              >
+                {escalationSeverityData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          ) : (
+            <p>Loading Escalation Chart...</p>
+          )}
+        </div>
+      </div>
+      <div className="col-12 col-lg-6">
           <div className="card border-0 shadow-sm">
-            <div className="card-header bg-white d-flex justify-content-between align-items-center">
+            <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Recent Activity</h5>
               <button className="btn btn-sm btn-link text-decoration-none">View All</button>
             </div>
@@ -168,76 +342,13 @@ const Overview = () => {
             </div>
           </div>
         </div>
-
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-white d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Upcoming Tasks</h5>
-              <button className="btn btn-sm btn-primary">+ Add Task</button>
-            </div>
-            <div className="card-body p-0">
-              <ul className="list-group list-group-flush">
-                <li className="list-group-item p-3">
-                  <div className="form-check d-flex align-items-center">
-                    <input className="form-check-input me-3" type="checkbox" id="task1" />
-                    <div className="flex-grow-1">
-                      <label className="form-check-label fw-bold" htmlFor="task1">
-                        Update user interface for client portal
-                      </label>
-                      <div className="d-flex align-items-center mt-1">
-                        <span className="badge bg-warning text-dark me-2">High Priority</span>
-                        <span className="text-muted small">Due in 2 days</span>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-                <li className="list-group-item p-3">
-                  <div className="form-check d-flex align-items-center">
-                    <input className="form-check-input me-3" type="checkbox" id="task2" />
-                    <div className="flex-grow-1">
-                      <label className="form-check-label fw-bold" htmlFor="task2">
-                        Prepare monthly financial report
-                      </label>
-                      <div className="d-flex align-items-center mt-1">
-                        <span className="badge bg-danger text-white me-2">Urgent</span>
-                        <span className="text-muted small">Due tomorrow</span>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-                <li className="list-group-item p-3">
-                  <div className="form-check d-flex align-items-center">
-                    <input className="form-check-input me-3" type="checkbox" id="task3" />
-                    <div className="flex-grow-1">
-                      <label className="form-check-label fw-bold" htmlFor="task3">
-                        Schedule team meeting for project kickoff
-                      </label>
-                      <div className="d-flex align-items-center mt-1">
-                        <span className="badge bg-info text-white me-2">Medium</span>
-                        <span className="text-muted small">Due in 3 days</span>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-                <li className="list-group-item p-3">
-                  <div className="form-check d-flex align-items-center">
-                    <input className="form-check-input me-3" type="checkbox" id="task4" />
-                    <div className="flex-grow-1">
-                      <label className="form-check-label fw-bold" htmlFor="task4">
-                        Review and approve content for marketing campaign
-                      </label>
-                      <div className="d-flex align-items-center mt-1">
-                        <span className="badge bg-secondary text-white me-2">Low</span>
-                        <span className="text-muted small">Due in 5 days</span>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        
       </div>
+     
+
+
+     
+      
     </>
   );
 };
