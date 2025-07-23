@@ -14,28 +14,29 @@ const Header = ({
   setShowNotifications,
   showUserMenu,
   setShowUserMenu,
-  setIsLoggedIn
+  setIsLoggedIn,
+  profile
 }) => {
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
-  const [profile, setProfile] = useState(null);
+  // const [profile, setProfile] = useState(null);
 
 const navigate = useNavigate();
 
-useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const res = await getProfileApi();
-      console.log("Fetched user profile:", res);
-      setProfile(res.data); // Save profile data
-    } catch (err) {
-      console.error("Failed to fetch user profile:", err);
-    }
-  };
-  fetchProfile();
-}, []);
+// useEffect(() => {
+//   const fetchProfile = async () => {
+//     try {
+//       const res = await getProfileApi();
+//       console.log("Fetched user profile:", res);
+//       setProfile(res.data); // Save profile data
+//     } catch (err) {
+//       console.error("Failed to fetch user profile:", err);
+//     }
+//   };
+//   fetchProfile();
+// }, []);
 
 
   const unreadCount = notifications.filter(n => !n.read).length;

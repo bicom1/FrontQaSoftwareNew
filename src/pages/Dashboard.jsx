@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import AgentForm from '../components/AgentForm'; 
 import EscalationForm from '../components/EscalationForm';
@@ -9,6 +9,7 @@ import UserManagement from '../components/UserManagement';
 import Overview from '../components/overview';
 import Sidebar from '../components/sidebar';
 import Header from '../components/Header';
+import { getProfileApi } from '../features/userApis';
 
 const Dashboard = ({setIsLoggedIn}) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -21,6 +22,21 @@ const Dashboard = ({setIsLoggedIn}) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [formsExpanded, setFormsExpanded] = useState(false);
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+        const fetchProfile = async () => {
+          try {
+            const res = await getProfileApi();
+            console.log("Fetched user profile:", res);
+            setProfile(res.data); // Save profile data
+          } catch (err) {
+            console.error("Failed to fetch user profile:", err);
+          }
+        };
+        fetchProfile();
+      }, []);
+  
 
   const renderContent = () => {
     switch (activeTab) {
@@ -53,6 +69,7 @@ const Dashboard = ({setIsLoggedIn}) => {
         setActiveTab={setActiveTab}
         formsExpanded={formsExpanded}
         setFormsExpanded={setFormsExpanded}
+        setProfile={profile}
       />
 
       {/* Main Content */}

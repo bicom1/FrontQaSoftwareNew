@@ -5,7 +5,7 @@ import { FaEye, FaEyeSlash, FaEnvelope, FaLock } from "react-icons/fa";
 import { LoginApi, forgotPasswordApi } from "../features/userApis";
 import { useNavigate } from "react-router-dom";
 
-function Login({ setIsLoggedIn }) {
+function Login({ onLoginSuccess }) {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,22 +37,17 @@ function Login({ setIsLoggedIn }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-  
     setIsSubmitting(true);
     try {
       const res = await LoginApi(formData);
-  
       if (res.data.success) {
-        // ✅ Save token
-        localStorage.setItem("bictoken", res.data.token);
-  
-        // ✅ Save user info — this fixes the AgentForm issue
-        localStorage.setItem("user", JSON.stringify(res.data.user)); // ⬅️ Make sure your API returns this
-  
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("userRole", res.data.user.role);
         toast.success("Login successful!");
         setTimeout(() => {
-          setIsLoggedIn(true);
-          navigate("/dashboard");
+          onLoginSuccess?.(); 
+          const role = res.data.user.role?.toLowerCase();
+          navigate(role === "agent" ? "/agent" : "/dashboard");
         }, 1000);
       } else {
         toast.error(res.data.message || "Invalid credentials");
