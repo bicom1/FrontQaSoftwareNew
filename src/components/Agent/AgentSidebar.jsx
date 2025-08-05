@@ -56,7 +56,7 @@ const AgentSidebar = ({
           <BarChart2 size={20} />
           {sidebarOpen && <span className="ms-2">Dashboard</span>}
         </button>
-        <button className={btnCls(activeTab === "feedback")} onClick={() => onNav("feedback")}>
+        <button className={btnCls(activeTab === "feedback")} onClick={() => onNav("/feedback")}>
           <Activity size={20} />
           {sidebarOpen && <span className="ms-2">Feedback</span>}
         </button>
