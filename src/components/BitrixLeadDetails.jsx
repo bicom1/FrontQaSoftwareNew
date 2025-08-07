@@ -51,9 +51,9 @@ const BitrixLeadDetails = ({ leadId }) => {
             <User size={20} className="me-2 text-primary" />
             Basic Info
           </h5>
-          <p><strong>Name:</strong> {lead.NAME || "N/A"} {lead.LAST_NAME || ""}</p>
-          <p><strong>Status:</strong> {lead.STATUS_DESCRIPTION || "N/A"}</p>
-          <p><strong>Source:</strong> {lead.SOURCE_DESCRIPTION || "N/A"}</p>
+          <p><strong>Name:</strong> {lead.data.NAME || "N/A"} {lead.data.LAST_NAME || ""}</p>
+          <p><strong>Status:</strong> {lead.data.STATUS_DESCRIPTION || "N/A"}</p>
+          <p><strong>Source:</strong> {lead.data.SOURCE_DESCRIPTION || "N/A"}</p>
         </div>
       </div>
 
@@ -64,9 +64,9 @@ const BitrixLeadDetails = ({ leadId }) => {
             <Mail size={20} className="me-2 text-success" />
             Contact Info
           </h5>
-          <p><strong>Email:</strong> {lead.EMAIL?.[0]?.VALUE || "N/A"}</p>
-          <p><strong>Phone:</strong> {lead.PHONE?.[0]?.VALUE || "N/A"}</p>
-          <p><strong>City:</strong> {lead.ADDRESS_CITY || "N/A"}</p>
+          <p><strong>Email:</strong> {lead.data.EMAIL?.[0]?.VALUE || "N/A"}</p>
+          <p><strong>Phone:</strong> {lead.data.PHONE?.[0]?.VALUE || "N/A"}</p>
+          <p><strong>City:</strong> {lead.data.ADDRESS_CITY || "N/A"}</p>
         </div>
       </div>
 
@@ -77,10 +77,10 @@ const BitrixLeadDetails = ({ leadId }) => {
             <MapPin size={20} className="me-2 text-warning" />
             Additional Details
           </h5>
-          <p><strong>Company:</strong> {lead.COMPANY_TITLE || "N/A"}</p>
-          <p><strong>Assigned To:</strong> {lead.ASSIGNED_BY_NAME || "N/A"}</p>
-          <p><strong>Created On:</strong> {lead.DATE_CREATE || "N/A"}</p>
-          <p><strong>Comments:</strong> {lead.COMMENTS || "No comments"}</p>
+          <p><strong>Company:</strong> {lead.data.COMPANY_TITLE || "N/A"}</p>
+          <p><strong>Assigned To:</strong> {lead.data.ASSIGNED_BY_NAME || "N/A"}</p>
+          <p><strong>Created On:</strong> {lead.data.DATE_CREATE || "N/A"}</p>
+          <p><strong>Comments:</strong> {lead.data.COMMENTS || "No comments"}</p>
         </div>
       </div>
     </div>
