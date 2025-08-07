@@ -10,10 +10,12 @@ const BitrixLeadDetails = ({ leadId }) => {
   useEffect(() => {
     const fetchLead = async () => {
       try {
+        console.log("🔍 Fetching lead for ID:", leadId);
         const res = await getBitrixLeadDetailsById(leadId);
-        setLead(res || null); // ✅ FIXED HERE
+        console.log("✅ Received lead:", res);
+        setLead(res || null);
       } catch (err) {
-        console.error("Error fetching Bitrix lead:", err);
+        console.error("❌ Error fetching Bitrix lead:", err);
         setLead(null);
       } finally {
         setLoading(false);
@@ -49,7 +51,7 @@ const BitrixLeadDetails = ({ leadId }) => {
             <User size={20} className="me-2 text-primary" />
             Basic Info
           </h5>
-          <p><strong>Name:</strong> {lead.NAME} {lead.LAST_NAME}</p>
+          <p><strong>Name:</strong> {lead.NAME || "N/A"} {lead.LAST_NAME || ""}</p>
           <p><strong>Status:</strong> {lead.STATUS_DESCRIPTION || "N/A"}</p>
           <p><strong>Source:</strong> {lead.SOURCE_DESCRIPTION || "N/A"}</p>
         </div>
@@ -77,7 +79,7 @@ const BitrixLeadDetails = ({ leadId }) => {
           </h5>
           <p><strong>Company:</strong> {lead.COMPANY_TITLE || "N/A"}</p>
           <p><strong>Assigned To:</strong> {lead.ASSIGNED_BY_NAME || "N/A"}</p>
-          <p><strong>Created On:</strong> {lead.DATE_CREATE}</p>
+          <p><strong>Created On:</strong> {lead.DATE_CREATE || "N/A"}</p>
           <p><strong>Comments:</strong> {lead.COMMENTS || "No comments"}</p>
         </div>
       </div>
@@ -86,4 +88,3 @@ const BitrixLeadDetails = ({ leadId }) => {
 };
 
 export default BitrixLeadDetails;
-
