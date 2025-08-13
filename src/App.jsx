@@ -2,11 +2,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import AgentRoutes from "./Routes/AgentRoutes";
 import Unauthorized from "./components/Unauthorized";
 import AgentLayout from "./pages/AgentPortal/AgentLayout";
-import AgentDashboard from "./pages/AgentPortal/AgentDashboard";
-import AgentFeedbackBox from "./components/Agent/AgentFeedbackBox";
+
 
 function RequireAuth({ children, allowedRoles }) {
   const token = localStorage.getItem("token");
@@ -81,8 +79,6 @@ function App() {
     </RequireAuth>
   }
 >
-  <Route index element={<AgentDashboard />} />
-  <Route path="feedback" element={<AgentFeedbackBox />} />
 </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
