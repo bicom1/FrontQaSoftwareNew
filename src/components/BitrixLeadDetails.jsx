@@ -65,7 +65,7 @@ const BitrixLeadDetails = ({ leadId }) => {
             Contact Info
           </h5>
           <p><strong>Email:</strong> {lead.data.EMAIL?.[0]?.VALUE || "N/A"}</p>
-          <p><strong>Phone:</strong> {lead.data.PHONE?.[0]?.VALUE || "N/A"}</p>
+          <p><strong>Phone:</strong> {lead.data.PHONE.VALUE?.[0]?.VALUE || "N/A"}</p>
           <p><strong>City:</strong> {lead.data.ADDRESS_CITY || "N/A"}</p>
         </div>
       </div>
