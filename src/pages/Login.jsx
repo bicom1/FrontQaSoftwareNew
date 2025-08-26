@@ -35,29 +35,37 @@ function Login({ onLoginSuccess }) {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setIsSubmitting(true);
-    try {
-      const res = await LoginApi(formData);
-      if (res.data.success) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("userRole", res.data.user.role);
-        toast.success("Login successful!");
-        setTimeout(() => {
-          onLoginSuccess?.(); 
-          const role = res.data.user.role?.toLowerCase();
-          navigate(role === "agent" ? "/agent" : "/dashboard");
-        }, 1000);
-      } else {
-        toast.error(res.data.message || "Invalid credentials");
-      }
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Login failed");
-    } finally {
-      setIsSubmitting(false);
+  e.preventDefault();
+  if (!validateForm()) return;
+  setIsSubmitting(true);
+  try {
+    const res = await LoginApi(formData);
+    if (res.data.success) {
+      // Save token
+      localStorage.setItem("token", res.data.token);
+
+      // Save full user object
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      // Save role separately if you need
+      localStorage.setItem("userRole", res.data.user.role);
+
+      toast.success("Login successful!");
+      setTimeout(() => {
+        onLoginSuccess?.(); 
+        const role = res.data.user.role?.toLowerCase();
+        navigate(role === "agent" ? "/agent" : "/dashboard");
+      }, 1000);
+    } else {
+      toast.error(res.data.message || "Invalid credentials");
     }
-  };
+  } catch (err) {
+    toast.error(err?.response?.data?.message || "Login failed");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
   
   
 

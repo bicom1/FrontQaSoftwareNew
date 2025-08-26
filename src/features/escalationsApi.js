@@ -1,13 +1,13 @@
 import axios from "axios";
-import { baseUrl } from "../features/config";
+import { baseUrl, getToken } from "../features/config";
 
-// Get JWT token from localStorage
-const getAuthToken = () => localStorage.getItem("bictoken");
+
+
 
 // Axios headers with token
 const authHeader = () => ({
   headers: {
-    Authorization: `Bearer ${getAuthToken()}`,
+    Authorization: `Bearer ${getToken()}`,
     "Content-Type": "application/json",
   },
 });
@@ -18,7 +18,7 @@ export const createEscalationApi = async (formData) => {
     const response = await fetch(`${baseUrl}/api/escalations/upload`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${getAuthToken()}`
+        Authorization: `Bearer ${getToken()}`
         // Note: DO NOT set Content-Type here for FormData
       },
       body: formData,
@@ -84,7 +84,7 @@ export const deleteEscalationApi = async (id) => {
 };
 
 export const totalEscalationCountsApi = async () => {
-  const token = getAuthToken(); 
+  const token = getToken(); 
   const res = await axios.get(`${baseUrl}/api/escalations/totalescalationcounts`, {
     withCredentials: true,
     headers: {

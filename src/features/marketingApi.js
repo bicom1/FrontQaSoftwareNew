@@ -1,13 +1,13 @@
 import axios from "axios";
-import { baseUrl } from "../features/config";
+import { baseUrl, getToken } from "../features/config";
 
 
-const getAuthToken = () => localStorage.getItem("bictoken");
+
 
 
 const authHeader = () => ({
   headers: {
-    Authorization: `Bearer ${getAuthToken()}`,
+    Authorization: `Bearer ${getToken()}`,
     "Content-Type": "application/json",
   },
   withCredentials: true,
@@ -70,7 +70,7 @@ export const deleteMarketingApi = async (id) => {
 // ✅ TOTAL MARKETING COUNTS
 export const totalMarketingCountsApi = async () => {
   try {
-    const token = getAuthToken(); 
+    const token = getToken(); 
     const res = await axios.get(`${baseUrl}/api/marketing/totalmarketingcounts`, {
       withCredentials: true,
       headers: {
