@@ -1,14 +1,13 @@
 // src/features/bitrixApi.js
 import axios from "axios";
-import { baseUrl } from "../features/config";
+import { baseUrl, getToken } from "../features/config";
 
-// Get auth token from localStorage
-const getAuthToken = () => localStorage.getItem("bictoken");
+
 
 // Auth header with token
 const authHeader = () => ({
   headers: {
-    Authorization: `Bearer ${getAuthToken()}`,
+    Authorization: `Bearer ${getToken()}`,
     "Content-Type": "application/json",
   },
   withCredentials: true,

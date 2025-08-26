@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, Settings, User, Search, Menu, X, LogOut, UserCircle, Palette } from 'lucide-react';
+import { Bell, Settings, User, Search, Menu, LogOut, UserCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getProfileApi } from '../features/userApis';
-
-
+import { getProfileApi, logoutApi } from '../features/userApis';
 
 const Header = ({ 
   sidebarOpen,
@@ -14,55 +12,63 @@ const Header = ({
   setShowNotifications,
   showUserMenu,
   setShowUserMenu,
-  setIsLoggedIn,
-  profile
+ 
 }) => {
+  const [profile, setProfile] = useState(null);
+  const navigate = useNavigate();
+
+  // Fetch profile once on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await getProfileApi();
+        setProfile(res.data); 
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
-  // const [profile, setProfile] = useState(null);
-
-const navigate = useNavigate();
-
-// useEffect(() => {
-//   const fetchProfile = async () => {
-//     try {
-//       const res = await getProfileApi();
-//       console.log("Fetched user profile:", res);
-//       setProfile(res.data); // Save profile data
-//     } catch (err) {
-//       console.error("Failed to fetch user profile:", err);
-//     }
-//   };
-//   fetchProfile();
-// }, []);
-
-
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
+ const handleLogout = async () => {
+  try {
+    // Call backend to invalidate token
+    await logoutApi();
+  } catch (err) {
+    console.error("Logout API failed:", err);
+    // You can ignore errors here, still proceed with local logout
+  } finally {
+    // Remove everything related to login locally
     localStorage.removeItem("token");
-    setIsLoggedIn(false); 
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("isLoggedIn");
+
+
     setShowUserMenu(false);
+
+    // Redirect to login/home
     navigate("/");
-  };
-  
-  
-  
+  }
+};
+
 
   return (
-    <header className="bg-white border-bottom shadow-sm px-4 py-3 d-flex align-items-center justify-content-between position-sticky top-0" style={{ zIndex: 1020, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+    <header className="bg-white border-bottom shadow-sm px-4 py-3 d-flex align-items-center justify-content-between position-sticky top-0"
+      style={{ zIndex: 1020, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+      
       {/* Mobile Menu Button */}
       <div className="d-md-none">
         <button 
           className="btn btn-outline-light border-0 p-2 rounded-3 shadow-sm hover-lift" 
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            transition: 'all 0.3s ease'
-          }}
+          style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', transition: 'all 0.3s ease' }}
         >
           <Menu size={20} className="text-white" />
         </button>
@@ -79,10 +85,7 @@ const navigate = useNavigate();
               type="text" 
               className="form-control border-0 bg-transparent shadow-none ps-2 pe-4" 
               placeholder="Search anything..."
-              style={{ 
-                fontSize: '14px',
-                '::placeholder': { color: '#6c757d' }
-              }}
+              style={{ fontSize: '14px' }}
             />
           </div>
         </div>
@@ -90,17 +93,6 @@ const navigate = useNavigate();
 
       {/* Right Side Actions */}
       <div className="d-flex align-items-center gap-2">
-        {/* Theme Toggle Button */}
-        {/* <button 
-          className="btn btn-light border-0 rounded-3 p-2 position-relative hover-lift"
-          style={{ 
-            background: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-            transition: 'all 0.3s ease'
-          }}
-          title="Toggle Theme"
-        >
-          <Palette size={18} className="text-dark" />
-        </button> */}
 
         {/* Notifications */}
         <div className="dropdown position-relative">
@@ -108,12 +100,14 @@ const navigate = useNavigate();
             className="btn btn-light border-0 rounded-3 p-2 position-relative hover-lift" 
             onClick={() => setShowNotifications(!showNotifications)}
             style={{ 
-              background: unreadCount > 0 ? 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+              background: unreadCount > 0 
+                ? 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' 
+                : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
               transition: 'all 0.3s ease'
             }}
             title={`${unreadCount} unread notifications`}
           >
-            <Bell size={18} className={unreadCount > 0 ? 'text-dark' : 'text-dark'} />
+            <Bell size={18} className="text-dark" />
             {unreadCount > 0 && (
               <span 
                 className="position-absolute top-0 start-100 translate-middle badge rounded-pill d-flex align-items-center justify-content-center"
@@ -123,7 +117,7 @@ const navigate = useNavigate();
                   color: 'white',
                   minWidth: '18px',
                   height: '18px',
-                  animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none'
+                  animation: 'pulse 2s infinite'
                 }}
               >
                 {unreadCount > 9 ? '9+' : unreadCount}
@@ -133,24 +127,17 @@ const navigate = useNavigate();
           
           {showNotifications && (
             <>
-              {/* Backdrop */}
-              <div 
-                className="position-fixed top-0 start-0 w-100 h-100"
+              <div className="position-fixed top-0 start-0 w-100 h-100"
                 style={{ zIndex: 999 }}
                 onClick={() => setShowNotifications(false)}
               />
-              <div 
-                className="position-absolute end-0 mt-3 bg-white rounded-4 shadow-lg border-0 overflow-hidden"
-                style={{ 
-                  width: '350px', 
-                  zIndex: 1000,
-                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                }}
-              >
-                <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <div className="position-absolute end-0 mt-3 bg-white rounded-4 shadow-lg border-0 overflow-hidden"
+                style={{ width: '350px', zIndex: 1000 }}>
+                <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom"
+                  style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                   <h6 className="mb-0 text-white fw-semibold">Notifications</h6>
                   <button 
-                    className="btn btn-sm btn-link text-white text-decoration-none fw-medium p-0 hover-underline" 
+                    className="btn btn-sm btn-link text-white p-0 hover-underline" 
                     onClick={markAllAsRead}
                     style={{ fontSize: '12px' }}
                   >
@@ -159,44 +146,21 @@ const navigate = useNavigate();
                 </div>
                 <div style={{ maxHeight: '350px', overflowY: 'auto' }} className="custom-scrollbar">
                   {notifications.length > 0 ? (
-                    notifications.map((note, index) => (
-                      <div 
-                        key={note.id} 
-                        className={`px-4 py-3 border-bottom position-relative hover-bg-light transition-all ${!note.read ? 'bg-light' : ''}`}
-                        style={{ 
-                          borderLeft: !note.read ? '3px solid #667eea' : '3px solid transparent',
-                          transition: 'all 0.2s ease'
-                        }}
+                    notifications.map(note => (
+                      <div key={note.id} 
+                        className={`px-4 py-3 border-bottom ${!note.read ? 'bg-light' : ''}`}
+                        style={{ borderLeft: !note.read ? '3px solid #667eea' : '3px solid transparent' }}
                       >
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div className="flex-grow-1">
-                            <p className="mb-1 fw-medium" style={{ fontSize: '14px', lineHeight: '1.4' }}>{note.text}</p>
-                            <small className="text-muted d-flex align-items-center">
-                              <div className="rounded-circle me-2" style={{ width: '6px', height: '6px', backgroundColor: !note.read ? '#667eea' : '#dee2e6' }}></div>
-                              {note.time}
-                            </small>
-                          </div>
-                          {!note.read && (
-                            <span className="badge rounded-pill ms-2" style={{ 
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              fontSize: '10px',
-                              padding: '4px 8px'
-                            }}>
-                              New
-                            </span>
-                          )}
-                        </div>
+                        <p className="mb-1 fw-medium" style={{ fontSize: '14px' }}>{note.text}</p>
+                        <small className="text-muted">{note.time}</small>
                       </div>
                     ))
                   ) : (
                     <div className="p-5 text-center text-muted">
-                      <Bell size={32} className="text-muted mb-2 opacity-50" />
+                      <Bell size={32} className="mb-2 opacity-50" />
                       <p className="mb-0">No notifications</p>
                     </div>
                   )}
-                </div>
-                <div className="text-center p-3 border-top bg-light">
-                  <button className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-medium">View all notifications</button>
                 </div>
               </div>
             </>
@@ -208,66 +172,60 @@ const navigate = useNavigate();
           <button 
             className="btn btn-light border-0 rounded-3 p-2 d-flex align-items-center gap-2 hover-lift" 
             onClick={() => setShowUserMenu(!showUserMenu)}
-            style={{ 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              transition: 'all 0.3s ease'
-            }}
-            title="User Menu"
+            style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
           >
             <div className="d-flex align-items-center justify-content-center rounded-circle bg-white" style={{ width: '24px', height: '24px' }}>
               <User size={14} className="text-primary" />
             </div>
-            <span className="text-capitalize d-none d-lg-inline text-white fw-medium" style={{ fontSize: '14px' }}>{profile?.name || "Loading..."}</span>
+            <span className="text-capitalize d-none d-lg-inline text-white fw-medium" style={{ fontSize: '14px' }}>
+              {profile?.name || "Guest"}
+            </span>
           </button>
           
           {showUserMenu && (
             <>
-              {/* Backdrop */}
-              <div 
-                className="position-fixed top-0 start-0 w-100 h-100"
+              <div className="position-fixed top-0 start-0 w-100 h-100"
                 style={{ zIndex: 999 }}
                 onClick={() => setShowUserMenu(false)}
               />
-              <div 
-                className="position-absolute end-0 mt-3 bg-white rounded-4 shadow-lg border-0 overflow-hidden"
-                style={{ 
-                  width: '220px', 
-                  zIndex: 1000,
-                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                }}
-              >
-                {/* User Info Header */}
-                <div className="px-4 py-3 border-bottom bg-gradient" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <div className="position-absolute end-0 mt-3 bg-white rounded-4 shadow-lg border-0 overflow-hidden"
+                style={{ width: '220px', zIndex: 1000 }}>
+                
+                <div className="px-4 py-3 border-bottom"
+                  style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                   <div className="d-flex align-items-center">
-                    <div className="rounded-circle bg-white d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                    <div className="rounded-circle bg-white d-flex align-items-center justify-content-center me-3"
+                      style={{ width: '40px', height: '40px' }}>
                       <User size={20} className="text-primary" />
                     </div>
                     <div>
-                      <div className="text-capitalize fw-semibold" style={{ fontSize: '14px' }}>{profile?.name || "Loading..."}</div>
-                      <div className='text-capitalize' style={{ fontSize: '12px' }}>{profile?.role || "Loading..."}</div>
+                      <div className="fw-semibold text-capitalize" style={{ fontSize: '14px', color:'white' }}>
+                        {profile?.name || "Guest"}
+                      </div>
+                      <div className="fw-semibold text-capitalize" style={{ fontSize: '12px', color : 'white' }}>
+                        {profile?.role || "User"}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Menu Items */}
                 <div className="py-2">
-                  <button className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light transition-all">
+                  <button className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light">
                     <UserCircle size={16} className="me-3 text-muted" />
                     <span style={{ fontSize: '14px' }}>Profile</span>
                   </button>
-                  <button className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light transition-all">
+                  <button className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light">
                     <Settings size={16} className="me-3 text-muted" />
                     <span style={{ fontSize: '14px' }}>Settings</span>
                   </button>
                   <div className="dropdown-divider mx-3 my-2"></div>
                   <button 
-  onClick={handleLogout}
-  className="dropdown-item d-flex align-items-center px-4 py-2 border-0 text-danger hover-bg-danger-light transition-all"
->
-  <LogOut size={16} className="me-3" />
-  <span style={{ fontSize: '14px' }}>Logout</span>
-</button>
-
+                    onClick={handleLogout}
+                    className="dropdown-item d-flex align-items-center px-4 py-2 border-0 text-danger hover-bg-danger-light"
+                  >
+                    <LogOut size={16} className="me-3" />
+                    <span style={{ fontSize: '14px' }}>Logout</span>
+                  </button>
                 </div>
               </div>
             </>
@@ -276,49 +234,13 @@ const navigate = useNavigate();
       </div>
 
       <style>{`
-        .hover-lift:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        .hover-bg-light:hover {
-          background-color: #f8f9fa !important;
-        }
-        
-        .hover-bg-danger-light:hover {
-          background-color: #f8d7da !important;
-        }
-        
-        .hover-underline:hover {
-          text-decoration: underline !important;
-        }import { useNavigate } from 'react-router-dom';
-
-        
-        .transition-all {
-          transition: all 0.2s ease;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f1f1;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 2px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
+        .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+        .hover-bg-light:hover { background-color: #f8f9fa !important; }
+        .hover-bg-danger-light:hover { background-color: #f8d7da !important; }
+        .hover-underline:hover { text-decoration: underline !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 2px; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
       `}</style>
     </header>
   );

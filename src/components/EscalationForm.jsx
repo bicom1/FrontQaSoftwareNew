@@ -9,7 +9,6 @@ const EscalationForm = () => {
     useremail: "",
     leadID: "",
     agentName: "",
-    mod: "",
     teamleader: "",
     evaluatedBy: "",
     leadSource: "",

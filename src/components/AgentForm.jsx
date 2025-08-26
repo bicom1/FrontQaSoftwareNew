@@ -1,14 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { CheckCircle2, User, Mail, Hash, Users, MessageSquare, Star, FileText, Award, TrendingUp, Clock, Calendar } from 'lucide-react';
-import { createEvaluationsApi } from '../features/evaluationApi';
+import React, { useEffect, useState } from "react";
+import {
+  CheckCircle2,
+  User,
+  Mail,
+  Hash,
+  Users,
+  MessageSquare,
+  Star,
+  FileText,
+  Award,
+  TrendingUp,
+  Clock,
+  Calendar,
+} from "lucide-react";
+import { createEvaluationsApi } from "../features/evaluationApi";
 
 const AgentForm = () => {
   const [evaluation, setEvaluation] = useState({
-    email: "",          
-    leadID: "",         
+    useremail: "", 
+    leadID: "",
     agentName: "",
-    teamleader: "",
     mod: "",
+    teamleader: "",
     greetings: "",
     accuracy: "",
     building: "",
@@ -32,64 +45,104 @@ const AgentForm = () => {
     { _id: "1", leadName: "John Smith" },
     { _id: "2", leadName: "Sarah Johnson" },
     { _id: "3", leadName: "Mike Wilson" },
-    { _id: "4", leadName: "Emily Davis" }
+    { _id: "4", leadName: "Emily Davis" },
   ];
 
   const handleChange = (name, value) => {
-    setEvaluation(prev => ({
+    setEvaluation((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async () => {
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    if (!user || !user._id) {
-      alert("User is not authenticated or user data is missing. Please log in.");
-      return;
-    }
-
-    const total = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
-
-    const payload = {
-      owner: user._id,
-      useremail: evaluation.email,
-      evaluatedby: user.email,
-      leadID: evaluation.leadID,        // make sure this matches your backend schema
-      agentName: evaluation.agentName,
-      mod: evaluation.mod,
-      teamleader: evaluation.teamleader,
-      greetings: evaluation.greetings,
-      accuracy: evaluation.accuracy,
-      building: evaluation.building,
-      presenting: evaluation.presenting,
-      closing: evaluation.closing,
-      bonus: evaluation.bonus,
-      evaluationsummary: evaluation.evaluationsummary,
-      rating: total,
-    };
-
     try {
+      let user = null;
+      try {
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          user = JSON.parse(userData);
+        }
+      } catch (err) {
+        console.error("Error parsing user data:", err);
+        alert("Error reading user data. Please log in again.");
+        return;
+      }
+
+      
+      if (!user || !user._id || !user.email) {
+        console.log("User data:", user);
+        alert("User is not authenticated or user data is incomplete. Please log in.");
+        return;
+      }
+
+      const total = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
+
+      const payload = {
+        owner: user._id,
+        useremail: user.email,
+        evaluatedby: user.email,
+        leadID: evaluation.leadID,
+        agentName: evaluation.agentName,
+        mod: evaluation.mod,
+        teamleader: evaluation.teamleader,
+        greetings: evaluation.greetings,
+        accuracy: evaluation.accuracy,
+        building: evaluation.building,
+        presenting: evaluation.presenting,
+        closing: evaluation.closing,
+        bonus: evaluation.bonus,
+        evaluationsummary: evaluation.evaluationsummary,
+        rating: total,
+      };
+
+      console.log("Submitting payload:", payload);
+
       const res = await createEvaluationsApi(payload);
-      alert("Evaluation saved!");
+
+      alert("Evaluation saved successfully!");
       console.log("Saved evaluation:", res);
+
+      // Reset form
+      setEvaluation({
+        useremail: user.email,
+        leadID: "",
+        agentName: "",
+        teamleader: "",
+        mod: "",
+        greetings: "",
+        accuracy: "",
+        building: "",
+        presenting: "",
+        closing: "",
+        bonus: "",
+        evaluationsummary: "",
+        rating: 0,
+      });
+
+      setUserRate({
+        greeting: { rateVal: 0 },
+        accuracy: { rateVal: 0 },
+        building: { rateVal: 0 },
+        presenting: { rateVal: 0 },
+        closing: { rateVal: 0 },
+        bonus: { rateVal: 0 },
+      });
     } catch (err) {
       console.error("Failed to save evaluation:", err);
-      alert("Error saving evaluation.");
+      alert("Error saving evaluation: " + (err.response?.data?.message || err.message));
     }
   };
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (user && user.email) {
-      setEvaluation(prev => ({
+      setEvaluation((prev) => ({
         ...prev,
-        email: user.email
+        useremail: user.email,
       }));
     }
   }, []);
-  
 
   const currentRating = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
   const maxRating = 96;
@@ -97,94 +150,101 @@ const AgentForm = () => {
 
   const evaluationCriteria = [
     {
-      id: 'greetings',
-      title: 'Professional Greetings',
-      description: 'Demonstrates enthusiasm and a positive tone throughout the call.',
+      id: "greetings",
+      title: "Professional Greetings",
+      description: "Demonstrates enthusiasm and a positive tone throughout the call.",
       icon: <MessageSquare size={18} />,
-      color: '#6366f1',
-      bgColor: 'rgba(99, 102, 241, 0.1)',
+      color: "#6366f1",
+      bgColor: "rgba(99, 102, 241, 0.1)",
       goodOption: {
-        value: 'uses',
-        text: 'Uses a professional and friendly greeting within the first 3 seconds, including the company name and their own name',
-        points: 16
-      }
+        value: "uses",
+        text: "Uses a professional and friendly greeting within the first 3 seconds, including the company name and their own name",
+        points: 16,
+      },
     },
     {
-      id: 'accuracy',
-      title: 'Accuracy & Compliance',
-      description: 'Provides accurate and up-to-date information about the company\'s products or services, adhering to all relevant scripts and policies.',
+      id: "accuracy",
+      title: "Accuracy & Compliance",
+      description: "Provides accurate and up-to-date information...",
       icon: <CheckCircle2 size={18} />,
-      color: '#059669',
-      bgColor: 'rgba(5, 150, 105, 0.1)',
+      color: "#059669",
+      bgColor: "rgba(5, 150, 105, 0.1)",
       goodOption: {
-        value: 'questions',
-        text: 'Asks clear and concise questions to accurately identify the customer\'s needs or inquiries',
-        points: 16
-      }
+        value: "questions",
+        text: "Asks clear and concise questions to accurately identify the customer needs",
+        points: 16,
+      },
     },
     {
-      id: 'building',
-      title: 'Building Rapport & Discovery',
-      description: 'Identifies potential pain points or opportunities where the product/service can provide value to the customer.',
+      id: "building",
+      title: "Building Rapport & Discovery",
+      description: "Identifies potential pain points or opportunities...",
       icon: <Users size={18} />,
-      color: '#dc2626',
-      bgColor: 'rgba(220, 38, 38, 0.1)',
+      color: "#dc2626",
+      bgColor: "rgba(220, 38, 38, 0.1)",
       goodOption: {
-        value: 'skills',
-        text: 'Demonstrates active listening skills and asks open-ended questions to understand the customer\'s needs and potential interest',
-        points: 16
-      }
+        value: "skills",
+        text: "Demonstrates active listening and open-ended questions",
+        points: 16,
+      },
     },
     {
-      id: 'presenting',
-      title: 'Presenting Solutions & Making the Sale',
-      description: 'Clearly and concisely presents the product/service features and benefits tailored to the customer\'s needs identified earlier.',
+      id: "presenting",
+      title: "Presenting Solutions & Making the Sale",
+      description: "Clearly and concisely presents tailored benefits...",
       icon: <Star size={18} />,
-      color: '#7c3aed',
-      bgColor: 'rgba(124, 58, 237, 0.1)',
+      color: "#7c3aed",
+      bgColor: "rgba(124, 58, 237, 0.1)",
       goodOption: {
-        value: 'appointment',
-        text: 'Attempts to overcome objections professionally using established techniques and effectively guides the customer towards booking an appointment',
-        points: 16
-      }
+        value: "appointment",
+        text: "Overcomes objections and guides customer to appointment",
+        points: 16,
+      },
     },
     {
-      id: 'closing',
-      title: 'Call Closing & Securing Commitment',
-      description: 'Confirms the customer\'s details and secures their commitment for the sale or appointment. Thanks the customer for their time.',
+      id: "closing",
+      title: "Call Closing & Securing Commitment",
+      description: "Confirms details and secures customer commitment...",
       icon: <FileText size={18} />,
-      color: '#ea580c',
-      bgColor: 'rgba(234, 88, 12, 0.1)',
+      color: "#ea580c",
+      bgColor: "rgba(234, 88, 12, 0.1)",
       goodOption: {
-        value: 'Professionally',
-        text: 'Professionally summarizes key points discussed and clearly outlines the next steps, including the call to action',
-        points: 16
-      }
+        value: "Professionally",
+        text: "Summarizes key points, outlines next steps",
+        points: 16,
+      },
     },
     {
-      id: 'bonus',
-      title: 'Bonus Point',
-      description: 'Going above and beyond customer expectations.',
+      id: "bonus",
+      title: "Bonus Point",
+      description: "Going above and beyond customer expectations.",
       icon: <Award size={18} />,
-      color: '#0891b2',
-      bgColor: 'rgba(8, 145, 178, 0.1)',
+      color: "#0891b2",
+      bgColor: "rgba(8, 145, 178, 0.1)",
       goodOption: {
-        value: 'customer',
-        text: 'Goes above and beyond by exceeding customer expectations, offering additional solutions, or demonstrating exceptional product knowledge',
-        points: 16
-      }
-    }
+        value: "customer",
+        text: "Exceeds customer expectations with knowledge",
+        points: 16,
+      },
+    },
   ];
 
   const getPerformanceLevel = (percentage) => {
-    if (percentage >= 80) return { text: 'Excellent', class: 'text-success', bgClass: 'bg-success-subtle' };
-    if (percentage >= 60) return { text: 'Good', class: 'text-primary', bgClass: 'bg-primary-subtle' };
-    if (percentage >= 40) return { text: 'Average', class: 'text-warning', bgClass: 'bg-warning-subtle' };
-    return { text: 'Needs Improvement', class: 'text-danger', bgClass: 'bg-danger-subtle' };
+    if (percentage >= 80)
+      return { text: "Excellent", class: "text-success", bgClass: "bg-success-subtle" };
+    if (percentage >= 60)
+      return { text: "Good", class: "text-primary", bgClass: "bg-primary-subtle" };
+    if (percentage >= 40)
+      return { text: "Average", class: "text-warning", bgClass: "bg-warning-subtle" };
+    return { text: "Needs Improvement", class: "text-danger", bgClass: "bg-danger-subtle" };
   };
 
   const performanceLevel = getPerformanceLevel(ratingPercentage);
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   return (
     <>
       <style jsx>{`
@@ -427,11 +487,12 @@ const AgentForm = () => {
                         Email Address
                       </label>
                       <input
-                        type="email"
-                        className="form-control form-control-modern readonly-field"
-                        value={evaluation.email}
-                        readOnly
-                      />
+  type="email"
+  className="form-control form-control-modern readonly-field"
+  value={evaluation.useremail}  // use useremail instead of email
+  readOnly
+/>
+
                     </div>
 
                     {/* Lead ID */}
@@ -498,7 +559,7 @@ const AgentForm = () => {
                         Mode of Communication
                       </label>
                       <div className="d-flex mode-selection">
-                        {['Chat', 'Call'].map((mode) => (
+                        {['Chat', 'Call','Both'].map((mode) => (
                           <div key={mode} className={`radio-card ${evaluation.mod === mode ? 'selected-primary' : ''}`}>
                             <label className="form-check-label d-flex align-items-center mb-0">
                               <input
@@ -652,14 +713,14 @@ const AgentForm = () => {
 
               {/* Submit Button */}
               <div className="d-grid">
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="btn submit-btn text-white fw-semibold"
-                >
-                  Submit Evaluation Assessment
-                </button>
-              </div>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="btn submit-btn text-white fw-semibold"
+        >
+          Submit Evaluation Assessment
+        </button>
+      </div>
             </div>
           </div>
         </div>
