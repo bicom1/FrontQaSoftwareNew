@@ -14,6 +14,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { createEvaluationsApi } from "../features/evaluationApi";
+import { getTeamLeadsApi } from "../features/teamleadApi";
 
 const AgentForm = () => {
   const [evaluation, setEvaluation] = useState({
@@ -41,12 +42,57 @@ const AgentForm = () => {
     bonus: { rateVal: 0 },
   });
 
-  const teamLeaders = [
-    { _id: "1", leadName: "John Smith" },
-    { _id: "2", leadName: "Sarah Johnson" },
-    { _id: "3", leadName: "Mike Wilson" },
-    { _id: "4", leadName: "Emily Davis" },
-  ];
+  const [teamLeaders, setTeamLeaders] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  
+// Update the useEffect to extract the data array correctly
+useEffect(() => {
+  const fetchTeamLeaders = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching team leaders...");
+      
+      // Try to import the module dynamically
+      const teamLeadModule = await import('../features/teamleadApi');
+      console.log("Team lead module:", teamLeadModule);
+      
+      // Check different export patterns
+      let getTeamLeadsFunction;
+      
+      if (teamLeadModule.getTeamLeadsApi) {
+        getTeamLeadsFunction = teamLeadModule.getTeamLeadsApi;
+        console.log("Using getTeamLeadsApi export");
+      } else if (teamLeadModule.default && teamLeadModule.default.getTeamLeadsApi) {
+        getTeamLeadsFunction = teamLeadModule.default.getTeamLeadsApi;
+        console.log("Using default.getTeamLeadsApi export");
+      } else if (teamLeadModule.default) {
+        getTeamLeadsFunction = teamLeadModule.default;
+        console.log("Using default export");
+      } else {
+        throw new Error('Team leads API function not found');
+      }
+      
+      const response = await getTeamLeadsFunction();
+      console.log("API response:", response);
+      
+      // Extract the data array from the response
+      const teamLeadersData = response.data || [];
+      console.log("Team leaders data:", teamLeadersData);
+      
+      setTeamLeaders(teamLeadersData);
+    } catch (error) {
+      console.error("Failed to fetch team leaders:", error);
+      // Fallback to empty array
+      setTeamLeaders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchTeamLeaders();
+}, []);
+
 
   const handleChange = (name, value) => {
     setEvaluation((prev) => ({
@@ -245,161 +291,178 @@ const AgentForm = () => {
     month: "long",
     day: "numeric",
   });
+  
   return (
     <>
-      <style jsx>{`
-        .gradient-bg {
-          background: #f4f4f4;
-          min-height: 100vh;
-        }
-        
-        .header-section {
-          background: white;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .header-gradient {
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-        }
-        
-        .icon-badge {
-          width: 40px;
-          height: 40px;
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-        }
-        
-        .custom-card {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s ease;
-        }
-        
-        .custom-card:hover {
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .progress-header {
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-          border-radius: 16px 16px 0 0;
-        }
-        
-        .progress-custom {
-          height: 12px;
-          background-color: #e2e8f0;
-          border-radius: 6px;
-        }
-        
-        .progress-bar-custom {
-          background: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
-          border-radius: 6px;
-          transition: width 0.7s ease;
-        }
-        
-        .form-control-modern {
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
-          padding: 12px 16px;
-          transition: all 0.2s ease;
-        }
-        
-        .form-control-modern:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .radio-card {
-          border: 2px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 16px;
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-        
-        .radio-card:hover {
-          background-color: #f9fafb;
-        }
-        
-        .radio-card.selected-primary {
-          border-color: #3b82f6;
-          background-color: rgba(59, 130, 246, 0.05);
-        }
-        
-        .radio-card.selected-success {
-          border-color: #10b981;
-          background-color: rgba(16, 185, 129, 0.05);
-        }
-        
-        .radio-card.selected-danger {
-          border-color: #ef4444;
-          background-color: rgba(239, 68, 68, 0.05);
-        }
-        
-        .criteria-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .badge-points {
-          font-size: 0.75rem;
-          font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 20px;
-        }
-        
-        .final-score-card {
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-          border-radius: 16px;
-          box-shadow: 0 10px 15px rgba(0,0,0,0.1);
-        }
-        
-        .submit-btn {
-          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-          border: none;
-          border-radius: 16px;
-          padding: 16px 32px;
-          font-weight: 600;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-          transition: all 0.2s ease;
-        }
-        
-        .submit-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-          background: linear-gradient(135deg, #047857 0%, #059669 100%);
-        }
-        
-        .section-header {
-          border-bottom: 1px solid #e5e7eb;
-          padding: 1.5rem;
-        }
-        
-        .datetime-info {
-          font-size: 0.875rem;
-          color: #6b7280;
-        }
-        
-        .mode-selection {
-          gap: 16px;
-        }
-        
-        .readonly-field {
-          background-color: #f9fafb;
-          color: #6b7280;
-          cursor: not-allowed;
-        }
-      `}</style>
+      <style>{`
+  .gradient-bg {
+    background: #f4f4f4;
+    min-height: 100vh;
+  }
+  
+  .header-section {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .header-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  }
+  
+  .icon-badge {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+  
+  .custom-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+  
+  .custom-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .progress-header {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .progress-custom {
+    height: 12px;
+    background-color: #e2e8f0;
+    border-radius: 6px;
+  }
+  
+  .progress-bar-custom {
+    background: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
+    border-radius: 6px;
+    transition: width 0.7s ease;
+  }
+  
+  .form-control-modern {
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control-modern:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  .radio-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .radio-card:hover {
+    background-color: #f9fafb;
+  }
+  
+  .radio-card.selected-primary {
+    border-color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+  
+  .radio-card.selected-success {
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.05);
+  }
+  
+  .radio-card.selected-danger {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+  
+  .criteria-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .badge-points {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 20px;
+  }
+  
+  .final-score-card {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+  }
+  
+  .submit-btn {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    border: none;
+    border-radius: 16px;
+    padding: 16px 32px;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+  
+  .section-header {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.5rem;
+  }
+  
+  .datetime-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+  
+  .mode-selection {
+    gap: 16px;
+  }
+  
+  .readonly-field {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+  
+  .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 10px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`}</style>
 
       <div className="gradient-bg">
         {/* Header Section */}
@@ -487,12 +550,11 @@ const AgentForm = () => {
                         Email Address
                       </label>
                       <input
-  type="email"
-  className="form-control form-control-modern readonly-field"
-  value={evaluation.useremail}  // use useremail instead of email
-  readOnly
-/>
-
+                        type="email"
+                        className="form-control form-control-modern readonly-field"
+                        value={evaluation.useremail}
+                        readOnly
+                      />
                     </div>
 
                     {/* Lead ID */}
@@ -502,12 +564,12 @@ const AgentForm = () => {
                         Lead ID
                       </label>
                       <input
-            type="text"
-            className="form-control form-control-modern"
-            placeholder="Enter Lead ID"
-            value={evaluation.leadID}
-            onChange={(e) => handleChange("leadID", e.target.value)}  // fixed from leadId to leadID
-          />
+                        type="text"
+                        className="form-control form-control-modern"
+                        placeholder="Enter Lead ID"
+                        value={evaluation.leadID}
+                        onChange={(e) => handleChange("leadID", e.target.value)}
+                      />
                     </div>
 
                     {/* Agent Name */}
@@ -524,33 +586,36 @@ const AgentForm = () => {
                         onChange={(e) => handleChange("agentName", e.target.value)}
                       />
                     </div>
-
-                    {/* Team Leader */}
-                    <div className="col-12">
-                      <label className="form-label fw-medium d-flex align-items-center mb-3">
-                        <Users size={16} className="me-2 text-primary" />
-                        Team Leader
-                      </label>
-                      <div className="row g-3">
-                        {teamLeaders.map((leader) => (
-                          <div key={leader._id} className="col-md-6">
-                            <div className={`radio-card ${evaluation.teamleader === leader.leadName ? 'selected-primary' : ''}`}>
-                              <label className="form-check-label d-flex align-items-center mb-0 w-100">
-                                <input
-                                  type="radio"
-                                  name="teamleader"
-                                  value={leader.leadName}
-                                  checked={evaluation.teamleader === leader.leadName}
-                                  onChange={(e) => handleChange("teamleader", e.target.value)}
-                                  className="form-check-input me-3"
-                                />
-                                <span className="fw-medium">{leader.leadName}</span>
-                              </label>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+<div className="col-12">
+  <label className="form-label fw-medium d-flex align-items-center mb-3">
+    <Users size={16} className="me-2 text-primary" />
+    Team Leader
+    {loading && <div className="loading-spinner ms-2"></div>}
+  </label>
+  {teamLeaders.length > 0 ? (
+    <div className="row g-3">
+      {teamLeaders.map((leader) => (
+        <div key={leader._id} className="col-md-6">
+          <div className={`radio-card ${evaluation.teamleader === leader.name ? 'selected-primary' : ''}`}>
+            <label className="form-check-label d-flex align-items-center mb-0 w-100">
+              <input
+                type="radio"
+                name="teamleader"
+                value={leader.name}
+                checked={evaluation.teamleader === leader.name}
+                onChange={(e) => handleChange("teamleader", e.target.value)}
+                className="form-check-input me-3"
+              />
+              <span className="fw-medium">{leader.name}</span>
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    !loading && <div className="text-muted">No team leaders available</div>
+  )}
+</div>
 
                     {/* Mode of Communication */}
                     <div className="col-12">
@@ -713,14 +778,14 @@ const AgentForm = () => {
 
               {/* Submit Button */}
               <div className="d-grid">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="btn submit-btn text-white fw-semibold"
-        >
-          Submit Evaluation Assessment
-        </button>
-      </div>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="btn submit-btn text-white fw-semibold"
+                >
+                  Submit Evaluation Assessment
+                </button>
+              </div>
             </div>
           </div>
         </div>

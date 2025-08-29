@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AlertTriangle, User, Mail, Hash, Users, MessageSquare, Star, FileText, Clock, Calendar, Upload, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { createEscalationApi } from "../features/escalationsApi";
+import { getTeamLeadsApi } from "../features/teamleadApi";
+
+
 
 const EscalationForm = () => {
   const [otherReason, setOtherReason] = useState(""); 
@@ -39,13 +42,56 @@ const EscalationForm = () => {
     documentation: { rateVal: 0 },
   });
 
+    const [teamLeaders, setTeamLeaders] = useState([]);
+    const [loading, setLoading] = useState(false);
+    
+
   
-  const leaders = [
-    { _id: "1", leadName: "John Smith" },
-    { _id: "2", leadName: "Sarah Johnson" },
-    { _id: "3", leadName: "Mike Davis" },
-    { _id: "4", leadName: "Emily Wilson" }
-  ];
+  useEffect(() => {
+    const fetchTeamLeaders = async () => {
+      try {
+        setLoading(true);
+        console.log("Fetching team leaders...");
+        
+        // Try to import the module dynamically
+        const teamLeadModule = await import('../features/teamleadApi');
+        console.log("Team lead module:", teamLeadModule);
+        
+        // Check different export patterns
+        let getTeamLeadsFunction;
+        
+        if (teamLeadModule.getTeamLeadsApi) {
+          getTeamLeadsFunction = teamLeadModule.getTeamLeadsApi;
+          console.log("Using getTeamLeadsApi export");
+        } else if (teamLeadModule.default && teamLeadModule.default.getTeamLeadsApi) {
+          getTeamLeadsFunction = teamLeadModule.default.getTeamLeadsApi;
+          console.log("Using default.getTeamLeadsApi export");
+        } else if (teamLeadModule.default) {
+          getTeamLeadsFunction = teamLeadModule.default;
+          console.log("Using default export");
+        } else {
+          throw new Error('Team leads API function not found');
+        }
+        
+        const response = await getTeamLeadsFunction();
+        console.log("API response:", response);
+        
+        // Extract the data array from the response
+        const teamLeadersData = response.data || [];
+        console.log("Team leaders data:", teamLeadersData);
+        
+        setTeamLeaders(teamLeadersData);
+      } catch (error) {
+        console.error("Failed to fetch team leaders:", error);
+        // Fallback to empty array
+        setTeamLeaders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchTeamLeaders();
+  }, []);
 
   const handlerEscalation = (name, value) => {
     setEscalation((pre) => ({
@@ -257,7 +303,7 @@ const EscalationForm = () => {
 
   return (
     <>
-      <style>{`
+     <style>{`
         /* ... (Your CSS styles as provided previously) ... */
         body {
           font-family: 'Inter', sans-serif;
@@ -547,7 +593,6 @@ const EscalationForm = () => {
           }
         }
       `}</style>
-
       <div className="gradient-bg">
         {/* Header Section */}
         <div className="header-section">
@@ -635,14 +680,15 @@ const EscalationForm = () => {
                         Email Address <span className="text-danger">*</span>
                       </label>
                       <input
-    type="email"
-    name="useremail"
-    className="form-control form-control-modern"
-    readOnly
-    placeholder="Enter your email"
-    value={escalation.useremail}
-    required
+  type="email"
+  name="useremail"
+  className="form-control form-control-modern readonly-field"
+  placeholder="Enter your email"
+  value={escalation.useremail}
+  onChange={handleChange}
+  required
 />
+
                     </div>
 
                     {/* Lead ID */}
@@ -699,40 +745,44 @@ const EscalationForm = () => {
                 </div>
               </div>
 
-              {/* Team Leader Selection */}
-              <div className="custom-card mb-4">
-                <div className="section-header">
+              <div >
+<div className="col-12 custom-card mb-4 p-3 ">
+  <div className="section-header">
                   <h3 className="h5 fw-semibold text-dark mb-0 d-flex align-items-center">
-                    <Users size={20} className="me-2 text-danger" />
-                    Team Leader <span className="text-danger">*</span>
+                    <TrendingUp size={20} className="me-2 text-danger" />
+                    Team Lead
                   </h3>
                 </div>
-                <div className="p-4">
-                  <div className="row g-3">
-                    {leaders.map((leader) => (
-                      <div key={leader._id} className="col-md-6">
-                        <div className={`radio-card ${escalation.teamleader === leader.leadName ? 'selected-primary' : ''}`}>
-                          <label className="form-check-label d-flex align-items-center mb-0 w-100">
-                            <input
-                              type="radio"
-                              name="teamleader"
-                              value={leader.leadName}
-                              checked={escalation.teamleader === leader.leadName}
-                              onChange={handleChange}
-                              className="form-check-input me-3"
-                              required
-                            />
-                            <span className="fw-medium">{leader.leadName}</span>
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+  {teamLeaders.length > 0 ? (
+    <div className="row g-3 mt-2">
+      {teamLeaders.map((leader) => (
+        <div key={leader._id} className="col-md-6">
+          <div className={`radio-card ${escalation.teamleader === leader.name ? 'selected-primary' : ''}`}>
+            <label className="form-check-label d-flex align-items-center mb-0 w-100">
+              <input
+                type="radio"
+                name="teamleader"
+                value={leader.name}
+                checked={escalation.teamleader === leader.name}
+                onChange={handleChange}
+                className="form-check-input me-3"
+              />
+              <span className="fw-medium">{leader.name}</span>
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    !loading && <div className="text-muted">No team leaders available</div>
+  )}
+</div>
               </div>
 
+
+
               {/* Lead Details */}
-              <div className="custom-card mb-4">
+              <div className="custom-card mb-4 mt-5">
                 <div className="section-header">
                   <h3 className="h5 fw-semibold text-dark mb-0 d-flex align-items-center">
                     <TrendingUp size={20} className="me-2 text-danger" />

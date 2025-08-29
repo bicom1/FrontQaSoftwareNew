@@ -75,6 +75,13 @@ const Sidebar = ({
           {sidebarOpen && <span className="ms-2">Users</span>}
         </button>
         <button 
+          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'teamlead' ? 'btn-primary' : 'btn-dark'}`}
+          onClick={() => setActiveTab('teamlead')}
+        >
+          <UsersIcon size={20} />
+          {sidebarOpen && <span className="ms-2">Add Team Lead</span>}
+        </button>
+        <button 
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'projects' ? 'btn-primary' : 'btn-dark'}`}
           onClick={() => setActiveTab('projects')}
         >

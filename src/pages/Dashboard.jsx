@@ -10,6 +10,7 @@ import Overview from '../components/overview';
 import Sidebar from '../components/sidebar';
 import Header from '../components/Header';
 import { getProfileApi } from '../features/userApis';
+import AddTeamLead from '../components/AddTeamLead';
 
 const Dashboard = ({setIsLoggedIn}) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -46,6 +47,8 @@ const Dashboard = ({setIsLoggedIn}) => {
         return <Analytics />;
       case 'users':
         return <UserManagement />;
+      case 'teamlead':
+        return <AddTeamLead/>
       case 'projects':
         return <Projects />;
       case 'agent':
