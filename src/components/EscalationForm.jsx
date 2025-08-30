@@ -8,22 +8,39 @@ import { getTeamLeadsApi } from "../features/teamleadApi";
 const EscalationForm = () => {
   const [otherReason, setOtherReason] = useState(""); 
   const [escalation, setEscalation] = useState({
-    owner: "",
-    useremail: "",
-    leadID: "",
-    agentName: "",
-    teamleader: "",
-    evaluatedBy: "",
-    leadSource: "",
-    userrating: "",
-    leadStatus: "",
-    escSeverity: "",
-    issueIden: "",
-    escAction: "", 
-    documentation: "",
-    successmaration: "",
-    audio: null, 
-  });
+  owner: "",
+  useremail: "", // will be set after loading user
+  leadID: "",
+  agentName: "",
+  teamleader: "",
+  evaluatedBy: "",
+  leadSource: "",
+  userrating: "",
+  leadStatus: "",
+  escSeverity: "",
+  issueIden: "",
+  escAction: "", 
+  documentation: "",
+  successmaration: "",
+  audio: null, 
+});
+
+// Load current user on mount
+useEffect(() => {
+  const userData = localStorage.getItem("user");
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      setEscalation(prev => ({
+        ...prev,
+        useremail: user.email || "",
+        owner: user._id || ""
+      }));
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+    }
+  }
+}, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -111,53 +128,87 @@ const EscalationForm = () => {
 
  
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!escalation.useremail || !escalation.leadID || !escalation.agentName || !escalation.teamleader) {
-      alert("Please fill all required fields: Email, Lead ID, Agent Name, and Team Leader");
+  e.preventDefault();
+
+  const userData = localStorage.getItem("user"); // or however you store user
+  let owner = "";
+  if (userData) {
+    try {
+      owner = JSON.parse(userData)._id || "";
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+      alert("Could not identify user. Please log in again.");
       return;
     }
-    
-    const formData = new FormData();
-  
-    
-    Object.entries(escalation).forEach(([key, value]) => {
-      if (key !== 'audio' && value !== null && value !== undefined) {
-        formData.append(key, value);
-      }
-    });
-  
-    
-    if (escalation.audio) {
-      formData.append('audio', escalation.audio);
+  }
+
+  if (!owner) {
+    alert("Owner not found. Please log in.");
+    return;
+  }
+
+  const requiredFields = ["useremail", "leadID", "agentName", "teamleader", "evaluatedBy", "leadSource"];
+  for (let field of requiredFields) {
+    if (!escalation[field] || escalation[field].trim() === "") {
+      alert(`Please fill the required field: ${field}`);
+      return;
     }
-  
-    
-    if (escalation.escAction === "Other" && otherReason.trim() !== "") {
-      formData.append('otherReason', otherReason);
+  }
+
+  const formData = new FormData();
+  Object.entries(escalation).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") {
+      if (key !== "audio") formData.append(key, value);
     }
-  
+  });
+
+  formData.append("owner", owner);
+
+  if (escalation.audio) formData.append("audio", escalation.audio);
+
+  if (escalation.escAction === "Other" && otherReason.trim() !== "") {
+    formData.set("escAction", otherReason.trim());
+  }
+
     try {
+      setLoading(true);
       await createEscalationApi(formData);
-      
-      setEscalation({
-        owner: "", useremail: "", leadID: "", agentName: "", mod: "",
-        teamleader: "", evaluatedBy: "", leadSource: "", userrating: "",
-        leadStatus: "", escSeverity: "", issueIden: "", escAction: "",
-        documentation: "", successmaration: "", audio: null,
-      });
+      alert("Escalation submitted successfully!");
+      // reset form
+    setEscalation({
+    owner: "",
+    useremail: userData.email,
+    leadID: "",
+    agentName: "",
+    teamleader: "",
+    evaluatedBy: "",
+    leadSource: "",
+    userrating: "",
+    leadStatus: "",
+    escSeverity: "",
+    issueIden: "",
+    escAction: "",
+    documentation: "",
+    successmaration: "",
+    audio: null,
+  });
+
       setOtherReason("");
-      setUserRate({ 
-        severity: { rateVal: 0 }, 
-        issue: { rateVal: 0 }, 
-        action: { rateVal: 0 }, 
-        documentation: { rateVal: 0 } 
+      setUserRate({
+        severity: { rateVal: 0 },
+        issue: { rateVal: 0 },
+        action: { rateVal: 0 },
+        documentation: { rateVal: 0 },
       });
-  
     } catch (error) {
-      console.error('Submission error:', error);
-      // Error handling is done in the API service
+      console.error("Create Escalation Error:", error.response || error);
+      alert("Failed to submit escalation. Check console for details.");
+    } finally {
+      setLoading(false);
     }
-  };
+};
+
+
 
   const currentRating = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
   const maxRating = 64; // Max points if all categories are rated highest
@@ -303,296 +354,7 @@ const EscalationForm = () => {
 
   return (
     <>
-     <style>{`
-        /* ... (Your CSS styles as provided previously) ... */
-        body {
-          font-family: 'Inter', sans-serif;
-          background-color: #f8fafd;
-          margin: 0;
-          padding: 0;
-        }
-        .gradient-bg {
-          background: linear-gradient(to right, #e0f2f7, #c1e7f3);
-          min-height: 100vh;
-          padding-bottom: 50px;
-        }
-        .container-fluid {
-          max-width: 1200px;
-        }
-        .header-section {
-          background-color: #ffffff;
-          border-bottom: 1px solid #e2e8f0;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        .header-section .icon-badge {
-          background-color: #fef2f2;
-          color: #dc2626;
-          padding: 12px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.1);
-        }
-        .header-section h1 {
-          color: #1a202c;
-          font-size: 1.8rem;
-        }
-        .header-section .text-muted {
-          color: #718096 !important;
-        }
-        .datetime-info {
-          font-size: 0.9rem;
-          color: #4a5568;
-        }
-        .custom-card {
-          background-color: #ffffff;
-          border-radius: 12px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-          overflow: hidden;
-        }
-        .custom-card .section-header {
-          background-color: #f7fafc;
-          padding: 1.25rem 1.5rem;
-          border-bottom: 1px solid #edf2f7;
-        }
-        .custom-card .section-header h3 {
-          color: #2d3748;
-          font-size: 1.15rem;
-        }
-        .form-label {
-          color: #2d3748;
-          font-weight: 600;
-          margin-bottom: 0.75rem;
-          display: flex;
-          align-items: center;
-        }
-        .form-label .text-danger {
-          margin-left: 5px;
-        }
-        .form-control-modern {
-          border: 1px solid #cbd5e0;
-          border-radius: 8px;
-          padding: 12px 15px;
-          font-size: 1rem;
-          color: #2d3748;
-          transition: all 0.3s ease;
-        }
-        .form-control-modern:focus {
-          border-color: #4299e1;
-          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
-          outline: none;
-        }
-        textarea.form-control-modern {
-          min-height: 90px;
-        }
-        .radio-card {
-          background-color: #f7fafc;
-          border: 2px solid #edf2f7;
-          border-radius: 10px;
-          padding: 1rem;
-          transition: all 0.2s ease-in-out;
-          cursor: pointer;
-          display: flex;
-          align-items: flex-start;
-        }
-        .radio-card:hover {
-          border-color: #a0aec0;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        .radio-card.selected-primary {
-          border-color: #3182ce;
-          background-color: #ebf8ff;
-          box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
-        }
-        .radio-card.selected-severity {
-          border-color: var(--severity-color, #dc2626);
-          background-color: var(--severity-bg, rgba(220, 38, 38, 0.1));
-          box-shadow: 0 0 0 3px var(--severity-bg, rgba(220, 38, 38, 0.2));
-        }
-        .radio-card.selected-success {
-          border-color: #059669;
-          background-color: rgba(5, 150, 105, 0.1);
-          box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
-        }
-        .radio-card.selected-danger {
-          border-color: #ef4444;
-          background-color: rgba(239, 68, 68, 0.1);
-          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-        }
-        .radio-card .form-check-input {
-          flex-shrink: 0;
-          margin-top: 0.25rem;
-          margin-right: 1rem;
-        }
-        .radio-card .fw-medium {
-          color: #2d3748;
-        }
-        .issue-emoji {
-          font-size: 1.5rem;
-          margin-right: 10px;
-          line-height: 1;
-        }
-        .badge-points {
-          font-size: 0.75rem;
-          padding: 0.4em 0.7em;
-          border-radius: 5px;
-          font-weight: 600;
-          margin-left: 10px;
-        }
-        .progress-header {
-          background: linear-gradient(135deg, #4299e1, #3182ce);
-          border-top-left-radius: 12px;
-          border-top-right-radius: 12px;
-        }
-        .progress-custom {
-          background-color: #e2e8f0;
-          border-radius: 10px;
-          height: 12px;
-          overflow: hidden;
-        }
-        .progress-bar-custom {
-          background: linear-gradient(to right, #63b3ed, #4299e1);
-          border-radius: 10px;
-          transition: width 0.5s ease-in-out;
-        }
-        .badge {
-          padding: 0.5em 0.8em;
-          border-radius: 6px;
-          font-weight: bold;
-        }
-        .text-danger {
-          color: #e53e3e !important;
-        }
-        .bg-danger-subtle {
-          background-color: #fef2f2 !important;
-          color: #dc2626 !important;
-        }
-        .text-warning {
-          color: #dd6b20 !important;
-        }
-        .bg-warning-subtle {
-          background-color: #fffaf0 !important;
-          color: #ea580c !important;
-        }
-        .text-primary {
-          color: #3182ce !important;
-        }
-        .bg-primary-subtle {
-          background-color: #ebf8ff !important;
-          color: #3182ce !important;
-        }
-        .text-success {
-          color: #38a169 !important;
-        }
-        .bg-success-subtle {
-          background-color: #f0fff4 !important;
-          color: #059669 !important;
-        }
-        .border-dashed {
-          border-style: dashed !important;
-          border-color: #cbd5e0 !important;
-        }
-        .final-score-card {
-          background: linear-gradient(135deg, #0b60b0, #001b79);
-          border-radius: 12px;
-          color: #ffffff;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-        .final-score-card .display-4 {
-          font-size: 3.5rem;
-        }
-        .final-score-card .h4 {
-          font-size: 1.5rem;
-        }
-        .submit-btn {
-          background: linear-gradient(to right, #48bb78, #38a169);
-          border: none;
-          padding: 15px 30px;
-          font-size: 1.1rem;
-          border-radius: 10px;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 10px rgba(56, 161, 105, 0.3);
-        }
-        .submit-btn:hover {
-          background: linear-gradient(to right, #38a169, #2f855a);
-          box-shadow: 0 6px 15px rgba(56, 161, 105, 0.4);
-          transform: translateY(-2px);
-        }
-        .me-1 { margin-right: 0.25rem !important; }
-        .me-2 { margin-right: 0.5rem !important; }
-        .me-3 { margin-right: 1rem !important; }
-        .mb-0 { margin-bottom: 0 !important; }
-        .mb-1 { margin-bottom: 0.25rem !important; }
-        .mb-2 { margin-bottom: 0.5rem !important; }
-        .mb-3 { margin-bottom: 1rem !important; }
-        .mb-4 { margin-bottom: 1.5rem !important; }
-        .py-4 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
-        .p-4 { padding: 1.5rem !important; }
-        .p-5 { padding: 3rem !important; }
-        .d-flex { display: flex !important; }
-        .align-items-center { align-items: center !important; }
-        .align-items-start { align-items: flex-start !important; }
-        .justify-content-center { justify-content: center !important; }
-        .justify-content-between { justify-content: space-between !important; }
-        .d-grid { display: grid !important; }
-        .text-center { text-align: center !important; }
-        .text-end { text-align: end !important; }
-        .fw-bold { font-weight: 700 !important; }
-        .fw-semibold { font-weight: 600 !important; }
-        .fw-medium { font-weight: 500 !important; }
-        .h2 { font-size: 2rem; }
-        .h3 { font-size: 1.75rem; }
-        .h4 { font-size: 1.5rem; }
-        .h5 { font-size: 1.25rem; }
-        .small { font-size: 0.875em !important; }
-        .lh-base { line-height: 1.5; }
-        @media (max-width: 768px) {
-          .header-section h1 {
-            font-size: 1.5rem;
-          }
-          .header-section .icon-badge {
-            padding: 8px;
-            box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.1);
-          }
-          .custom-card .section-header {
-            padding: 1rem;
-          }
-          .custom-card .section-header h3 {
-            font-size: 1rem;
-          }
-          .p-4 {
-            padding: 1rem !important;
-          }
-          .p-5 {
-            padding: 2rem !important;
-          }
-          .final-score-card .display-4 {
-            font-size: 2.5rem;
-          }
-          .final-score-card .h4 {
-            font-size: 1.2rem;
-          }
-          .submit-btn {
-            padding: 12px 20px;
-            font-size: 1rem;
-          }
-        }
-        @media (max-width: 576px) {
-          .header-section .row {
-            flex-direction: column;
-            align-items: flex-start !important;
-          }
-          .header-section .col-auto {
-            width: 100%;
-            text-align: start !important;
-            margin-top: 1rem;
-          }
-          .header-section .text-muted.mb-0.ms-5 {
-            margin-left: 0 !important;
-          }
-        }
-      `}</style>
+    
       <div className="gradient-bg">
         {/* Header Section */}
         <div className="header-section">
@@ -681,12 +443,10 @@ const EscalationForm = () => {
                       </label>
                       <input
   type="email"
-  name="useremail"
   className="form-control form-control-modern readonly-field"
   placeholder="Enter your email"
   value={escalation.useremail}
-  onChange={handleChange}
-  required
+  readOnly
 />
 
                     </div>

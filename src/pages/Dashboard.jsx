@@ -3,7 +3,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import AgentForm from '../components/AgentForm'; 
 import EscalationForm from '../components/EscalationForm';
 import PpcForm from '../components/PpcForm';
-import Analytics from '../components/Analytics';
 import Projects from '../components/Projects';
 import UserManagement from '../components/UserManagement';
 import Overview from '../components/overview';
@@ -11,6 +10,8 @@ import Sidebar from '../components/sidebar';
 import Header from '../components/Header';
 import { getProfileApi } from '../features/userApis';
 import AddTeamLead from '../components/AddTeamLead';
+import AgentList from '../components/AgentList';
+import QcList from '../components/QcList';
 
 const Dashboard = ({setIsLoggedIn}) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -44,7 +45,7 @@ const Dashboard = ({setIsLoggedIn}) => {
       case 'overview':
         return <Overview />;
       case 'analytics':
-        return <Analytics />;
+        return <QcList />;
       case 'users':
         return <UserManagement />;
       case 'teamlead':
@@ -57,6 +58,8 @@ const Dashboard = ({setIsLoggedIn}) => {
         return <EscalationForm />;
       case 'ppc':
         return <PpcForm />;
+      case 'AgentList':
+       return <AgentList/>
       default:
         return <Overview />;
     }

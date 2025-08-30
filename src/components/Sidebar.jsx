@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart2, Activity, Users as UsersIcon, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target } from 'lucide-react';
+import { BarChart2, Activity, Users as UsersIcon, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target, SquareUserRound, CircleUser } from 'lucide-react';
 import { getProfileApi } from '../features/userApis';
 
 const Sidebar = ({ 
@@ -60,12 +60,20 @@ const Sidebar = ({
           <BarChart2 size={20} />
           {sidebarOpen && <span className="ms-2">Overview</span>}
         </button>
+
         <button 
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'analytics' ? 'btn-primary' : 'btn-dark'}`}
           onClick={() => setActiveTab('analytics')}
         >
           <Activity size={20} />
           {sidebarOpen && <span className="ms-2">Bitrix</span>}
+        </button>
+        <button 
+          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'AgentList' ? 'btn-primary' : 'btn-dark'}`}
+          onClick={() => setActiveTab('AgentList')}
+        >
+          <SquareUserRound size={20} />
+          {sidebarOpen && <span className="ms-2">Agent List</span>}
         </button>
         <button 
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'users' ? 'btn-primary' : 'btn-dark'}`}
@@ -78,7 +86,8 @@ const Sidebar = ({
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'teamlead' ? 'btn-primary' : 'btn-dark'}`}
           onClick={() => setActiveTab('teamlead')}
         >
-          <UsersIcon size={20} />
+          <CircleUser size={20} />
+          
           {sidebarOpen && <span className="ms-2">Add Team Lead</span>}
         </button>
         <button 
