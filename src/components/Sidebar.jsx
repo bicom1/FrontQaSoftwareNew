@@ -66,7 +66,7 @@ const Sidebar = ({
           onClick={() => setActiveTab('analytics')}
         >
           <Activity size={20} />
-          {sidebarOpen && <span className="ms-2">Bitrix</span>}
+          {sidebarOpen && <span className="ms-2">QC Team</span>}
         </button>
         <button 
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'AgentList' ? 'btn-primary' : 'btn-dark'}`}
