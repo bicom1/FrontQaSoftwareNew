@@ -80,7 +80,7 @@ const QcList = () => {
       <div className="d-flex justify-content-between align-items-center mb-4 header-section">
         <div>
           <h1 className="fw-bold d-flex align-items-center gap-2 mb-1">
-            <BarChart3 size={28} className="text-primary" /> QC Analytics Dashboard
+            <BarChart3 size={28} className="text-primary" /> QC Team List
           </h1>
           <p className="text-muted mb-0">Monitor performance and manage leads efficiently</p>
         </div>

@@ -14,8 +14,8 @@ import {
   Activity,
   TrendingUp
 } from "lucide-react";
-import Sidebar from './Sidebar';
-import Header from './Header';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
 import { getProfileApi } from '../features/userApis';
 import TableAdmin from "./TableAdmin";
 
