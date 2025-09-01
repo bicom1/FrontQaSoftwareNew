@@ -12,6 +12,7 @@ import { getProfileApi } from '../features/userApis';
 import AddTeamLead from '../components/AddTeamLead';
 import AgentList from '../components/AgentList';
 import QcList from '../components/QcList';
+import ReportDownload from '../components/ReportDownload';
 
 const Dashboard = ({setIsLoggedIn}) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -60,6 +61,8 @@ const Dashboard = ({setIsLoggedIn}) => {
         return <PpcForm />;
       case 'AgentList':
        return <AgentList/>
+      case 'reportDownload':
+       return <ReportDownload/>
       default:
         return <Overview />;
     }
