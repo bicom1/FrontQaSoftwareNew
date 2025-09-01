@@ -1,9 +1,6 @@
 import axios from "axios";
 import { baseUrl, getToken } from "../features/config";
 
-
-
-
 // Axios config with auth
 const authHeader = () => ({
   headers: {

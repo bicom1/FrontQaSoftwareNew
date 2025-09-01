@@ -49,10 +49,10 @@ const Overview = () => {
           overviewAnalyticsRangeApi(timeRange)
         ]);
 
-        setTotalUsers(users);
-        setTotalEscalationCounts(escalations);
-        setTotalEvaluationCounts(evaluations);
-        setTotalMarketingCounts(marketing);
+        setTotalUsers(users.count);
+        setTotalEscalationCounts(escalations.count);
+        setTotalEvaluationCounts(evaluations.count);
+        setTotalMarketingCounts(marketing.count);
 
         setEscalationAnalytics(escalationAnalyticsData);
         setEvaluationAnalytics({

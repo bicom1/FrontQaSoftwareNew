@@ -57,7 +57,7 @@ const BitrixLeadDetails = ({ leadId }) => {
         </div>
       </div>
 
-      {/* Contact Info */}
+      Contact Info
       <div className="col-md-6">
         <div className="border rounded p-3 shadow-sm bg-light h-100">
           <h5 className="mb-3 d-flex align-items-center">
