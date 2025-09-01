@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AlertTriangle, User, Mail, Hash, Users, MessageSquare, Star, FileText, Clock, Calendar, Upload, TrendingUp, CheckCircle2 } from 'lucide-react';
-import { createEscalationApi } from "../features/escalationsApi";
 import { getTeamLeadsApi } from "../features/teamleadApi";
+import { createEscalationApi } from "../features/escalationsApi";
 
 
 
@@ -13,7 +13,7 @@ const EscalationForm = () => {
   leadID: "",
   agentName: "",
   teamleader: "",
-  evaluatedBy: "",
+  evaluatedby: "",
   leadSource: "",
   userrating: "",
   leadStatus: "",
@@ -25,12 +25,14 @@ const EscalationForm = () => {
   audio: null, 
 });
 
-// Load current user on mount
+
+
 useEffect(() => {
   const userData = localStorage.getItem("user");
   if (userData) {
     try {
       const user = JSON.parse(userData);
+      console.log("Loaded user:", user); // 🔹 Add this
       setEscalation(prev => ({
         ...prev,
         useremail: user.email || "",
@@ -41,6 +43,7 @@ useEffect(() => {
     }
   }
 }, []);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -126,87 +129,89 @@ useEffect(() => {
     }
   };
 
- 
-  const handleSubmit = async (e) => {
+
+
+const handleSubmit = async (e) => {
   e.preventDefault();
 
-  const userData = localStorage.getItem("user"); // or however you store user
-  let owner = "";
-  if (userData) {
-    try {
-      owner = JSON.parse(userData)._id || "";
-    } catch (err) {
-      console.error("Error parsing user data:", err);
-      alert("Could not identify user. Please log in again.");
-      return;
-    }
-  }
+  if (loading) return; // Prevent double submission
 
+  const owner = escalation.owner;
   if (!owner) {
     alert("Owner not found. Please log in.");
     return;
   }
 
-  const requiredFields = ["useremail", "leadID", "agentName", "teamleader", "evaluatedBy", "leadSource"];
+  // Validate required fields
+  const requiredFields = [
+    "useremail", "leadID", "agentName", "teamleader",
+    "evaluatedby", "leadSource", "userrating", "leadStatus",
+    "escSeverity", "issueIden", "escAction", "successmaration"
+  ];
+
   for (let field of requiredFields) {
-    if (!escalation[field] || escalation[field].trim() === "") {
+    if (!escalation[field]?.toString().trim()) {
       alert(`Please fill the required field: ${field}`);
       return;
     }
   }
 
-  const formData = new FormData();
-  Object.entries(escalation).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== "") {
-      if (key !== "audio") formData.append(key, value);
-    }
-  });
+  setLoading(true);
 
-  formData.append("owner", owner);
+  try {
+    // --- API call ---
+    await createEscalationApi(escalation, otherReason);
 
-  if (escalation.audio) formData.append("audio", escalation.audio);
+    // --- Only show success alert once ---
+    alert("Escalation submitted successfully!");
 
-  if (escalation.escAction === "Other" && otherReason.trim() !== "") {
-    formData.set("escAction", otherReason.trim());
-  }
-
+    // --- Reset form ---
+    let parsedUser = { _id: "", email: "" };
     try {
-      setLoading(true);
-      await createEscalationApi(formData);
-      alert("Escalation submitted successfully!");
-      // reset form
-    setEscalation({
-    owner: "",
-    useremail: userData.email,
-    leadID: "",
-    agentName: "",
-    teamleader: "",
-    evaluatedBy: "",
-    leadSource: "",
-    userrating: "",
-    leadStatus: "",
-    escSeverity: "",
-    issueIden: "",
-    escAction: "",
-    documentation: "",
-    successmaration: "",
-    audio: null,
-  });
-
-      setOtherReason("");
-      setUserRate({
-        severity: { rateVal: 0 },
-        issue: { rateVal: 0 },
-        action: { rateVal: 0 },
-        documentation: { rateVal: 0 },
-      });
-    } catch (error) {
-      console.error("Create Escalation Error:", error.response || error);
-      alert("Failed to submit escalation. Check console for details.");
-    } finally {
-      setLoading(false);
+      const userData = localStorage.getItem("user");
+      if (userData) parsedUser = JSON.parse(userData);
+    } catch (err) {
+      console.warn("Failed to parse userData", err);
     }
+
+    setEscalation({
+      owner: parsedUser._id || "",
+      useremail: parsedUser.email || "",
+      leadID: "",
+      agentName: "",
+      teamleader: "",
+      evaluatedby: "",
+      leadSource: "",
+      userrating: "",
+      leadStatus: "",
+      escSeverity: "",
+      issueIden: "",
+      escAction: "",
+      documentation: "",
+      successmaration: "",
+      audio: null,
+    });
+
+    setOtherReason("");
+    setUserRate({
+      severity: { rateVal: 0 },
+      issue: { rateVal: 0 },
+      action: { rateVal: 0 },
+      documentation: { rateVal: 0 },
+    });
+  } catch (error) {
+    console.error(error);
+    alert("Failed to submit escalation. Check console for details.");
+  } finally {
+    setLoading(false);
+  }
 };
+
+
+
+
+
+
 
 
 
@@ -354,6 +359,175 @@ useEffect(() => {
 
   return (
     <>
+     <style>{`
+  .gradient-bg {
+    background: #f4f4f4;
+    min-height: 100vh;
+  }
+  
+  .header-section {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .header-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  }
+  
+  .icon-badge {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+  
+  .custom-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+  
+  .custom-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .progress-header {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .progress-custom {
+    height: 12px;
+    background-color: #e2e8f0;
+    border-radius: 6px;
+  }
+  
+  .progress-bar-custom {
+    background: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
+    border-radius: 6px;
+    transition: width 0.7s ease;
+  }
+  
+  .form-control-modern {
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control-modern:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  .radio-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .radio-card:hover {
+    background-color: #f9fafb;
+  }
+  
+  .radio-card.selected-primary {
+    border-color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+  
+  .radio-card.selected-success {
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.05);
+  }
+  
+  .radio-card.selected-danger {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+  
+  .criteria-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .badge-points {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 20px;
+  }
+  
+  .final-score-card {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+  }
+  
+  .submit-btn {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    border: none;
+    border-radius: 16px;
+    padding: 16px 32px;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+  
+  .section-header {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.5rem;
+  }
+  
+  .datetime-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+  
+  .mode-selection {
+    gap: 16px;
+  }
+  
+  .readonly-field {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+  
+  .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 10px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`}</style>
     
       <div className="gradient-bg">
         {/* Header Section */}
@@ -476,10 +650,10 @@ useEffect(() => {
                       </label>
                       <input
                         type="text"
-                        name="evaluatedBy"
+                        name="evaluatedby"
                         className="form-control form-control-modern"
                         placeholder="Enter Your Name"
-                        value={escalation.evaluatedBy}
+                        value={escalation.evaluatedby}
                         onChange={handleChange}
                         required
                       />
@@ -728,8 +902,8 @@ useEffect(() => {
                       )}
 
                       {/* Audio Upload Field - only if documentation is 'provided' or specific criteria met */}
-                      {criteria.id === 'documentation' && escalation.documentation === 'provided' && (
-                        <div className="col-12 mt-4">
+                      {criteria.id === 'documentation' && escalation.escAction === 'provided' && (
+ <div className="col-12 mt-4">
                           <label className="form-label fw-medium d-flex align-items-center">
                             <Upload size={16} className="me-2 text-primary" />
                             Attach Audio Recording (Optional)
@@ -747,7 +921,7 @@ useEffect(() => {
                             </p>
                           )}
                         </div>
-                      )}
+)}
                     </div>
                   </div>
                 </div>

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import BitrixLeadDetails from "./BitrixLeadDetails";
 import { getallusersApi } from "../features/userApis";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const QcList = () => {
   const [leadId, setLeadId] = useState("");
@@ -32,9 +33,19 @@ const QcList = () => {
     avgResponse: "2.4m"
   });
 
+  const navigate = useNavigate(); // Initialize navigate
+
   const handleSearch = (e) => {
     e.preventDefault();
     setLeadId(inputId.trim());
+  };
+
+  // Function to handle admin click
+  const handleAdminClick = (adminId, adminName) => {
+    // Navigate to admin details page with admin ID as parameter
+    navigate(`/admin-details/${adminId}`, { 
+      state: { adminName: adminName }
+    });
   };
 
   useEffect(() => {
@@ -125,17 +136,19 @@ const QcList = () => {
                       <div className={`admin-card card border-0 shadow-sm rounded-3 ${expandedAdmin === agent._id ? 'expanded' : ''}`}>
                         <div 
                           className="card-body py-3"
-                          onClick={() => setExpandedAdmin(expandedAdmin === agent._id ? null : agent._id)}
                           style={{cursor: 'pointer'}}
                         >
                           <div className="d-flex align-items-center justify-content-between">
-                            <div className="d-flex align-items-center gap-3">
+                            <div 
+                              className="d-flex align-items-center gap-3"
+                              onClick={() => handleAdminClick(agent._id, agent.name)}
+                            >
                               <div className="admin-avatar rounded-circle bg-primary-gradient text-white d-flex align-items-center justify-content-center fw-bold">
                                 {agent.name?.charAt(0).toUpperCase()}
                                 {agent.role === 'superadmin' && <span className="admin-badge"><Crown size={10} /></span>}
                               </div>
                               <div>
-                                <h6 className="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <h6 className="fw-bold mb-0 d-flex align-items-center gap-2 admin-name-link">
                                   {agent.name}
                                   {agent.role === 'superadmin' && <span className="badge bg-warning rounded-pill py-1">Owner</span>}
                                 </h6>
@@ -145,50 +158,50 @@ const QcList = () => {
                                 </small>
                               </div>
                             </div>
-                            <div className="d-flex align-items-center gap-3">
-                              <div className="text-end d-none d-md-block">
-                                <small className="text-muted d-flex align-items-center gap-1">
-                                  <Calendar size={14} />
-                                  Joined {new Date(agent.createdAt).toLocaleDateString()}
-                                </small>
-                              </div>
-                              {expandedAdmin === agent._id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            <div 
+                              onClick={() => setExpandedAdmin(expandedAdmin === agent._id ? null : agent._id)}
+                              style={{cursor: 'pointer'}}
+                            >
+                              {expandedAdmin === agent._id ? (
+                                <ChevronUp size={20} className="text-muted" />
+                              ) : (
+                                <ChevronDown size={20} className="text-muted" />
+                              )}
                             </div>
                           </div>
                           
                           {expandedAdmin === agent._id && (
                             <div className="admin-details mt-3 pt-3 border-top">
+                              <h6 className="detail-title">Admin Details</h6>
                               <div className="row">
                                 <div className="col-md-6">
-                                  <h6 className="detail-title">Admin Details</h6>
+                                  <div className="detail-item">
+                                    <span className="detail-label">Role:</span>
+                                    <span className="text-capitalize">{agent.role}</span>
+                                  </div>
                                   <div className="detail-item">
                                     <span className="detail-label">Status:</span>
                                     <span className="badge bg-success rounded-pill">Active</span>
                                   </div>
-                                  <div className="detail-item">
-                                    <span className="detail-label">Last Login:</span>
-                                    <span>Today at 2:45 PM</span>
-                                  </div>
-                                  <div className="detail-item">
-                                    <span className="detail-label">Leads Managed:</span>
-                                    <span>142</span>
-                                  </div>
                                 </div>
                                 <div className="col-md-6">
-                                  <h6 className="detail-title">Performance Metrics</h6>
                                   <div className="detail-item">
-                                    <span className="detail-label">Conversion Rate:</span>
-                                    <span className="fw-semibold">72%</span>
+                                    <span className="detail-label">Member Since:</span>
+                                    <span>{new Date(agent.createdAt).toLocaleDateString()}</span>
                                   </div>
                                   <div className="detail-item">
-                                    <span className="detail-label">Avg. Response Time:</span>
-                                    <span className="fw-semibold">1.8m</span>
-                                  </div>
-                                  <div className="detail-item">
-                                    <span className="detail-label">Satisfaction Score:</span>
-                                    <span className="fw-semibold">4.8/5</span>
+                                    <span className="detail-label">Last Login:</span>
+                                    <span>{new Date().toLocaleDateString()}</span>
                                   </div>
                                 </div>
+                              </div>
+                              <div className="mt-3">
+                                <button 
+                                  className="btn btn-outline-primary btn-sm"
+                                  onClick={() => handleAdminClick(agent._id, agent.name)}
+                                >
+                                  View Full Details
+                                </button>
                               </div>
                             </div>
                           )}
@@ -411,6 +424,15 @@ const QcList = () => {
         .detail-label {
           color: #64748b;
           font-weight: 500;
+        }
+        
+        .admin-name-link {
+          cursor: pointer;
+          transition: color 0.2s;
+        }
+        
+        .admin-name-link:hover {
+          color: #3b82f6;
         }
         
         @keyframes fadeIn {

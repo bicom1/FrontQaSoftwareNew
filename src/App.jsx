@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./components/Unauthorized";
-import AgentRoutes from "./routes/AgentRoutes"; // ✅ import this instead of AgentLayout
+import AgentRoutes from "./routes/AgentRoutes";
+import AdminDetails from "./components/AdminDetails";
+import QcList from "./components/QcList";
+// Import the Analytics component
 
 function RequireAuth({ children, allowedRoles }) {
   const token = localStorage.getItem("token");
@@ -69,6 +72,9 @@ function App() {
           </RequireAuth>
         }
       />
+     
+     {/* Corrected route path to match the navigation in Analytics component */}
+     <Route path="/admin-details/:adminId" element={<AdminDetails />} />
 
       {/* ✅ Correct Agent routes */}
       <Route

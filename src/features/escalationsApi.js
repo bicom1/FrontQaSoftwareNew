@@ -1,120 +1,148 @@
-// src/features/escalationApi.js
+// src/features/api/escalationApi.js
 import axios from "axios";
-import { baseUrl, getToken } from "./config";
 
-// Axios headers with token
-const authHeader = () => ({
-  headers: {
-    Authorization: `Bearer ${getToken()}`,
-  },
-});
+import { baseUrl, getToken } from "../features/config"; 
 
-export const createEscalationApi = async (payload) => {
-  try {
-    let config = authHeader();
-    let data = payload;
 
-    // If payload has 'audio' as a file, convert to FormData
-    if (payload.audio instanceof File) {
-      data = new FormData();
-      for (const key in payload) {
-        if (payload[key] !== null && payload[key] !== undefined) {
-          data.append(key, payload[key]);
-        }
-      }
-      // Let browser set Content-Type automatically
-      config.headers["Content-Type"] = "multipart/form-data";
-    } else {
-      // JSON submission
-      config.headers["Content-Type"] = "application/json";
+// Helper for headers
+const authHeader = () => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// --- CREATE Escalation ---
+export const createEscalationApi = async (escalation, otherReason = "") => {
+  const formData = new FormData();
+
+  Object.entries(escalation).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") {
+      if (key !== "audio") formData.append(key, value);
     }
+  });
 
-    const response = await axios.post(`${baseUrl}/api/escalations`, data, config);
-    alert("Escalation submitted successfully!");
-    return response.data;
-  } catch (error) {
-    console.error("Create Escalation Error:", error.response?.data || error.message);
-    alert(`Error: ${error.response?.data?.message || error.message}`);
-    throw error;
+  if (escalation.audio) formData.append("audio", escalation.audio);
+
+  if (escalation.escAction === "Other" && otherReason.trim()) {
+    formData.set("escAction", otherReason.trim());
   }
+
+  formData.set("owner", escalation.owner);
+
+  const response = await fetch(`${baseUrl}/api/escalations`, {
+    method: "POST",
+    body: formData,
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to submit escalation");
+  }
+
+  return await response.json();
 };
 
-// ✅ READ All Escalations
-export const getEscalationsApi = async () => {
-  try {
-    const response = await axios.get(`${baseUrl}/api/escalations/getescalations`, authHeader());
-    return response.data;
-  } catch (error) {
-    console.error("Get Escalations Error:", error.response?.data || error.message);
-    throw error;
-  }
-};
 
-// ✅ READ Escalation by ID
+// --- READ Escalations (all or filtered) ---
+
+export const getEscalationsApi = async ()=>{
+  const responce = await fetch (`${baseUrl}/api/escalations`,{
+    headers: authHeader(),
+  })
+  if (!responce.ok){
+    const errorData = await responce.json()
+    throw new Error(errorData.message || "fetch Failed")
+  }
+}
+
+
+// --- READ single Escalation ---
 export const getEscalationByIdApi = async (id) => {
-  try {
-    const response = await axios.get(`${baseUrl}/api/escalations/getEscalationById/${id}`, authHeader());
-    return response.data;
-  } catch (error) {
-    console.error("Get Escalation By ID Error:", error.response?.data || error.message);
-    throw error;
+  const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch escalation");
   }
+
+  return await response.json();
 };
 
-// ✅ UPDATE Escalation
-export const updateEscalationApi = async (id, payload) => {
-  try {
-    const response = await axios.put(`${baseUrl}/api/escalations/${id}`, payload, authHeader());
-    return response.data;
-  } catch (error) {
-    console.error("Update Escalation Error:", error.response?.data || error.message);
-    throw error;
+// --- UPDATE Escalation ---
+export const updateEscalationApi = async (id, updatedData) => {
+  const formData = new FormData();
+
+  Object.entries(updatedData).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") {
+      if (key !== "audio") formData.append(key, value);
+    }
+  });
+
+  if (updatedData.audio) formData.append("audio", updatedData.audio);
+
+  const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
+    method: "PUT",
+    body: formData,
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to update escalation");
   }
+
+  return await response.json();
 };
 
-// ✅ DELETE Escalation
+// --- DELETE Escalation ---
 export const deleteEscalationApi = async (id) => {
-  try {
-    const response = await axios.delete(`${baseUrl}/api/escalations/${id}`, authHeader());
-    return response.data;
-  } catch (error) {
-    console.error("Delete Escalation Error:", error.response?.data || error.message);
-    throw error;
+  const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to delete escalation");
   }
+
+  return await response.json();
 };
 
-// ✅ TOTAL Escalation Counts
+// --- GET total escalation counts ---
 export const totalEscalationCountsApi = async () => {
-  try {
-    const token = getToken();
-    const res = await axios.get(`${baseUrl}/api/escalations/totalescalationcounts`, {
-      headers: { Authorization: token ? `Bearer ${token}` : "" },
-    });
-    return res.data.count;
-  } catch (error) {
-    console.error("Total Escalation Counts Error:", error.response?.data || error.message);
-    throw error;
+  const response = await fetch(`${baseUrl}/api/escalations/totalescalationscounts`, {
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch escalation count");
   }
+
+  return await response.json();
 };
 
-// ✅ Escalation Analytics
-export const getEscalationAnalyticsApi = async () => {
-  try {
-    const response = await axios.get(`${baseUrl}/api/analytics/getescalationanalytics`, authHeader());
-    return response.data;
-  } catch (error) {
-    console.error("Fetch Escalation Analytics Error:", error.response?.data || error.message);
-    throw error;
-  }
-};
 
-// ✅ Overview Analytics with Range
-export const overviewAnalyticsRangeApi = async (range = "7d") => {
-  try {
-    const response = await axios.get(`${baseUrl}/api/analytics/evaluations?range=${range}`, authHeader());
-    return response.data;
-  } catch (error) {
-    console.error("Fetch Overview Analytics Error:", error.response?.data || error.message);
-    throw error;
+
+  export const getEscalationAnalyticsApi = async ()=> {
+    const response = await fetch(`${baseUrl}/api/analytics/getescalationAnalytics`,{
+      headers: authHeader()
+    })
+
+    if(!response.ok){
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch Analytics ");
+    }
+  return await response.json();
+    
+
   }
+
+
+  export const overviewAnalyticsRangeApi = async (range = '7d') => {
+  const res = await axios.get(`/api/analytics/evaluations?range=${range}`);
+  return res.data;
 };
