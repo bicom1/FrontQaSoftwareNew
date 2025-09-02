@@ -125,8 +125,6 @@ export const totalEscalationCountsApi = async () => {
   return await response.json();
 };
 
-
-
   export const getEscalationAnalyticsApi = async ()=> {
     const response = await fetch(`${baseUrl}/api/analytics/getescalationAnalytics`,{
       headers: authHeader()
@@ -141,8 +139,9 @@ export const totalEscalationCountsApi = async () => {
 
   }
 
-
   export const overviewAnalyticsRangeApi = async (range = '7d') => {
   const res = await axios.get(`/api/analytics/evaluations?range=${range}`);
   return res.data;
 };
+
+
