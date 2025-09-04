@@ -31,10 +31,10 @@ const Dashboard = ({setIsLoggedIn}) => {
         const fetchProfile = async () => {
           try {
             const res = await getProfileApi();
-            console.log("Fetched user profile:", res);
+            // console.log("Fetched user profile:", res);
             setProfile(res.data); // Save profile data
           } catch (err) {
-            console.error("Failed to fetch user profile:", err);
+            // console.error("Failed to fetch user profile:", err);
           }
         };
         fetchProfile();
