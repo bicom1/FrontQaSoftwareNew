@@ -2,9 +2,6 @@ import axios from "axios";
 import { baseUrl, getToken } from "../features/config";
 
 
-
-
-
 const authHeader = () => ({
   headers: {
     Authorization: `Bearer ${getToken()}`,
@@ -67,22 +64,18 @@ export const deleteMarketingApi = async (id) => {
   }
 };
 
-// ✅ TOTAL MARKETING COUNTS
 export const totalMarketingCountsApi = async () => {
-  try {
-    const token = getToken(); 
-    const res = await axios.get(`${baseUrl}/api/marketing/totalmarketingcounts`, {
-      withCredentials: true,
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
+    const response = await fetch(`${baseUrl}/api/marketing/totalmarketingcounts`, {
+      headers: authHeader(),
     });
-    return res.data.count; 
-  } catch (error) {
-    console.error("Total Marketing Count Error:", error.response?.data || error.message);
-    throw error;
-  }
-};
+  
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch Marketing Form count");
+    }
+  
+    return await response.json();
+  };
 
 
 export const getMarketingAnalyticsApi = async () => {

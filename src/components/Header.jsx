@@ -95,7 +95,7 @@ const Header = ({
       <div className="d-flex align-items-center gap-2">
 
         {/* Notifications */}
-        <div className="dropdown position-relative">
+        {/* <div className="dropdown position-relative">
           <button 
             className="btn btn-light border-0 rounded-3 p-2 position-relative hover-lift" 
             onClick={() => setShowNotifications(!showNotifications)}
@@ -165,7 +165,7 @@ const Header = ({
               </div>
             </>
           )}
-        </div>
+        </div> */}
 
         {/* User Menu */}
         <div className="dropdown position-relative">
