@@ -1,14 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { CheckCircle2, User, Mail, Hash, Users, MessageSquare, Star, FileText, Award, TrendingUp, Clock, Calendar } from 'lucide-react';
-import { createEvaluationsApi } from '../features/evaluationApi';
+import React, { useEffect, useState } from "react";
+import {
+  CheckCircle2,
+  User,
+  Mail,
+  Hash,
+  Users,
+  MessageSquare,
+  Star,
+  FileText,
+  Award,
+  TrendingUp,
+  Clock,
+  Calendar,
+} from "lucide-react";
+import { createEvaluationsApi } from "../features/evaluationApi";
+import { getTeamLeadsApi } from "../features/teamleadApi";
 
 const AgentForm = () => {
   const [evaluation, setEvaluation] = useState({
-    email: "",          
-    leadID: "",         
+    useremail: "", 
+    leadID: "",
     agentName: "",
-    teamleader: "",
     mod: "",
+    teamleader: "",
     greetings: "",
     accuracy: "",
     building: "",
@@ -28,68 +42,153 @@ const AgentForm = () => {
     bonus: { rateVal: 0 },
   });
 
-  const teamLeaders = [
-    { _id: "1", leadName: "John Smith" },
-    { _id: "2", leadName: "Sarah Johnson" },
-    { _id: "3", leadName: "Mike Wilson" },
-    { _id: "4", leadName: "Emily Davis" }
-  ];
+  const [teamLeaders, setTeamLeaders] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  
+// Update the useEffect to extract the data array correctly
+useEffect(() => {
+  const fetchTeamLeaders = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching team leaders...");
+      
+      // Try to import the module dynamically
+      const teamLeadModule = await import('../features/teamleadApi');
+      console.log("Team lead module:", teamLeadModule);
+      
+      // Check different export patterns
+      let getTeamLeadsFunction;
+      
+      if (teamLeadModule.getTeamLeadsApi) {
+        getTeamLeadsFunction = teamLeadModule.getTeamLeadsApi;
+        console.log("Using getTeamLeadsApi export");
+      } else if (teamLeadModule.default && teamLeadModule.default.getTeamLeadsApi) {
+        getTeamLeadsFunction = teamLeadModule.default.getTeamLeadsApi;
+        console.log("Using default.getTeamLeadsApi export");
+      } else if (teamLeadModule.default) {
+        getTeamLeadsFunction = teamLeadModule.default;
+        console.log("Using default export");
+      } else {
+        throw new Error('Team leads API function not found');
+      }
+      
+      const response = await getTeamLeadsFunction();
+      console.log("API response:", response);
+      
+      // Extract the data array from the response
+      const teamLeadersData = response.data || [];
+      console.log("Team leaders data:", teamLeadersData);
+      
+      setTeamLeaders(teamLeadersData);
+    } catch (error) {
+      console.error("Failed to fetch team leaders:", error);
+      // Fallback to empty array
+      setTeamLeaders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchTeamLeaders();
+}, []);
+
 
   const handleChange = (name, value) => {
-    setEvaluation(prev => ({
+    setEvaluation((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async () => {
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    if (!user || !user._id) {
-      alert("User is not authenticated or user data is missing. Please log in.");
-      return;
-    }
-
-    const total = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
-
-    const payload = {
-      owner: user._id,
-      useremail: evaluation.email,
-      evaluatedby: user.email,
-      leadID: evaluation.leadID,        // make sure this matches your backend schema
-      agentName: evaluation.agentName,
-      mod: evaluation.mod,
-      teamleader: evaluation.teamleader,
-      greetings: evaluation.greetings,
-      accuracy: evaluation.accuracy,
-      building: evaluation.building,
-      presenting: evaluation.presenting,
-      closing: evaluation.closing,
-      bonus: evaluation.bonus,
-      evaluationsummary: evaluation.evaluationsummary,
-      rating: total,
-    };
-
     try {
+      let user = null;
+      try {
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          user = JSON.parse(userData);
+        }
+      } catch (err) {
+        console.error("Error parsing user data:", err);
+        alert("Error reading user data. Please log in again.");
+        return;
+      }
+
+      
+      if (!user || !user._id || !user.email) {
+        console.log("User data:", user);
+        alert("User is not authenticated or user data is incomplete. Please log in.");
+        return;
+      }
+
+      const total = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
+
+      const payload = {
+        owner: user._id,
+        useremail: user.email,
+        evaluatedby: user.email,
+        leadID: evaluation.leadID,
+        agentName: evaluation.agentName,
+        mod: evaluation.mod,
+        teamleader: evaluation.teamleader,
+        greetings: evaluation.greetings,
+        accuracy: evaluation.accuracy,
+        building: evaluation.building,
+        presenting: evaluation.presenting,
+        closing: evaluation.closing,
+        bonus: evaluation.bonus,
+        evaluationsummary: evaluation.evaluationsummary,
+        rating: total,
+      };
+
+      console.log("Submitting payload:", payload);
+
       const res = await createEvaluationsApi(payload);
-      alert("Evaluation saved!");
+
+      alert("Evaluation saved successfully!");
       console.log("Saved evaluation:", res);
+
+      // Reset form
+      setEvaluation({
+        useremail: user.email,
+        leadID: "",
+        agentName: "",
+        teamleader: "",
+        mod: "",
+        greetings: "",
+        accuracy: "",
+        building: "",
+        presenting: "",
+        closing: "",
+        bonus: "",
+        evaluationsummary: "",
+        rating: 0,
+      });
+
+      setUserRate({
+        greeting: { rateVal: 0 },
+        accuracy: { rateVal: 0 },
+        building: { rateVal: 0 },
+        presenting: { rateVal: 0 },
+        closing: { rateVal: 0 },
+        bonus: { rateVal: 0 },
+      });
     } catch (err) {
       console.error("Failed to save evaluation:", err);
-      alert("Error saving evaluation.");
+      alert("Error saving evaluation: " + (err.response?.data?.message || err.message));
     }
   };
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (user && user.email) {
-      setEvaluation(prev => ({
+      setEvaluation((prev) => ({
         ...prev,
-        email: user.email
+        useremail: user.email,
       }));
     }
   }, []);
-  
 
   const currentRating = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
   const maxRating = 96;
@@ -97,249 +196,273 @@ const AgentForm = () => {
 
   const evaluationCriteria = [
     {
-      id: 'greetings',
-      title: 'Professional Greetings',
-      description: 'Demonstrates enthusiasm and a positive tone throughout the call.',
+      id: "greetings",
+      title: "Professional Greetings",
+      description: "Demonstrates enthusiasm and a positive tone throughout the call.",
       icon: <MessageSquare size={18} />,
-      color: '#6366f1',
-      bgColor: 'rgba(99, 102, 241, 0.1)',
+      color: "#6366f1",
+      bgColor: "rgba(99, 102, 241, 0.1)",
       goodOption: {
-        value: 'uses',
-        text: 'Uses a professional and friendly greeting within the first 3 seconds, including the company name and their own name',
-        points: 16
-      }
+        value: "uses",
+        text: "Uses a professional and friendly greeting within the first 3 seconds, including the company name and their own name",
+        points: 16,
+      },
     },
     {
-      id: 'accuracy',
-      title: 'Accuracy & Compliance',
-      description: 'Provides accurate and up-to-date information about the company\'s products or services, adhering to all relevant scripts and policies.',
+      id: "accuracy",
+      title: "Accuracy & Compliance",
+      description: "Provides accurate and up-to-date information...",
       icon: <CheckCircle2 size={18} />,
-      color: '#059669',
-      bgColor: 'rgba(5, 150, 105, 0.1)',
+      color: "#059669",
+      bgColor: "rgba(5, 150, 105, 0.1)",
       goodOption: {
-        value: 'questions',
-        text: 'Asks clear and concise questions to accurately identify the customer\'s needs or inquiries',
-        points: 16
-      }
+        value: "questions",
+        text: "Asks clear and concise questions to accurately identify the customer needs",
+        points: 16,
+      },
     },
     {
-      id: 'building',
-      title: 'Building Rapport & Discovery',
-      description: 'Identifies potential pain points or opportunities where the product/service can provide value to the customer.',
+      id: "building",
+      title: "Building Rapport & Discovery",
+      description: "Identifies potential pain points or opportunities...",
       icon: <Users size={18} />,
-      color: '#dc2626',
-      bgColor: 'rgba(220, 38, 38, 0.1)',
+      color: "#dc2626",
+      bgColor: "rgba(220, 38, 38, 0.1)",
       goodOption: {
-        value: 'skills',
-        text: 'Demonstrates active listening skills and asks open-ended questions to understand the customer\'s needs and potential interest',
-        points: 16
-      }
+        value: "skills",
+        text: "Demonstrates active listening and open-ended questions",
+        points: 16,
+      },
     },
     {
-      id: 'presenting',
-      title: 'Presenting Solutions & Making the Sale',
-      description: 'Clearly and concisely presents the product/service features and benefits tailored to the customer\'s needs identified earlier.',
+      id: "presenting",
+      title: "Presenting Solutions & Making the Sale",
+      description: "Clearly and concisely presents tailored benefits...",
       icon: <Star size={18} />,
-      color: '#7c3aed',
-      bgColor: 'rgba(124, 58, 237, 0.1)',
+      color: "#7c3aed",
+      bgColor: "rgba(124, 58, 237, 0.1)",
       goodOption: {
-        value: 'appointment',
-        text: 'Attempts to overcome objections professionally using established techniques and effectively guides the customer towards booking an appointment',
-        points: 16
-      }
+        value: "appointment",
+        text: "Overcomes objections and guides customer to appointment",
+        points: 16,
+      },
     },
     {
-      id: 'closing',
-      title: 'Call Closing & Securing Commitment',
-      description: 'Confirms the customer\'s details and secures their commitment for the sale or appointment. Thanks the customer for their time.',
+      id: "closing",
+      title: "Call Closing & Securing Commitment",
+      description: "Confirms details and secures customer commitment...",
       icon: <FileText size={18} />,
-      color: '#ea580c',
-      bgColor: 'rgba(234, 88, 12, 0.1)',
+      color: "#ea580c",
+      bgColor: "rgba(234, 88, 12, 0.1)",
       goodOption: {
-        value: 'Professionally',
-        text: 'Professionally summarizes key points discussed and clearly outlines the next steps, including the call to action',
-        points: 16
-      }
+        value: "Professionally",
+        text: "Summarizes key points, outlines next steps",
+        points: 16,
+      },
     },
     {
-      id: 'bonus',
-      title: 'Bonus Point',
-      description: 'Going above and beyond customer expectations.',
+      id: "bonus",
+      title: "Bonus Point",
+      description: "Going above and beyond customer expectations.",
       icon: <Award size={18} />,
-      color: '#0891b2',
-      bgColor: 'rgba(8, 145, 178, 0.1)',
+      color: "#0891b2",
+      bgColor: "rgba(8, 145, 178, 0.1)",
       goodOption: {
-        value: 'customer',
-        text: 'Goes above and beyond by exceeding customer expectations, offering additional solutions, or demonstrating exceptional product knowledge',
-        points: 16
-      }
-    }
+        value: "customer",
+        text: "Exceeds customer expectations with knowledge",
+        points: 16,
+      },
+    },
   ];
 
   const getPerformanceLevel = (percentage) => {
-    if (percentage >= 80) return { text: 'Excellent', class: 'text-success', bgClass: 'bg-success-subtle' };
-    if (percentage >= 60) return { text: 'Good', class: 'text-primary', bgClass: 'bg-primary-subtle' };
-    if (percentage >= 40) return { text: 'Average', class: 'text-warning', bgClass: 'bg-warning-subtle' };
-    return { text: 'Needs Improvement', class: 'text-danger', bgClass: 'bg-danger-subtle' };
+    if (percentage >= 80)
+      return { text: "Excellent", class: "text-success", bgClass: "bg-success-subtle" };
+    if (percentage >= 60)
+      return { text: "Good", class: "text-primary", bgClass: "bg-primary-subtle" };
+    if (percentage >= 40)
+      return { text: "Average", class: "text-warning", bgClass: "bg-warning-subtle" };
+    return { text: "Needs Improvement", class: "text-danger", bgClass: "bg-danger-subtle" };
   };
 
   const performanceLevel = getPerformanceLevel(ratingPercentage);
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  
   return (
     <>
-      <style jsx>{`
-        .gradient-bg {
-          background: #f4f4f4;
-          min-height: 100vh;
-        }
-        
-        .header-section {
-          background: white;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .header-gradient {
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-        }
-        
-        .icon-badge {
-          width: 40px;
-          height: 40px;
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-        }
-        
-        .custom-card {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s ease;
-        }
-        
-        .custom-card:hover {
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .progress-header {
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-          border-radius: 16px 16px 0 0;
-        }
-        
-        .progress-custom {
-          height: 12px;
-          background-color: #e2e8f0;
-          border-radius: 6px;
-        }
-        
-        .progress-bar-custom {
-          background: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
-          border-radius: 6px;
-          transition: width 0.7s ease;
-        }
-        
-        .form-control-modern {
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
-          padding: 12px 16px;
-          transition: all 0.2s ease;
-        }
-        
-        .form-control-modern:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .radio-card {
-          border: 2px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 16px;
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-        
-        .radio-card:hover {
-          background-color: #f9fafb;
-        }
-        
-        .radio-card.selected-primary {
-          border-color: #3b82f6;
-          background-color: rgba(59, 130, 246, 0.05);
-        }
-        
-        .radio-card.selected-success {
-          border-color: #10b981;
-          background-color: rgba(16, 185, 129, 0.05);
-        }
-        
-        .radio-card.selected-danger {
-          border-color: #ef4444;
-          background-color: rgba(239, 68, 68, 0.05);
-        }
-        
-        .criteria-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .badge-points {
-          font-size: 0.75rem;
-          font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 20px;
-        }
-        
-        .final-score-card {
-          background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-          border-radius: 16px;
-          box-shadow: 0 10px 15px rgba(0,0,0,0.1);
-        }
-        
-        .submit-btn {
-          background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-          border: none;
-          border-radius: 16px;
-          padding: 16px 32px;
-          font-weight: 600;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-          transition: all 0.2s ease;
-        }
-        
-        .submit-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-          background: linear-gradient(135deg, #047857 0%, #059669 100%);
-        }
-        
-        .section-header {
-          border-bottom: 1px solid #e5e7eb;
-          padding: 1.5rem;
-        }
-        
-        .datetime-info {
-          font-size: 0.875rem;
-          color: #6b7280;
-        }
-        
-        .mode-selection {
-          gap: 16px;
-        }
-        
-        .readonly-field {
-          background-color: #f9fafb;
-          color: #6b7280;
-          cursor: not-allowed;
-        }
-      `}</style>
+      <style>{`
+  .gradient-bg {
+    background: #f4f4f4;
+    min-height: 100vh;
+  }
+  
+  .header-section {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .header-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  }
+  
+  .icon-badge {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+  
+  .custom-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+  
+  .custom-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .progress-header {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .progress-custom {
+    height: 12px;
+    background-color: #e2e8f0;
+    border-radius: 6px;
+  }
+  
+  .progress-bar-custom {
+    background: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
+    border-radius: 6px;
+    transition: width 0.7s ease;
+  }
+  
+  .form-control-modern {
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control-modern:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  .radio-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .radio-card:hover {
+    background-color: #f9fafb;
+  }
+  
+  .radio-card.selected-primary {
+    border-color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+  
+  .radio-card.selected-success {
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.05);
+  }
+  
+  .radio-card.selected-danger {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+  
+  .criteria-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .badge-points {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 20px;
+  }
+  
+  .final-score-card {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+  }
+  
+  .submit-btn {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    border: none;
+    border-radius: 16px;
+    padding: 16px 32px;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+  
+  .section-header {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.5rem;
+  }
+  
+  .datetime-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+  
+  .mode-selection {
+    gap: 16px;
+  }
+  
+  .readonly-field {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+  
+  .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 10px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`}</style>
 
       <div className="gradient-bg">
         {/* Header Section */}
@@ -429,7 +552,7 @@ const AgentForm = () => {
                       <input
                         type="email"
                         className="form-control form-control-modern readonly-field"
-                        value={evaluation.email}
+                        value={evaluation.useremail}
                         readOnly
                       />
                     </div>
@@ -441,12 +564,12 @@ const AgentForm = () => {
                         Lead ID
                       </label>
                       <input
-            type="text"
-            className="form-control form-control-modern"
-            placeholder="Enter Lead ID"
-            value={evaluation.leadID}
-            onChange={(e) => handleChange("leadID", e.target.value)}  // fixed from leadId to leadID
-          />
+                        type="text"
+                        className="form-control form-control-modern"
+                        placeholder="Enter Lead ID"
+                        value={evaluation.leadID}
+                        onChange={(e) => handleChange("leadID", e.target.value)}
+                      />
                     </div>
 
                     {/* Agent Name */}
@@ -463,33 +586,36 @@ const AgentForm = () => {
                         onChange={(e) => handleChange("agentName", e.target.value)}
                       />
                     </div>
-
-                    {/* Team Leader */}
-                    <div className="col-12">
-                      <label className="form-label fw-medium d-flex align-items-center mb-3">
-                        <Users size={16} className="me-2 text-primary" />
-                        Team Leader
-                      </label>
-                      <div className="row g-3">
-                        {teamLeaders.map((leader) => (
-                          <div key={leader._id} className="col-md-6">
-                            <div className={`radio-card ${evaluation.teamleader === leader.leadName ? 'selected-primary' : ''}`}>
-                              <label className="form-check-label d-flex align-items-center mb-0 w-100">
-                                <input
-                                  type="radio"
-                                  name="teamleader"
-                                  value={leader.leadName}
-                                  checked={evaluation.teamleader === leader.leadName}
-                                  onChange={(e) => handleChange("teamleader", e.target.value)}
-                                  className="form-check-input me-3"
-                                />
-                                <span className="fw-medium">{leader.leadName}</span>
-                              </label>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+<div className="col-12">
+  <label className="form-label fw-medium d-flex align-items-center mb-3">
+    <Users size={16} className="me-2 text-primary" />
+    Team Leader
+    {loading && <div className="loading-spinner ms-2"></div>}
+  </label>
+  {teamLeaders.length > 0 ? (
+    <div className="row g-3">
+      {teamLeaders.map((leader) => (
+        <div key={leader._id} className="col-md-6">
+          <div className={`radio-card ${evaluation.teamleader === leader.name ? 'selected-primary' : ''}`}>
+            <label className="form-check-label d-flex align-items-center mb-0 w-100">
+              <input
+                type="radio"
+                name="teamleader"
+                value={leader.name}
+                checked={evaluation.teamleader === leader.name}
+                onChange={(e) => handleChange("teamleader", e.target.value)}
+                className="form-check-input me-3"
+              />
+              <span className="fw-medium">{leader.name}</span>
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    !loading && <div className="text-muted">No team leaders available</div>
+  )}
+</div>
 
                     {/* Mode of Communication */}
                     <div className="col-12">
@@ -498,7 +624,7 @@ const AgentForm = () => {
                         Mode of Communication
                       </label>
                       <div className="d-flex mode-selection">
-                        {['Chat', 'Call'].map((mode) => (
+                        {['Chat', 'Call','Both'].map((mode) => (
                           <div key={mode} className={`radio-card ${evaluation.mod === mode ? 'selected-primary' : ''}`}>
                             <label className="form-check-label d-flex align-items-center mb-0">
                               <input

@@ -1,27 +1,49 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AlertTriangle, User, Mail, Hash, Users, MessageSquare, Star, FileText, Clock, Calendar, Upload, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { getTeamLeadsApi } from "../features/teamleadApi";
 import { createEscalationApi } from "../features/escalationsApi";
+
+
 
 const EscalationForm = () => {
   const [otherReason, setOtherReason] = useState(""); 
   const [escalation, setEscalation] = useState({
-    owner: "",
-    useremail: "",
-    leadID: "",
-    agentName: "",
-    mod: "",
-    teamleader: "",
-    evaluatedBy: "",
-    leadSource: "",
-    userrating: "",
-    leadStatus: "",
-    escSeverity: "",
-    issueIden: "",
-    escAction: "", 
-    documentation: "",
-    successmaration: "",
-    audio: null, 
-  });
+  owner: "",
+  useremail: "", // will be set after loading user
+  leadID: "",
+  agentName: "",
+  teamleader: "",
+  evaluatedby: "",
+  leadSource: "",
+  userrating: "",
+  leadStatus: "",
+  escSeverity: "",
+  issueIden: "",
+  escAction: "", 
+  documentation: "",
+  successmaration: "",
+  audio: null, 
+});
+
+
+
+useEffect(() => {
+  const userData = localStorage.getItem("user");
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      console.log("Loaded user:", user); // 🔹 Add this
+      setEscalation(prev => ({
+        ...prev,
+        useremail: user.email || "",
+        owner: user._id || ""
+      }));
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+    }
+  }
+}, []);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,13 +62,56 @@ const EscalationForm = () => {
     documentation: { rateVal: 0 },
   });
 
+    const [teamLeaders, setTeamLeaders] = useState([]);
+    const [loading, setLoading] = useState(false);
+    
+
   
-  const leaders = [
-    { _id: "1", leadName: "John Smith" },
-    { _id: "2", leadName: "Sarah Johnson" },
-    { _id: "3", leadName: "Mike Davis" },
-    { _id: "4", leadName: "Emily Wilson" }
-  ];
+  useEffect(() => {
+    const fetchTeamLeaders = async () => {
+      try {
+        setLoading(true);
+        console.log("Fetching team leaders...");
+        
+        // Try to import the module dynamically
+        const teamLeadModule = await import('../features/teamleadApi');
+        console.log("Team lead module:", teamLeadModule);
+        
+        // Check different export patterns
+        let getTeamLeadsFunction;
+        
+        if (teamLeadModule.getTeamLeadsApi) {
+          getTeamLeadsFunction = teamLeadModule.getTeamLeadsApi;
+          console.log("Using getTeamLeadsApi export");
+        } else if (teamLeadModule.default && teamLeadModule.default.getTeamLeadsApi) {
+          getTeamLeadsFunction = teamLeadModule.default.getTeamLeadsApi;
+          console.log("Using default.getTeamLeadsApi export");
+        } else if (teamLeadModule.default) {
+          getTeamLeadsFunction = teamLeadModule.default;
+          console.log("Using default export");
+        } else {
+          throw new Error('Team leads API function not found');
+        }
+        
+        const response = await getTeamLeadsFunction();
+        console.log("API response:", response);
+        
+        // Extract the data array from the response
+        const teamLeadersData = response.data || [];
+        console.log("Team leaders data:", teamLeadersData);
+        
+        setTeamLeaders(teamLeadersData);
+      } catch (error) {
+        console.error("Failed to fetch team leaders:", error);
+        // Fallback to empty array
+        setTeamLeaders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchTeamLeaders();
+  }, []);
 
   const handlerEscalation = (name, value) => {
     setEscalation((pre) => ({
@@ -64,55 +129,91 @@ const EscalationForm = () => {
     }
   };
 
- 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!escalation.useremail || !escalation.leadID || !escalation.agentName || !escalation.teamleader) {
-      alert("Please fill all required fields: Email, Lead ID, Agent Name, and Team Leader");
+
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (loading) return; // Prevent double submission
+
+  const owner = escalation.owner;
+  if (!owner) {
+    alert("Owner not found. Please log in.");
+    return;
+  }
+
+  // Validate required fields
+  const requiredFields = [
+    "useremail", "leadID", "agentName", "teamleader",
+    "evaluatedby", "leadSource", "userrating", "leadStatus",
+    "escSeverity", "issueIden", "escAction", "successmaration"
+  ];
+
+  for (let field of requiredFields) {
+    if (!escalation[field]?.toString().trim()) {
+      alert(`Please fill the required field: ${field}`);
       return;
     }
-    
-    const formData = new FormData();
-  
-    
-    Object.entries(escalation).forEach(([key, value]) => {
-      if (key !== 'audio' && value !== null && value !== undefined) {
-        formData.append(key, value);
-      }
-    });
-  
-    
-    if (escalation.audio) {
-      formData.append('audio', escalation.audio);
-    }
-  
-    
-    if (escalation.escAction === "Other" && otherReason.trim() !== "") {
-      formData.append('otherReason', otherReason);
-    }
-  
+  }
+
+  setLoading(true);
+
+  try {
+    // --- API call ---
+    await createEscalationApi(escalation, otherReason);
+
+    // --- Only show success alert once ---
+    alert("Escalation submitted successfully!");
+
+    // --- Reset form ---
+    let parsedUser = { _id: "", email: "" };
     try {
-      await createEscalationApi(formData);
-      
-      setEscalation({
-        owner: "", useremail: "", leadID: "", agentName: "", mod: "",
-        teamleader: "", evaluatedBy: "", leadSource: "", userrating: "",
-        leadStatus: "", escSeverity: "", issueIden: "", escAction: "",
-        documentation: "", successmaration: "", audio: null,
-      });
-      setOtherReason("");
-      setUserRate({ 
-        severity: { rateVal: 0 }, 
-        issue: { rateVal: 0 }, 
-        action: { rateVal: 0 }, 
-        documentation: { rateVal: 0 } 
-      });
-  
-    } catch (error) {
-      console.error('Submission error:', error);
-      // Error handling is done in the API service
+      const userData = localStorage.getItem("user");
+      if (userData) parsedUser = JSON.parse(userData);
+    } catch (err) {
+      console.warn("Failed to parse userData", err);
     }
-  };
+
+    setEscalation({
+      owner: parsedUser._id || "",
+      useremail: parsedUser.email || "",
+      leadID: "",
+      agentName: "",
+      teamleader: "",
+      evaluatedby: "",
+      leadSource: "",
+      userrating: "",
+      leadStatus: "",
+      escSeverity: "",
+      issueIden: "",
+      escAction: "",
+      documentation: "",
+      successmaration: "",
+      audio: null,
+    });
+
+    setOtherReason("");
+    setUserRate({
+      severity: { rateVal: 0 },
+      issue: { rateVal: 0 },
+      action: { rateVal: 0 },
+      documentation: { rateVal: 0 },
+    });
+  } catch (error) {
+    console.error(error);
+    alert("Failed to submit escalation. Check console for details.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
+
+
+
+
 
   const currentRating = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
   const maxRating = 64; // Max points if all categories are rated highest
@@ -258,297 +359,176 @@ const EscalationForm = () => {
 
   return (
     <>
-      <style>{`
-        /* ... (Your CSS styles as provided previously) ... */
-        body {
-          font-family: 'Inter', sans-serif;
-          background-color: #f8fafd;
-          margin: 0;
-          padding: 0;
-        }
-        .gradient-bg {
-          background: linear-gradient(to right, #e0f2f7, #c1e7f3);
-          min-height: 100vh;
-          padding-bottom: 50px;
-        }
-        .container-fluid {
-          max-width: 1200px;
-        }
-        .header-section {
-          background-color: #ffffff;
-          border-bottom: 1px solid #e2e8f0;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        .header-section .icon-badge {
-          background-color: #fef2f2;
-          color: #dc2626;
-          padding: 12px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.1);
-        }
-        .header-section h1 {
-          color: #1a202c;
-          font-size: 1.8rem;
-        }
-        .header-section .text-muted {
-          color: #718096 !important;
-        }
-        .datetime-info {
-          font-size: 0.9rem;
-          color: #4a5568;
-        }
-        .custom-card {
-          background-color: #ffffff;
-          border-radius: 12px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-          overflow: hidden;
-        }
-        .custom-card .section-header {
-          background-color: #f7fafc;
-          padding: 1.25rem 1.5rem;
-          border-bottom: 1px solid #edf2f7;
-        }
-        .custom-card .section-header h3 {
-          color: #2d3748;
-          font-size: 1.15rem;
-        }
-        .form-label {
-          color: #2d3748;
-          font-weight: 600;
-          margin-bottom: 0.75rem;
-          display: flex;
-          align-items: center;
-        }
-        .form-label .text-danger {
-          margin-left: 5px;
-        }
-        .form-control-modern {
-          border: 1px solid #cbd5e0;
-          border-radius: 8px;
-          padding: 12px 15px;
-          font-size: 1rem;
-          color: #2d3748;
-          transition: all 0.3s ease;
-        }
-        .form-control-modern:focus {
-          border-color: #4299e1;
-          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
-          outline: none;
-        }
-        textarea.form-control-modern {
-          min-height: 90px;
-        }
-        .radio-card {
-          background-color: #f7fafc;
-          border: 2px solid #edf2f7;
-          border-radius: 10px;
-          padding: 1rem;
-          transition: all 0.2s ease-in-out;
-          cursor: pointer;
-          display: flex;
-          align-items: flex-start;
-        }
-        .radio-card:hover {
-          border-color: #a0aec0;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        .radio-card.selected-primary {
-          border-color: #3182ce;
-          background-color: #ebf8ff;
-          box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
-        }
-        .radio-card.selected-severity {
-          border-color: var(--severity-color, #dc2626);
-          background-color: var(--severity-bg, rgba(220, 38, 38, 0.1));
-          box-shadow: 0 0 0 3px var(--severity-bg, rgba(220, 38, 38, 0.2));
-        }
-        .radio-card.selected-success {
-          border-color: #059669;
-          background-color: rgba(5, 150, 105, 0.1);
-          box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
-        }
-        .radio-card.selected-danger {
-          border-color: #ef4444;
-          background-color: rgba(239, 68, 68, 0.1);
-          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-        }
-        .radio-card .form-check-input {
-          flex-shrink: 0;
-          margin-top: 0.25rem;
-          margin-right: 1rem;
-        }
-        .radio-card .fw-medium {
-          color: #2d3748;
-        }
-        .issue-emoji {
-          font-size: 1.5rem;
-          margin-right: 10px;
-          line-height: 1;
-        }
-        .badge-points {
-          font-size: 0.75rem;
-          padding: 0.4em 0.7em;
-          border-radius: 5px;
-          font-weight: 600;
-          margin-left: 10px;
-        }
-        .progress-header {
-          background: linear-gradient(135deg, #4299e1, #3182ce);
-          border-top-left-radius: 12px;
-          border-top-right-radius: 12px;
-        }
-        .progress-custom {
-          background-color: #e2e8f0;
-          border-radius: 10px;
-          height: 12px;
-          overflow: hidden;
-        }
-        .progress-bar-custom {
-          background: linear-gradient(to right, #63b3ed, #4299e1);
-          border-radius: 10px;
-          transition: width 0.5s ease-in-out;
-        }
-        .badge {
-          padding: 0.5em 0.8em;
-          border-radius: 6px;
-          font-weight: bold;
-        }
-        .text-danger {
-          color: #e53e3e !important;
-        }
-        .bg-danger-subtle {
-          background-color: #fef2f2 !important;
-          color: #dc2626 !important;
-        }
-        .text-warning {
-          color: #dd6b20 !important;
-        }
-        .bg-warning-subtle {
-          background-color: #fffaf0 !important;
-          color: #ea580c !important;
-        }
-        .text-primary {
-          color: #3182ce !important;
-        }
-        .bg-primary-subtle {
-          background-color: #ebf8ff !important;
-          color: #3182ce !important;
-        }
-        .text-success {
-          color: #38a169 !important;
-        }
-        .bg-success-subtle {
-          background-color: #f0fff4 !important;
-          color: #059669 !important;
-        }
-        .border-dashed {
-          border-style: dashed !important;
-          border-color: #cbd5e0 !important;
-        }
-        .final-score-card {
-          background: linear-gradient(135deg, #0b60b0, #001b79);
-          border-radius: 12px;
-          color: #ffffff;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-        .final-score-card .display-4 {
-          font-size: 3.5rem;
-        }
-        .final-score-card .h4 {
-          font-size: 1.5rem;
-        }
-        .submit-btn {
-          background: linear-gradient(to right, #48bb78, #38a169);
-          border: none;
-          padding: 15px 30px;
-          font-size: 1.1rem;
-          border-radius: 10px;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 10px rgba(56, 161, 105, 0.3);
-        }
-        .submit-btn:hover {
-          background: linear-gradient(to right, #38a169, #2f855a);
-          box-shadow: 0 6px 15px rgba(56, 161, 105, 0.4);
-          transform: translateY(-2px);
-        }
-        .me-1 { margin-right: 0.25rem !important; }
-        .me-2 { margin-right: 0.5rem !important; }
-        .me-3 { margin-right: 1rem !important; }
-        .mb-0 { margin-bottom: 0 !important; }
-        .mb-1 { margin-bottom: 0.25rem !important; }
-        .mb-2 { margin-bottom: 0.5rem !important; }
-        .mb-3 { margin-bottom: 1rem !important; }
-        .mb-4 { margin-bottom: 1.5rem !important; }
-        .py-4 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
-        .p-4 { padding: 1.5rem !important; }
-        .p-5 { padding: 3rem !important; }
-        .d-flex { display: flex !important; }
-        .align-items-center { align-items: center !important; }
-        .align-items-start { align-items: flex-start !important; }
-        .justify-content-center { justify-content: center !important; }
-        .justify-content-between { justify-content: space-between !important; }
-        .d-grid { display: grid !important; }
-        .text-center { text-align: center !important; }
-        .text-end { text-align: end !important; }
-        .fw-bold { font-weight: 700 !important; }
-        .fw-semibold { font-weight: 600 !important; }
-        .fw-medium { font-weight: 500 !important; }
-        .h2 { font-size: 2rem; }
-        .h3 { font-size: 1.75rem; }
-        .h4 { font-size: 1.5rem; }
-        .h5 { font-size: 1.25rem; }
-        .small { font-size: 0.875em !important; }
-        .lh-base { line-height: 1.5; }
-        @media (max-width: 768px) {
-          .header-section h1 {
-            font-size: 1.5rem;
-          }
-          .header-section .icon-badge {
-            padding: 8px;
-            box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.1);
-          }
-          .custom-card .section-header {
-            padding: 1rem;
-          }
-          .custom-card .section-header h3 {
-            font-size: 1rem;
-          }
-          .p-4 {
-            padding: 1rem !important;
-          }
-          .p-5 {
-            padding: 2rem !important;
-          }
-          .final-score-card .display-4 {
-            font-size: 2.5rem;
-          }
-          .final-score-card .h4 {
-            font-size: 1.2rem;
-          }
-          .submit-btn {
-            padding: 12px 20px;
-            font-size: 1rem;
-          }
-        }
-        @media (max-width: 576px) {
-          .header-section .row {
-            flex-direction: column;
-            align-items: flex-start !important;
-          }
-          .header-section .col-auto {
-            width: 100%;
-            text-align: start !important;
-            margin-top: 1rem;
-          }
-          .header-section .text-muted.mb-0.ms-5 {
-            margin-left: 0 !important;
-          }
-        }
-      `}</style>
-
+     <style>{`
+  .gradient-bg {
+    background: #f4f4f4;
+    min-height: 100vh;
+  }
+  
+  .header-section {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .header-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  }
+  
+  .icon-badge {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+  
+  .custom-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+  
+  .custom-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .progress-header {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .progress-custom {
+    height: 12px;
+    background-color: #e2e8f0;
+    border-radius: 6px;
+  }
+  
+  .progress-bar-custom {
+    background: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
+    border-radius: 6px;
+    transition: width 0.7s ease;
+  }
+  
+  .form-control-modern {
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control-modern:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  .radio-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .radio-card:hover {
+    background-color: #f9fafb;
+  }
+  
+  .radio-card.selected-primary {
+    border-color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+  
+  .radio-card.selected-success {
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.05);
+  }
+  
+  .radio-card.selected-danger {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+  
+  .criteria-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .badge-points {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 20px;
+  }
+  
+  .final-score-card {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 16px;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+  }
+  
+  .submit-btn {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    border: none;
+    border-radius: 16px;
+    padding: 16px 32px;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+  
+  .section-header {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.5rem;
+  }
+  
+  .datetime-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+  
+  .mode-selection {
+    gap: 16px;
+  }
+  
+  .readonly-field {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+  
+  .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 10px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`}</style>
+    
       <div className="gradient-bg">
         {/* Header Section */}
         <div className="header-section">
@@ -636,14 +616,13 @@ const EscalationForm = () => {
                         Email Address <span className="text-danger">*</span>
                       </label>
                       <input
-    type="email"
-    name="useremail"
-    className="form-control form-control-modern"
-    readOnly
-    placeholder="Enter your email"
-    value={escalation.useremail}
-    required
+  type="email"
+  className="form-control form-control-modern readonly-field"
+  placeholder="Enter your email"
+  value={escalation.useremail}
+  readOnly
 />
+
                     </div>
 
                     {/* Lead ID */}
@@ -671,10 +650,10 @@ const EscalationForm = () => {
                       </label>
                       <input
                         type="text"
-                        name="evaluatedBy"
+                        name="evaluatedby"
                         className="form-control form-control-modern"
                         placeholder="Enter Your Name"
-                        value={escalation.evaluatedBy}
+                        value={escalation.evaluatedby}
                         onChange={handleChange}
                         required
                       />
@@ -700,40 +679,44 @@ const EscalationForm = () => {
                 </div>
               </div>
 
-              {/* Team Leader Selection */}
-              <div className="custom-card mb-4">
-                <div className="section-header">
+              <div >
+<div className="col-12 custom-card mb-4 p-3 ">
+  <div className="section-header">
                   <h3 className="h5 fw-semibold text-dark mb-0 d-flex align-items-center">
-                    <Users size={20} className="me-2 text-danger" />
-                    Team Leader <span className="text-danger">*</span>
+                    <TrendingUp size={20} className="me-2 text-danger" />
+                    Team Lead
                   </h3>
                 </div>
-                <div className="p-4">
-                  <div className="row g-3">
-                    {leaders.map((leader) => (
-                      <div key={leader._id} className="col-md-6">
-                        <div className={`radio-card ${escalation.teamleader === leader.leadName ? 'selected-primary' : ''}`}>
-                          <label className="form-check-label d-flex align-items-center mb-0 w-100">
-                            <input
-                              type="radio"
-                              name="teamleader"
-                              value={leader.leadName}
-                              checked={escalation.teamleader === leader.leadName}
-                              onChange={handleChange}
-                              className="form-check-input me-3"
-                              required
-                            />
-                            <span className="fw-medium">{leader.leadName}</span>
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+  {teamLeaders.length > 0 ? (
+    <div className="row g-3 mt-2">
+      {teamLeaders.map((leader) => (
+        <div key={leader._id} className="col-md-6">
+          <div className={`radio-card ${escalation.teamleader === leader.name ? 'selected-primary' : ''}`}>
+            <label className="form-check-label d-flex align-items-center mb-0 w-100">
+              <input
+                type="radio"
+                name="teamleader"
+                value={leader.name}
+                checked={escalation.teamleader === leader.name}
+                onChange={handleChange}
+                className="form-check-input me-3"
+              />
+              <span className="fw-medium">{leader.name}</span>
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    !loading && <div className="text-muted">No team leaders available</div>
+  )}
+</div>
               </div>
 
+
+
               {/* Lead Details */}
-              <div className="custom-card mb-4">
+              <div className="custom-card mb-4 mt-5">
                 <div className="section-header">
                   <h3 className="h5 fw-semibold text-dark mb-0 d-flex align-items-center">
                     <TrendingUp size={20} className="me-2 text-danger" />
@@ -919,8 +902,8 @@ const EscalationForm = () => {
                       )}
 
                       {/* Audio Upload Field - only if documentation is 'provided' or specific criteria met */}
-                      {criteria.id === 'documentation' && escalation.documentation === 'provided' && (
-                        <div className="col-12 mt-4">
+                      {criteria.id === 'documentation' && escalation.escAction === 'provided' && (
+ <div className="col-12 mt-4">
                           <label className="form-label fw-medium d-flex align-items-center">
                             <Upload size={16} className="me-2 text-primary" />
                             Attach Audio Recording (Optional)
@@ -938,7 +921,7 @@ const EscalationForm = () => {
                             </p>
                           )}
                         </div>
-                      )}
+)}
                     </div>
                   </div>
                 </div>

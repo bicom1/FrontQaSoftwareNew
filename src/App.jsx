@@ -2,8 +2,11 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import AgentRoutes from "./Routes/AgentRoutes";
 import Unauthorized from "./components/Unauthorized";
+import AgentRoutes from "./routes/AgentRoutes";
+import AdminDetails from "./components/AdminDetails";
+import EditEscalation from "./components/admin/escalation/EditEscalation";
+// Import the Analytics component
 
 function RequireAuth({ children, allowedRoles }) {
   const token = localStorage.getItem("token");
@@ -39,7 +42,7 @@ function App() {
   }, []);
 
   return (
-   <Routes>
+    <Routes>
       <Route
         path="/"
         element={
@@ -69,18 +72,29 @@ function App() {
           </RequireAuth>
         }
       />
+     
+     <Route path="/admin-details/:adminId" element={<AdminDetails />} />
+     <Route path="/admin-details/edit" element={<EditEscalation />} />
 
-    <Route
-  path="/agent/*"
-  element={
-    <RequireAuth allowedRoles={["agent"]}>
-      <AgentRoutes setIsLoggedIn={setIsLoggedIn} />
-    </RequireAuth>
-  }
-/>
+     
+
+     
+
+    
+      <Route
+        path="/agent/*"
+        element={
+          <RequireAuth allowedRoles={["agent"]}>
+            <AgentRoutes setIsLoggedIn={setIsLoggedIn} />
+          </RequireAuth>
+        }
+      />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
 export default App;
+
+

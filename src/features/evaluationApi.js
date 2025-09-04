@@ -1,26 +1,62 @@
 import axios from "axios";
-import { baseUrl } from "../features/config";
+import { baseUrl, getToken } from "../features/config";
 
-// Get token from localStorage
-const getAuthToken = () => localStorage.getItem("bictoken");
+
+export const getEvaluationOnwerApi = async (ownerId) => {
+  const token = getToken();
+  try {
+    const res = await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Always return an array
+    return res.data?.evaluations || [];
+  } catch (err) {
+    console.error("Evaluation API error:", err);
+    return [];
+  }
+};
+
+
+
+  export const createReportEvaluationsApi = async ({ startDate, endDate, agentName,teamleader }) => {
+   const token = getToken(); 
+  try {
+    const res = await axios.get(
+      `${baseUrl}/api/evaluations/datefilterevaluation?startDate=${startDate}&endDate=${endDate}&agentName=${agentName}&teamleader=${teamleader}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res;
+  } catch (error) {
+    if (error.response) {
+      return error.response;
+    }
+    throw error;
+  }
+};
 
 // Axios config with auth
 const authHeader = () => ({
   headers: {
-    Authorization: `Bearer ${getAuthToken()}`,
+    Authorization: `Bearer ${getToken()}`,
     "Content-Type": "application/json",
   },
 });
 
 // ✅ CREATE Evaluation
-export const createEvaluationsApi = async (payload) => {
-  try {
-    const response = await axios.post(`${baseUrl}/api/evaluations/`, payload, authHeader());
-    return response.data;
-  } catch (error) {
-    console.error("Create Evaluation Error:", error.response?.data || error.message);
-    throw error;
-  }
+export const createEvaluationsApi = async (data) => {
+  const token = getToken(); // should return JWT stored in localStorage/cookies
+
+  const res = await axios.post(`${baseUrl}/api/evaluations`, data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.data;
 };
 
 // ✅ READ All Evaluations
@@ -69,7 +105,7 @@ export const deleteEvaluationApi = async (id) => {
 
 
   export const totalEvaluationCountsApi = async () => {
-    const token = getAuthToken(); 
+    const token = getToken(); 
     const res = await axios.get(`${baseUrl}/api/evaluations/totalevaluationcounts`, {
       withCredentials: true,
       headers: {
@@ -89,3 +125,13 @@ export const deleteEvaluationApi = async (id) => {
       throw error;    
     }
   };
+
+// export const getEvaluationOnwerApi = async (ownerId ) => {
+//   const token = getToken();
+//   return await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId }`, {
+//     headers: {
+//       Authorization: `Bearer ${token}`,
+//     },
+//   });
+// };
+

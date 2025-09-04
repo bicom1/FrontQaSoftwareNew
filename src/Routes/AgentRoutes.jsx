@@ -7,12 +7,11 @@ import AgentFeedbackBox from "../components/Agent/AgentFeedbackBox";
 const AgentRoutes = ({ setIsLoggedIn }) => (
   <Routes>
     <Route element={<AgentLayout setIsLoggedIn={setIsLoggedIn} />}>
-    
       <Route index element={<AgentDashboard />} />
-    
       <Route path="feedback" element={<AgentFeedbackBox />} />
     </Route>
   </Routes>
 );
 
 export default AgentRoutes;
+

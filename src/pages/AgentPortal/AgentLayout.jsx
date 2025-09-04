@@ -8,7 +8,7 @@ const pathnameToTab = (pathname) => {
   // strip trailing slash
   const clean = pathname.replace(/\/+$/, "");
   if (clean === "/agent") return "agent"; 
-  if (clean.endsWith("/feedback")) return "feedback";
+  if (clean.endsWith("feedback")) return "feedback";
   return "agent";
 };
 
@@ -29,9 +29,9 @@ const AgentLayout = ({ setIsLoggedIn }) => {
   const activeTab = pathnameToTab(location.pathname);
 
   const handleNav = (tabKey) => {
-    navigate(`/agent/${tabKey}`);
+    navigate(`/agent${tabKey}`);
   };
- 
+
 
 
   return (
