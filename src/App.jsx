@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./components/Unauthorized";
 import AgentRoutes from "./routes/AgentRoutes";
 import AdminDetails from "./components/AdminDetails";
-import QcList from "./components/QcList";
+import EditEscalation from "./components/admin/escalation/EditEscalation";
 // Import the Analytics component
 
 function RequireAuth({ children, allowedRoles }) {
@@ -73,10 +73,14 @@ function App() {
         }
       />
      
-     {/* Corrected route path to match the navigation in Analytics component */}
      <Route path="/admin-details/:adminId" element={<AdminDetails />} />
+     <Route path="/admin-details/edit" element={<EditEscalation />} />
 
-      {/* ✅ Correct Agent routes */}
+     
+
+     
+
+    
       <Route
         path="/agent/*"
         element={
@@ -92,3 +96,5 @@ function App() {
 }
 
 export default App;
+
+

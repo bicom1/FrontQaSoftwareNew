@@ -3,14 +3,47 @@ import axios from "axios";
 
 import { baseUrl, getToken } from "../features/config"; 
 
-
-// Helper for headers
 const authHeader = () => {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// --- CREATE Escalation ---
+export const getEscalationOnwerApi = async (ownerId) => {
+  const token = getToken();
+  try {
+    const res = await axios.get(`${baseUrl}/api/escalations/owner/${ownerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Always return an array
+    return res.data?.data || [];
+  } catch (err) {
+    console.error("Escalation API error:", err);
+    return [];
+  }
+};
+
+
+export const createReportEscalationsApi = async ({ startDate, endDate, agentName,teamleader }) => {
+   const token = getToken(); 
+  try {
+    const res = await axios.get(
+      `${baseUrl}/api/escalations/datefiltereescalation?startDate=${startDate}&endDate=${endDate}&agentName=${agentName}&teamleader=${teamleader}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res;
+  } catch (error) {
+    if (error.response) {
+      return error.response;
+    }
+    throw error;
+  }
+};
+
+
 export const createEscalationApi = async (escalation, otherReason = "") => {
   const formData = new FormData();
 
@@ -43,7 +76,7 @@ export const createEscalationApi = async (escalation, otherReason = "") => {
 };
 
 
-// --- READ Escalations (all or filtered) ---
+
 
 export const getEscalationsApi = async ()=>{
   const responce = await fetch (`${baseUrl}/api/escalations`,{
@@ -56,7 +89,6 @@ export const getEscalationsApi = async ()=>{
 }
 
 
-// --- READ single Escalation ---
 export const getEscalationByIdApi = async (id) => {
   const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
     headers: authHeader(),
@@ -70,7 +102,7 @@ export const getEscalationByIdApi = async (id) => {
   return await response.json();
 };
 
-// --- UPDATE Escalation ---
+
 export const updateEscalationApi = async (id, updatedData) => {
   const formData = new FormData();
 
@@ -96,7 +128,7 @@ export const updateEscalationApi = async (id, updatedData) => {
   return await response.json();
 };
 
-// --- DELETE Escalation ---
+
 export const deleteEscalationApi = async (id) => {
   const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
     method: "DELETE",
@@ -111,7 +143,7 @@ export const deleteEscalationApi = async (id) => {
   return await response.json();
 };
 
-// --- GET total escalation counts ---
+
 export const totalEscalationCountsApi = async () => {
   const response = await fetch(`${baseUrl}/api/escalations/totalescalationscounts`, {
     headers: authHeader(),
@@ -124,8 +156,6 @@ export const totalEscalationCountsApi = async () => {
 
   return await response.json();
 };
-
-
 
   export const getEscalationAnalyticsApi = async ()=> {
     const response = await fetch(`${baseUrl}/api/analytics/getescalationAnalytics`,{
@@ -141,8 +171,11 @@ export const totalEscalationCountsApi = async () => {
 
   }
 
-
   export const overviewAnalyticsRangeApi = async (range = '7d') => {
   const res = await axios.get(`/api/analytics/evaluations?range=${range}`);
   return res.data;
 };
+
+
+
+

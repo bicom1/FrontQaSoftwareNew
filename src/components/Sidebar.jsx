@@ -136,6 +136,13 @@ const Sidebar = ({
               <Target size={20} />
               <span className="ms-2">PPC</span>
             </button>
+            <button 
+              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'reportDownload' ? 'btn-primary' : 'btn-dark'}`}
+              onClick={() => setActiveTab('reportDownload')}
+            >
+              <Target size={20} />
+              <span className="ms-2">Report Download</span>
+            </button>
           </div>
         )}
       </div>

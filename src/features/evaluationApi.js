@@ -1,6 +1,43 @@
 import axios from "axios";
 import { baseUrl, getToken } from "../features/config";
 
+
+export const getEvaluationOnwerApi = async (ownerId) => {
+  const token = getToken();
+  try {
+    const res = await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Always return an array
+    return res.data?.evaluations || [];
+  } catch (err) {
+    console.error("Evaluation API error:", err);
+    return [];
+  }
+};
+
+
+
+  export const createReportEvaluationsApi = async ({ startDate, endDate, agentName,teamleader }) => {
+   const token = getToken(); 
+  try {
+    const res = await axios.get(
+      `${baseUrl}/api/evaluations/datefilterevaluation?startDate=${startDate}&endDate=${endDate}&agentName=${agentName}&teamleader=${teamleader}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res;
+  } catch (error) {
+    if (error.response) {
+      return error.response;
+    }
+    throw error;
+  }
+};
+
 // Axios config with auth
 const authHeader = () => ({
   headers: {
@@ -88,3 +125,13 @@ export const deleteEvaluationApi = async (id) => {
       throw error;    
     }
   };
+
+// export const getEvaluationOnwerApi = async (ownerId ) => {
+//   const token = getToken();
+//   return await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId }`, {
+//     headers: {
+//       Authorization: `Bearer ${token}`,
+//     },
+//   });
+// };
+

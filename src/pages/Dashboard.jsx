@@ -12,6 +12,7 @@ import { getProfileApi } from '../features/userApis';
 import AddTeamLead from '../components/AddTeamLead';
 import AgentList from '../components/AgentList';
 import QcList from '../components/QcList';
+import ReportDownload from '../components/ReportDownload';
 
 const Dashboard = ({setIsLoggedIn}) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,10 +31,10 @@ const Dashboard = ({setIsLoggedIn}) => {
         const fetchProfile = async () => {
           try {
             const res = await getProfileApi();
-            console.log("Fetched user profile:", res);
+            // console.log("Fetched user profile:", res);
             setProfile(res.data); // Save profile data
           } catch (err) {
-            console.error("Failed to fetch user profile:", err);
+            // console.error("Failed to fetch user profile:", err);
           }
         };
         fetchProfile();
@@ -60,6 +61,8 @@ const Dashboard = ({setIsLoggedIn}) => {
         return <PpcForm />;
       case 'AgentList':
        return <AgentList/>
+      case 'reportDownload':
+       return <ReportDownload/>
       default:
         return <Overview />;
     }
