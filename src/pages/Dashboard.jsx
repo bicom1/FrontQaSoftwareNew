@@ -6,7 +6,7 @@ import PpcForm from '../components/PpcForm';
 import Projects from '../components/Projects';
 import UserManagement from '../components/UserManagement';
 import Overview from '../components/Overview';
-import Sidebar from '../components/sidebar';
+import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { getProfileApi } from '../features/userApis';
 import AddTeamLead from '../components/AddTeamLead';
