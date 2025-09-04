@@ -5,7 +5,7 @@ import EscalationForm from '../components/EscalationForm';
 import PpcForm from '../components/PpcForm';
 import Projects from '../components/Projects';
 import UserManagement from '../components/UserManagement';
-import Overview from '../components/overview';
+import Overview from '../components/Overview';
 import Sidebar from '../components/sidebar';
 import Header from '../components/Header';
 import { getProfileApi } from '../features/userApis';
