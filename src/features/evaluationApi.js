@@ -104,15 +104,28 @@ export const deleteEvaluationApi = async (id) => {
 };
 
 
+  // export const totalEvaluationCountsApi = async () => {
+  //   const token = getToken(); 
+  //   const res = await axios.get(`${baseUrl}/api/evaluations/totalevaluationcounts`, {
+  //     withCredentials: true,
+  //     headers: {
+  //       Authorization: token ? `Bearer ${token}` : "",
+  //     },
+  //   });
+  //   return res.data.count; 
+  // };
+
   export const totalEvaluationCountsApi = async () => {
-    const token = getToken(); 
-    const res = await axios.get(`${baseUrl}/api/evaluations/totalevaluationcounts`, {
-      withCredentials: true,
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
+    const response = await fetch(`${baseUrl}/api/evaluations/totalevaluationcounts`, {
+      headers: authHeader(),
     });
-    return res.data.count; 
+  
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch Evaluation count");
+    }
+  
+    return await response.json();
   };
   
 
