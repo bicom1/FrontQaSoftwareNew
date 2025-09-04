@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./components/Unauthorized";
-import AgentRoutes from "./routes/AgentRoutes";
+import AgentRoutes from "./Routes/AgentRoutes";
 import AdminDetails from "./components/AdminDetails";
 import EditEscalation from "./components/admin/escalation/EditEscalation";
 // Import the Analytics component
