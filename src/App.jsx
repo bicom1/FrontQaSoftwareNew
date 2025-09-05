@@ -44,7 +44,7 @@ function App() {
   return (
     <Routes>
       <Route
-        path="/"
+        path="/login"
         element={
           isLoggedIn ? (
             <Navigate
@@ -58,7 +58,7 @@ function App() {
       />
 
       <Route
-        path="/login"
+        path="/"
         element={<Login onLoginSuccess={() => setIsLoggedIn(true)} />}
       />
 

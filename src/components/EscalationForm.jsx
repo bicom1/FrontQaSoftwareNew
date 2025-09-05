@@ -632,7 +632,7 @@ const handleSubmit = async (e) => {
                         Lead ID <span className="text-danger">*</span>
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         name="leadID"
                         className="form-control form-control-modern"
                         placeholder="Enter Lead ID"
@@ -684,7 +684,7 @@ const handleSubmit = async (e) => {
   <div className="section-header">
                   <h3 className="h5 fw-semibold text-dark mb-0 d-flex align-items-center">
                     <TrendingUp size={20} className="me-2 text-danger" />
-                    Team Lead
+                    Team Lead <span className="text-danger">*</span>
                   </h3>
                 </div>
   {teamLeaders.length > 0 ? (
@@ -700,6 +700,7 @@ const handleSubmit = async (e) => {
                 checked={escalation.teamleader === leader.name}
                 onChange={handleChange}
                 className="form-check-input me-3"
+                required
               />
               <span className="fw-medium">{leader.name}</span>
             </label>

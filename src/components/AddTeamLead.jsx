@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Form, Button, Card, Spinner, Container, Row, Col, Alert } from "react-bootstrap";
 import { toast } from "react-hot-toast";
 import teamleadApi from "../features/teamleadApi"; 
+import { ToastContainer } from "react-toastify";
 
 const AddTeamLead = () => {
   const [formData, setFormData] = useState({
@@ -11,160 +12,190 @@ const AddTeamLead = () => {
   });
 
   const [loading, setLoading] = useState(false);
-  const [errorDetails, setErrorDetails] = useState(null);
+  // const [errorDetails, setErrorDetails] = useState(null);
+   const [fieldErrors, setFieldErrors] = useState({});
+
+    const toastConfig = {
+    position: "top-right",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+    theme: "colored",
+  };
 
   // Handle input change
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    // Clear error details when user starts typing
-    if (errorDetails) setErrorDetails(null);
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    // Clear field-specific error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: "" }));
+    }
   };
+
+  const validateForm = () => {
+  const errors = {};
+  let isValid = true;
+
+  // Name validation
+  if (!formData.name.trim()) {
+    errors.name = "Name is required";
+    isValid = false;
+  } else if (!/^[A-Za-z\s]+$/.test(formData.name)) {
+    errors.name = "Name should contain only letters and spaces";
+    isValid = false;
+  }
+
+  // Email validation - Only gmail.com addresses
+  if (!formData.email.trim()) {
+    errors.email = "Email is required";
+    isValid = false;
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      errors.email = "Please enter a valid email address";
+      isValid = false;
+    } else if (!formData.email.toLowerCase().endsWith('@gmail.com')) {
+      errors.email = "Only Gmail addresses are allowed (@gmail.com)";
+      isValid = false;
+    }
+  }
+
+  // Password validation
+  if (!formData.password) {
+    errors.password = "Password is required";
+    isValid = false;
+  } else if (formData.password.length < 6) {
+    errors.password = "Password must be at least 6 characters long";
+    isValid = false;
+  }
+
+  setFieldErrors(errors);
+  return isValid;
+};
+
 
   // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.password) {
-      toast.error("Please fill in all fields.");
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
-
-    // Validate password strength
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters long.");
+    if (!validateForm()) {
+      // Show general validation error
+      toast.error("Please correct the errors in the form", toastConfig);
       return;
     }
 
     try {
       setLoading(true);
-      setErrorDetails(null);
-      
-      console.log("Submitting data:", formData);
+      setFieldErrors({}); // Clear all field errors
+
       const response = await teamleadApi.createTeamLeadApi(formData);
       
-      console.log("API Response:", response);
-      
-      // Show success toast with team lead name
+      // Show success toast
       toast.success(`Team lead "${formData.name}" created successfully!`, {
-        duration: 4000,
-        position: "top-center",
+        ...toastConfig,
+        icon: "✅",
       });
       
       // Reset form
       setFormData({ name: "", email: "", password: "" });
+      
     } catch (error) {
       console.error("API Error:", error);
       
-      // Extract detailed error information
       const errorMessage = error.response?.data?.message || "Failed to create team lead";
-      const errorStatus = error.response?.status;
       const errorData = error.response?.data;
       
+      // Show error toast
       toast.error(errorMessage, {
-        duration: 5000,
-        position: "top-center",
+        ...toastConfig,
+        icon: "❌",
       });
-      
-      // Set detailed error information for debugging
-      setErrorDetails({
-        message: errorMessage,
-        status: errorStatus,
-        data: errorData
-      });
+
+      // Handle field-specific errors from server
+      if (errorData?.errors) {
+        const serverErrors = {};
+        Object.keys(errorData.errors).forEach(key => {
+          serverErrors[key] = errorData.errors[key].message;
+        });
+        setFieldErrors(serverErrors);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container className="mt-5">
+     <Container className="mt-5">
       <Row className="justify-content-center">
-        <Col md={8}>
-          <Card className="shadow-lg rounded-4">
-            <Card.Body>
-              <h3 className="text-center mb-4">Add Team Lead</h3>
+        <Col md={8} lg={6}>
+          <Card className="shadow-lg rounded-4 border-0">
+            <Card.Body className="p-4">
+              <div className="text-center mb-4">
+                <h3 className="fw-bold text-primary">Add Team Lead</h3>
+                <p className="text-muted">Create a new team lead account</p>
+              </div>
               
-              {/* Display detailed error information for debugging */}
-              {errorDetails && (
-                <Alert variant="danger" className="mb-4">
-                  <Alert.Heading>Error Details</Alert.Heading>
-                  <p><strong>Message:</strong> {errorDetails.message}</p>
-                  {errorDetails.status && <p><strong>Status Code:</strong> {errorDetails.status}</p>}
-                  {errorDetails.data && (
-                    <>
-                      <p><strong>Server Response:</strong></p>
-                      <pre className="bg-light p-2 rounded">
-                        {JSON.stringify(errorDetails.data, null, 2)}
-                      </pre>
-                    </>
-                  )}
-                  <hr />
-                  <p className="mb-0">
-                    Check browser console for more details. Ensure your backend API is running and accessible.
-                  </p>
-                </Alert>
-              )}
-              
-              <Form onSubmit={handleSubmit}>
+              <Form onSubmit={handleSubmit} noValidate>
                 <Form.Group className="mb-3">
-                  <Form.Label>Full Name</Form.Label>
+                  <Form.Label className="fw-semibold">
+                    Full Name <span className="text-danger">*</span>
+                  </Form.Label>
                   <Form.Control
                     type="text"
                     name="name"
                     placeholder="Enter team lead name"
                     value={formData.name}
                     onChange={handleChange}
-                    required
-                    isInvalid={errorDetails && errorDetails.data?.errors?.name}
+                    isInvalid={!!fieldErrors.name}
+                    className="py-2"
                   />
-                  {errorDetails && errorDetails.data?.errors?.name && (
-                    <Form.Control.Feedback type="invalid">
-                      {errorDetails.data.errors.name.message}
-                    </Form.Control.Feedback>
-                  )}
+                  <Form.Control.Feedback type="invalid" className="d-block">
+                    {fieldErrors.name}
+                  </Form.Control.Feedback>
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Email Address</Form.Label>
+                  <Form.Label className="fw-semibold">
+                    Email Address <span className="text-danger">*</span>
+                  </Form.Label>
                   <Form.Control
                     type="email"
                     name="email"
                     placeholder="Enter team lead email"
                     value={formData.email}
                     onChange={handleChange}
-                    required
-                    isInvalid={errorDetails && errorDetails.data?.errors?.email}
+                    isInvalid={!!fieldErrors.email}
+                    className="py-2"
                   />
-                  {errorDetails && errorDetails.data?.errors?.email && (
-                    <Form.Control.Feedback type="invalid">
-                      {errorDetails.data.errors.email.message}
-                    </Form.Control.Feedback>
-                  )}
+                  <Form.Control.Feedback type="invalid" className="d-block">
+                    {fieldErrors.email}
+                  </Form.Control.Feedback>
                 </Form.Group>
 
-                <Form.Group className="mb-3">
-                  <Form.Label>Password</Form.Label>
+                <Form.Group className="mb-4">
+                  <Form.Label className="fw-semibold">
+                    Password <span className="text-danger">*</span>
+                  </Form.Label>
                   <Form.Control
                     type="password"
                     name="password"
                     placeholder="Enter a secure password (min. 6 characters)"
                     value={formData.password}
                     onChange={handleChange}
-                    required
-                    isInvalid={errorDetails && errorDetails.data?.errors?.password}
+                    isInvalid={!!fieldErrors.password}
+                    className="py-2"
                   />
-                  {errorDetails && errorDetails.data?.errors?.password && (
-                    <Form.Control.Feedback type="invalid">
-                      {errorDetails.data.errors.password.message}
-                    </Form.Control.Feedback>
-                  )}
+                  <Form.Control.Feedback type="invalid" className="d-block">
+                    {fieldErrors.password}
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted">
+                    Must be at least 6 characters long
+                  </Form.Text>
                 </Form.Group>
 
                 <div className="d-grid">
@@ -172,7 +203,8 @@ const AddTeamLead = () => {
                     variant="primary"
                     type="submit"
                     disabled={loading}
-                    className="rounded-3"
+                    className="rounded-3 py-2 fw-semibold"
+                    size="lg"
                   >
                     {loading ? (
                       <>
@@ -182,8 +214,9 @@ const AddTeamLead = () => {
                           size="sm"
                           role="status"
                           aria-hidden="true"
-                        />{" "}
-                        Saving...
+                          className="me-2"
+                        />
+                        Creating Team Lead...
                       </>
                     ) : (
                       "Add Team Lead"
@@ -195,6 +228,7 @@ const AddTeamLead = () => {
           </Card>
         </Col>
       </Row>
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
     </Container>
   );
 };
