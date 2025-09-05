@@ -75,13 +75,13 @@ const Sidebar = ({
           <SquareUserRound size={20} />
           {sidebarOpen && <span className="ms-2">Agent List</span>}
         </button>
-        <button 
+        {/* <button 
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'users' ? 'btn-primary' : 'btn-dark'}`}
           onClick={() => setActiveTab('users')}
         >
           <UsersIcon size={20} />
           {sidebarOpen && <span className="ms-2">Users</span>}
-        </button>
+        </button> */}
         <button 
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'teamlead' ? 'btn-primary' : 'btn-dark'}`}
           onClick={() => setActiveTab('teamlead')}
@@ -90,13 +90,13 @@ const Sidebar = ({
           
           {sidebarOpen && <span className="ms-2">Add Team Lead</span>}
         </button>
-        <button 
+        {/* <button 
           className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'projects' ? 'btn-primary' : 'btn-dark'}`}
           onClick={() => setActiveTab('projects')}
         >
           <Briefcase size={20} />
           {sidebarOpen && <span className="ms-2">Projects</span>}
-        </button>
+        </button> */}
         
         {/* Forms button with expandable sub-menu */}
         <button 

@@ -157,6 +157,8 @@ export const totalEscalationCountsApi = async () => {
   return await response.json();
 };
 
+ 
+
   export const getEscalationAnalyticsApi = async ()=> {
     const response = await fetch(`${baseUrl}/api/analytics/getescalationAnalytics`,{
       headers: authHeader()

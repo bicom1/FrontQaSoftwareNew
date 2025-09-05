@@ -1,6 +1,11 @@
 import axios from "axios";
 import { baseUrl, getToken } from "../features/config";
 
+const authHeader = () => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export const LeadRegister = async (data) => {
   const res = await axios.post(`${baseUrl}/api/users/register-user`, data);
   return res;
@@ -46,15 +51,19 @@ export const getallusersApi = async () => {
   return res;
 } 
 
+
 export const totalUserCountApi = async () => {
-  const token = getToken();
-  const res = await axios.get(`${baseUrl}/api/users/totalUserCount`, {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-  });
-  return res.data.count; 
-};
+    const response = await fetch(`${baseUrl}/api/users/totalUserCount`, {
+      headers: authHeader(),
+    });
+  
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch User count");
+    }
+  
+    return await response.json();
+  };
 
 export const logoutApi = async () => {
   const token = getToken();

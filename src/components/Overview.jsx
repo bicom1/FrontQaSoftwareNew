@@ -24,7 +24,7 @@ const Overview = () => {
   const [evaluationRatingRangeData, setEvaluationRatingRangeData] = useState([]);
   const [marketingSourceData, setMarketingSourceData] = useState([]);
   const [escalationSeverityData, setEscalationSeverityData] = useState([]);
-  const [timeRange, setTimeRange] = useState('7d'); // default 'Last 7 days'
+  // const [timeRange, setTimeRange] = useState('7d'); // default 'Last 7 days'
 
 
   useEffect(() => {
@@ -39,14 +39,14 @@ const Overview = () => {
           evaluationAnalyticsData,
           marketingAnalyticsData,
         ] = await Promise.all([
-          totalUserCountApi(timeRange),
-          totalEscalationCountsApi(timeRange),
-          totalEvaluationCountsApi(timeRange),
-          totalMarketingCountsApi(timeRange),
-          getEscalationAnalyticsApi(timeRange),
-          getEvaluationAnalyticsApi(timeRange),
-          getMarketingAnalyticsApi(timeRange),
-          overviewAnalyticsRangeApi(timeRange)
+          totalUserCountApi(),
+          totalEscalationCountsApi(),
+          totalEvaluationCountsApi(),
+          totalMarketingCountsApi(),
+          getEscalationAnalyticsApi(),
+          getEvaluationAnalyticsApi(),
+          getMarketingAnalyticsApi(),
+          overviewAnalyticsRangeApi()
         ]);
 
         setTotalUsers(users.count);
@@ -90,14 +90,14 @@ const Overview = () => {
     };
 
     fetchAllData();
-  }, [timeRange]);
+  }, []);
 
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4>Dashboard Overview</h4>
         <div>
-        <select
+        {/* <select
   className="form-select form-select-sm"
   value={timeRange}
   onChange={(e) => setTimeRange(e.target.value)}
@@ -106,7 +106,7 @@ const Overview = () => {
   <option value="30d">Last 30 days</option>
   <option value="month">This month</option>
   <option value="quarter">Last quarter</option>
-</select>
+</select> */}
         </div>
       </div>
 
