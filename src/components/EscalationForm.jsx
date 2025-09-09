@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { AlertTriangle, User, Mail, Hash, Users, MessageSquare, Star, FileText, Clock, Calendar, Upload, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { getTeamLeadsApi } from "../features/teamleadApi";
 import { createEscalationApi } from "../features/escalationsApi";
+import axios from "axios";
 
 
 
-const EscalationForm = () => {
+const EscalationForm = ({ escalationId }) => {
   const [otherReason, setOtherReason] = useState(""); 
   const [escalation, setEscalation] = useState({
   owner: "",
@@ -24,6 +25,19 @@ const EscalationForm = () => {
   successmaration: "",
   audio: null, 
 });
+
+useEffect(() => {
+    if (escalationId) {
+      axios
+        .get(`https://7f3e2eecdfb0.ngrok-free.app/api/bitrix24/${escalationId}`)
+        .then((res) => {
+          if (res.data.success) {
+            setEscalation((prev) => ({ ...prev, ...res.data.data }));
+          }
+        })
+        .catch((err) => console.error("Error fetching escalation:", err));
+    }
+  }, [escalationId]);
 
 
 
@@ -45,9 +59,12 @@ useEffect(() => {
 }, []);
 
 
+  // const handleChange = (e) => {
+  //   const { name, value } = e.target;
+  //   setEscalation((prev) => ({ ...prev, [name]: value }));
+  // };
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEscalation((prev) => ({ ...prev, [name]: value }));
+    setEscalation({ ...escalation, [e.target.name]: e.target.value });
   };
 
   const handleAudioChange = (e) => {
@@ -131,96 +148,94 @@ useEffect(() => {
 
 
 
+// const handleSubmit = async (e) => {
+//   e.preventDefault();
+
+//   if (loading) return; // Prevent double submission
+
+//   const owner = escalation.owner;
+//   if (!owner) {
+//     alert("Owner not found. Please log in.");
+//     return;
+//   }
+
+//   // Validate required fields
+//   const requiredFields = [
+//     "useremail", "leadID", "agentName", "teamleader",
+//     "evaluatedby", "leadSource", "userrating", "leadStatus",
+//     "escSeverity", "issueIden", "escAction", "successmaration"
+//   ];
+
+//   for (let field of requiredFields) {
+//     if (!escalation[field]?.toString().trim()) {
+//       alert(`Please fill the required field: ${field}`);
+//       return;
+//     }
+//   }
+
+//   setLoading(true);
+
+//   try {
+//     // --- API call ---
+//     await createEscalationApi(escalation, otherReason);
+
+//     // --- Only show success alert once ---
+//     alert("Escalation submitted successfully!");
+
+//     // --- Reset form ---
+//     let parsedUser = { _id: "", email: "" };
+//     try {
+//       const userData = localStorage.getItem("user");
+//       if (userData) parsedUser = JSON.parse(userData);
+//     } catch (err) {
+//       console.warn("Failed to parse userData", err);
+//     }
+
+//     setEscalation({
+//       owner: parsedUser._id || "",
+//       useremail: parsedUser.email || "",
+//       leadID: "",
+//       agentName: "",
+//       teamleader: "",
+//       evaluatedby: "",
+//       leadSource: "",
+//       userrating: "",
+//       leadStatus: "",
+//       escSeverity: "",
+//       issueIden: "",
+//       escAction: "",
+//       documentation: "",
+//       successmaration: "",
+//       audio: null,
+//     });
+
+//     setOtherReason("");
+//     setUserRate({
+//       severity: { rateVal: 0 },
+//       issue: { rateVal: 0 },
+//       action: { rateVal: 0 },
+//       documentation: { rateVal: 0 },
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     alert("Failed to submit escalation. Check console for details.");
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
 const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  if (loading) return; // Prevent double submission
-
-  const owner = escalation.owner;
-  if (!owner) {
-    alert("Owner not found. Please log in.");
-    return;
-  }
-
-  // Validate required fields
-  const requiredFields = [
-    "useremail", "leadID", "agentName", "teamleader",
-    "evaluatedby", "leadSource", "userrating", "leadStatus",
-    "escSeverity", "issueIden", "escAction", "successmaration"
-  ];
-
-  for (let field of requiredFields) {
-    if (!escalation[field]?.toString().trim()) {
-      alert(`Please fill the required field: ${field}`);
-      return;
-    }
-  }
-
-  setLoading(true);
-
-  try {
-    // --- API call ---
-    await createEscalationApi(escalation, otherReason);
-
-    // --- Only show success alert once ---
-    alert("Escalation submitted successfully!");
-
-    // --- Reset form ---
-    let parsedUser = { _id: "", email: "" };
+    e.preventDefault();
     try {
-      const userData = localStorage.getItem("user");
-      if (userData) parsedUser = JSON.parse(userData);
+      await axios.post(
+        "https://backendqasoftware-1jfe.onrender.com/api/bitrix24/webhook",
+        escalation
+      );
+      alert("Escalation saved!");
     } catch (err) {
-      console.warn("Failed to parse userData", err);
+      alert("Error saving escalation");
     }
-
-    setEscalation({
-      owner: parsedUser._id || "",
-      useremail: parsedUser.email || "",
-      leadID: "",
-      agentName: "",
-      teamleader: "",
-      evaluatedby: "",
-      leadSource: "",
-      userrating: "",
-      leadStatus: "",
-      escSeverity: "",
-      issueIden: "",
-      escAction: "",
-      documentation: "",
-      successmaration: "",
-      audio: null,
-    });
-
-    setOtherReason("");
-    setUserRate({
-      severity: { rateVal: 0 },
-      issue: { rateVal: 0 },
-      action: { rateVal: 0 },
-      documentation: { rateVal: 0 },
-    });
-  } catch (error) {
-    console.error(error);
-    alert("Failed to submit escalation. Check console for details.");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
- useEffect(() => {
-  fetch("http://localhost:3001/api/escalations/prefill")
-    .then(res => res.json())
-    .then(data => {
-      if (data.success && data.data) {
-        setEscalation(prev => ({ ...prev, ...data.data }));
-      }
-    })
-    .catch(err => console.error("Error fetching prefill data:", err));
-}, []);
-
-
+  };
 
 
 
