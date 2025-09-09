@@ -1,9 +1,9 @@
 import axios from "axios";
 import { baseUrl, getToken } from "./config";
 
-
 // Create team leader
 const createTeamLeadApi = async (teamleadData) => {
+  console.log("Creating team lead with data:", teamleadData);
   const response = await axios.post(`${baseUrl}/api/teamlead/create`, teamleadData);
   return response.data;
 };
@@ -17,25 +17,27 @@ export const getTeamLeadsApi = async () => {
 // Get single team lead by ID
 const getTeamLeadApi = async (id) => {
   const token = getToken();
-  const response = await axios.get(`${baseUrl}/teamlead/${id}`, {
+  const response = await axios.get(`${baseUrl}/api/teamlead/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
 };
 
-// Update team lead
+// Update team lead - FIXED URL
 const updateTeamLeadApi = async (id, teamLeadData) => {
+  console.log("Updating team lead ID:", id, "with data:", teamLeadData);
   const token = getToken();
-  const response = await axios.put(`${baseUrl}/teamlead/${id}`, teamLeadData, {
+  const response = await axios.put(`${baseUrl}/api/teamlead/${id}`, teamLeadData, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
 };
 
-// Delete team lead
+// Delete team lead - FIXED URL  
 const deleteTeamLeadApi = async (id) => {
+  console.log("Deleting team lead ID:", id);
   const token = getToken();
-  const response = await axios.delete(`${baseUrl}/teamlead/${id}`, {
+  const response = await axios.delete(`${baseUrl}/api/teamlead/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;

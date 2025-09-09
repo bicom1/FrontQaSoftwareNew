@@ -564,7 +564,7 @@ useEffect(() => {
                         Lead ID
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         className="form-control form-control-modern"
                         placeholder="Enter Lead ID"
                         value={evaluation.leadID}

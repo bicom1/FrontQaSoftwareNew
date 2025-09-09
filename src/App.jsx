@@ -6,7 +6,10 @@ import Unauthorized from "./components/Unauthorized";
 import AgentRoutes from "./Routes/AgentRoutes";
 import AdminDetails from "./components/AdminDetails";
 import EditEscalation from "./components/admin/escalation/EditEscalation";
-// Import the Analytics component
+import EscalationForm from "./components/EscalationForm";
+import AgentForm from "./components/AgentForm";
+import PpcForm from "./components/PpcForm";
+import Layout from "./components/admin/escalation/Layout";
 
 function RequireAuth({ children, allowedRoles }) {
   const token = localStorage.getItem("token");
@@ -44,7 +47,7 @@ function App() {
   return (
     <Routes>
       <Route
-        path="/"
+        path="/login"
         element={
           isLoggedIn ? (
             <Navigate
@@ -58,14 +61,14 @@ function App() {
       />
 
       <Route
-        path="/login"
+        path="/"
         element={<Login onLoginSuccess={() => setIsLoggedIn(true)} />}
       />
 
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       <Route
-        path="/dashboard"
+        path="/dashboard/*"
         element={
           <RequireAuth>
             <Dashboard onLogout={() => setIsLoggedIn(false)} />
@@ -73,14 +76,43 @@ function App() {
         }
       />
      
-     <Route path="/admin-details/:adminId" element={<AdminDetails />} />
-     <Route path="/admin-details/edit" element={<EditEscalation />} />
+      <Route path="/admin-details/:adminId" element={<AdminDetails />} />
+      <Route path="/admin-details/edit" element={<EditEscalation />} />
 
+      {/* New separate routes with Layout */}
+      <Route
+        path="/escalation"
+        element={
+          <RequireAuth>
+            <Layout setIsLoggedIn={setIsLoggedIn}>
+              <EscalationForm />
+            </Layout>
+          </RequireAuth>
+        }
+      />
+      
+      <Route
+        path="/marketing"
+        element={
+          <RequireAuth>
+            <Layout setIsLoggedIn={setIsLoggedIn}>
+              <PpcForm />
+            </Layout>
+          </RequireAuth>
+        }
+      />
+      
+      <Route
+        path="/evaluation"
+        element={
+          <RequireAuth>
+            <Layout setIsLoggedIn={setIsLoggedIn}>
+              <AgentForm />
+            </Layout>
+          </RequireAuth>
+        }
+      />
      
-
-     
-
-    
       <Route
         path="/agent/*"
         element={
@@ -96,5 +128,3 @@ function App() {
 }
 
 export default App;
-
-
