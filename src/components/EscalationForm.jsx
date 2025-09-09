@@ -29,7 +29,7 @@ const EscalationForm = ({ escalationId }) => {
 useEffect(() => {
     if (escalationId) {
       axios
-        .get(`https://7f3e2eecdfb0.ngrok-free.app/api/bitrix24/${escalationId}`)
+        .get(`https://backendqasoftware-1jfe.onrender.com/api/bitrix24/${escalationId}`)
         .then((res) => {
           if (res.data.success) {
             setEscalation((prev) => ({ ...prev, ...res.data.data }));
