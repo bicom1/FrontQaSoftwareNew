@@ -209,7 +209,16 @@ const handleSubmit = async (e) => {
 
 
 
-
+ useEffect(() => {
+  fetch("http://localhost:3001/api/escalations/prefill")
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.data) {
+        setEscalation(prev => ({ ...prev, ...data.data }));
+      }
+    })
+    .catch(err => console.error("Error fetching prefill data:", err));
+}, []);
 
 
 
@@ -359,7 +368,7 @@ const handleSubmit = async (e) => {
 
   return (
     <>
-     <style>{`
+    <style>{`
   .gradient-bg {
     background: #f4f4f4;
     min-height: 100vh;
@@ -637,7 +646,8 @@ const handleSubmit = async (e) => {
                         className="form-control form-control-modern"
                         placeholder="Enter Lead ID"
                         value={escalation.leadID}
-                        onChange={handleChange}
+                        onChange={(e) => setEscalation({ ...escalation, leadID: e.target.value })}
+      
                         required
                       />
                     </div>
@@ -671,7 +681,7 @@ const handleSubmit = async (e) => {
                         className="form-control form-control-modern"
                         placeholder="Enter Agent Name"
                         value={escalation.agentName}
-                        onChange={handleChange}
+                        onChange={(e) => setEscalation({ ...escalation, agentName: e.target.value })} 
                         required
                       />
                     </div>

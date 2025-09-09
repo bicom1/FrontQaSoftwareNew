@@ -1,39 +1,40 @@
+// components/Sidebar.js
 import React, { useEffect, useState } from 'react';
-import { BarChart2, Activity, Users as UsersIcon, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target, SquareUserRound, CircleUser } from 'lucide-react';
+import { BarChart2, Activity, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target, SquareUserRound, CircleUser } from 'lucide-react';
 import { getProfileApi } from '../features/userApis';
+import { Link, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ 
   sidebarOpen, 
   setSidebarOpen, 
-  activeTab, 
-  setActiveTab, 
-  formsExpanded, 
-  setFormsExpanded 
+  profile
 }) => {
+  const location = useLocation();
+  const [formsExpanded, setFormsExpanded] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await getProfileApi();
+        setProfile(res.data);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
   const handleFormsClick = () => {
     setFormsExpanded(!formsExpanded);
   };
 
-    const [profile, setProfile] = useState(null);
-  
-
-    useEffect(() => {
-      const fetchProfile = async () => {
-        try {
-          const res = await getProfileApi();
-          console.log("Fetched user profile:", res);
-          setProfile(res.data); // Save profile data
-        } catch (err) {
-          console.error("Failed to fetch user profile:", err);
-        }
-      };
-      fetchProfile();
-    }, []);
- 
-  
+  const isActive = (path) => {
+    return location.pathname === path || location.pathname.startsWith(path);
+  };
 
   return (
     <div 
@@ -53,98 +54,87 @@ const Sidebar = ({
       </div>
 
       <div className="nav flex-column nav-pills">
-        <button 
-          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'overview' ? 'btn-primary' : 'btn-dark'}`}
-          onClick={() => setActiveTab('overview')}
+        <Link 
+          to="/dashboard/overview"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/overview') ? 'btn-primary' : 'btn-dark'}`}
         >
           <BarChart2 size={20} />
           {sidebarOpen && <span className="ms-2">Overview</span>}
-        </button>
+        </Link>
 
-        <button 
-          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'analytics' ? 'btn-primary' : 'btn-dark'}`}
-          onClick={() => setActiveTab('analytics')}
+        <Link 
+          to="/dashboard/analytics"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/analytics') ? 'btn-primary' : 'btn-dark'}`}
         >
           <Activity size={20} />
           {sidebarOpen && <span className="ms-2">QC Team</span>}
-        </button>
-        <button 
-          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'AgentList' ? 'btn-primary' : 'btn-dark'}`}
-          onClick={() => setActiveTab('AgentList')}
+        </Link>
+        
+        <Link 
+          to="/dashboard/agent-list"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/agent-list') ? 'btn-primary' : 'btn-dark'}`}
         >
           <SquareUserRound size={20} />
           {sidebarOpen && <span className="ms-2">Agent List</span>}
-        </button>
-        {/* <button 
-          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'users' ? 'btn-primary' : 'btn-dark'}`}
-          onClick={() => setActiveTab('users')}
-        >
-          <UsersIcon size={20} />
-          {sidebarOpen && <span className="ms-2">Users</span>}
-        </button> */}
-        <button 
-          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'teamlead' ? 'btn-primary' : 'btn-dark'}`}
-          onClick={() => setActiveTab('teamlead')}
+        </Link>
+        
+        <Link 
+          to="/dashboard/teamlead"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/teamlead') ? 'btn-primary' : 'btn-dark'}`}
         >
           <CircleUser size={20} />
-          
           {sidebarOpen && <span className="ms-2">Add Team Lead</span>}
-        </button>
-        {/* <button 
-          className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'projects' ? 'btn-primary' : 'btn-dark'}`}
-          onClick={() => setActiveTab('projects')}
-        >
-          <Briefcase size={20} />
-          {sidebarOpen && <span className="ms-2">Projects</span>}
-        </button> */}
+        </Link>
         
-        {/* Forms button with expandable sub-menu */}
-        <button 
-          className={`btn text-start mb-2 d-flex align-items-center ${['agent', 'escalation', 'ppc'].includes(activeTab) ? 'btn-primary' : 'btn-dark'}`}
-          onClick={handleFormsClick}
-        >
-          <Briefcase size={20} />
-          {sidebarOpen && <span className="ms-2">Forms</span>}
-          {sidebarOpen && (
-            <span className="ms-auto">
-              {formsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </span>
-          )}
-        </button>
+        {/* External forms links */}
+        <div className="mb-2">
+          <button 
+            className={`btn text-start w-100 d-flex align-items-center ${(isActive('/escalation') || isActive('/marketing') || isActive('/evaluation')) ? 'btn-primary' : 'btn-dark'}`}
+            onClick={handleFormsClick}
+          >
+            <Briefcase size={20} />
+            {sidebarOpen && <span className="ms-2">Forms</span>}
+            {sidebarOpen && (
+              <span className="ms-auto">
+                {formsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </span>
+            )}
+          </button>
 
-        {/* Sub-menu items for Forms */}
-        {formsExpanded && sidebarOpen && (
-          <div className="ms-3">
-            <button 
-              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'agent' ? 'btn-primary' : 'btn-dark'}`}
-              onClick={() => setActiveTab('agent')}
-            >
-              <User size={20} />
-              <span className="ms-2">Agent</span>
-            </button>
-            <button 
-              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'escalation' ? 'btn-primary' : 'btn-dark'}`}
-              onClick={() => setActiveTab('escalation')}
-            >
-              <ArrowUp size={20} />
-              <span className="ms-2">Escalation</span>
-            </button>
-            <button 
-              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'ppc' ? 'btn-primary' : 'btn-dark'}`}
-              onClick={() => setActiveTab('ppc')}
-            >
-              <Target size={20} />
-              <span className="ms-2">PPC</span>
-            </button>
-            <button 
-              className={`btn text-start mb-2 d-flex align-items-center ${activeTab === 'reportDownload' ? 'btn-primary' : 'btn-dark'}`}
-              onClick={() => setActiveTab('reportDownload')}
-            >
-              <Target size={20} />
-              <span className="ms-2">Report Download</span>
-            </button>
-          </div>
-        )}
+          {/* Sub-menu items for Forms */}
+          {formsExpanded && sidebarOpen && (
+            <div className="ms-3 mt-2">
+              <Link 
+                to="/evaluation"
+                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/evaluation') ? 'btn-primary' : 'btn-dark'}`}
+              >
+                <User size={20} />
+                <span className="ms-2">Agent Evaluation</span>
+              </Link>
+              <Link 
+                to="/escalation"
+                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/escalation') ? 'btn-primary' : 'btn-dark'}`}
+              >
+                <ArrowUp size={20} />
+                <span className="ms-2">Escalation</span>
+              </Link>
+              <Link 
+                to="/marketing"
+                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/marketing') ? 'btn-primary' : 'btn-dark'}`}
+              >
+                <Target size={20} />
+                <span className="ms-2">PPC/Marketing</span>
+              </Link>
+              <Link 
+                to="/dashboard/report-download"
+                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/report-download') ? 'btn-primary' : 'btn-dark'}`}
+              >
+                <Target size={20} />
+                <span className="ms-2">Report Download</span>
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-auto">
@@ -155,7 +145,6 @@ const Sidebar = ({
               style={{ width: '40px', height: '40px' }}
             >
               <span className="text-capitalize fw-bold">{profile?.name?.charAt(0) || "L"}</span>
-
             </div>
             <div>
               <div className="text-capitalize fw-bold">{profile?.name || "Loading..."}</div>

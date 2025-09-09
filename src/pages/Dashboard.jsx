@@ -1,107 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import AgentForm from '../components/AgentForm'; 
-import EscalationForm from '../components/EscalationForm';
-import PpcForm from '../components/PpcForm';
-import Projects from '../components/Projects';
-import UserManagement from '../components/UserManagement';
+// pages/Dashboard.js
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Overview from '../components/Overview';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
-import { getProfileApi } from '../features/userApis';
-import AddTeamLead from '../components/AddTeamLead';
-import AgentList from '../components/AgentList';
 import QcList from '../components/QcList';
+import UserManagement from '../components/UserManagement';
+import AddTeamLead from '../components/AddTeamLead';
+import Projects from '../components/Projects';
+import AgentList from '../components/AgentList';
 import ReportDownload from '../components/ReportDownload';
+import Layout from '../components/admin/escalation/Layout';
 
-const Dashboard = ({setIsLoggedIn}) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: 'New user registration', time: '5 minutes ago', read: false },
-    { id: 2, text: 'Server update completed', time: '2 hours ago', read: false },
-    { id: 3, text: 'Weekly report available', time: '1 day ago', read: true },
-  ]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [formsExpanded, setFormsExpanded] = useState(false);
-  const [profile, setProfile] = useState(null);
 
-  useEffect(() => {
-        const fetchProfile = async () => {
-          try {
-            const res = await getProfileApi();
-            // console.log("Fetched user profile:", res);
-            setProfile(res.data); // Save profile data
-          } catch (err) {
-            // console.error("Failed to fetch user profile:", err);
-          }
-        };
-        fetchProfile();
-      }, []);
-  
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <Overview />;
-      case 'analytics':
-        return <QcList />;
-      case 'users':
-        return <UserManagement />;
-      case 'teamlead':
-        return <AddTeamLead/>
-      case 'projects':
-        return <Projects />;
-      case 'agent':
-        return <AgentForm />; 
-      case 'escalation':
-        return <EscalationForm />;
-      case 'ppc':
-        return <PpcForm />;
-      case 'AgentList':
-       return <AgentList/>
-      case 'reportDownload':
-       return <ReportDownload/>
-      default:
-        return <Overview />;
-    }
-  };
-
+const Dashboard = ({ setIsLoggedIn }) => {
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
-      {/* Sidebar Component */}
-      <Sidebar 
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        formsExpanded={formsExpanded}
-        setFormsExpanded={setFormsExpanded}
-        setProfile={profile}
-      />
-
-      {/* Main Content */}
-      <div className="flex-grow-1 d-flex flex-column">
-        {/* Header Component */}
-        <Header
-          setIsLoggedIn={setIsLoggedIn}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          notifications={notifications}
-          setNotifications={setNotifications}
-          showNotifications={showNotifications}
-          setShowNotifications={setShowNotifications}
-          showUserMenu={showUserMenu}
-          setShowUserMenu={setShowUserMenu}
-        />
-
-        {/* Content Area */}
-        <div className="flex-grow-1 bg-light p-4">
-          {renderContent()}
-        </div>
-      </div>
-    </div>
+    <Layout setIsLoggedIn={setIsLoggedIn}>
+      <Routes>
+        <Route path="/" element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<Overview />} />
+        <Route path="analytics" element={<QcList />} />
+        <Route path="users" element={<UserManagement />} />
+        <Route path="teamlead" element={<AddTeamLead />} />
+        <Route path="projects" element={<Projects />} />
+        <Route path="agent-list" element={<AgentList />} />
+        <Route path="report-download" element={<ReportDownload />} />
+        <Route path="*" element={<Navigate to="overview" replace />} />
+      </Routes>
+    </Layout>
   );
 };
 
