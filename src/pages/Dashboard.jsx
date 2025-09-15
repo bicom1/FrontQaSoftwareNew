@@ -15,15 +15,15 @@ const Dashboard = ({ setIsLoggedIn }) => {
   return (
     <Layout setIsLoggedIn={setIsLoggedIn}>
       <Routes>
-        <Route path="/" element={<Navigate to="overview" replace />} />
-        <Route path="overview" element={<Overview />} />
-        <Route path="analytics" element={<QcList />} />
+        <Route path="/" element={<Navigate to="home" replace />} />
+        <Route path="home" element={<Overview />} />
+        <Route path="qc-team" element={<QcList />} />
         <Route path="users" element={<UserManagement />} />
-        <Route path="teamlead" element={<AddTeamLead />} />
+        <Route path="add-teamlead" element={<AddTeamLead />} />
         <Route path="projects" element={<Projects />} />
-        <Route path="agent-list" element={<AgentList />} />
+        <Route path="sales-team" element={<AgentList />} />
         <Route path="report-download" element={<ReportDownload />} />
-        <Route path="*" element={<Navigate to="overview" replace />} />
+        <Route path="*" element={<Navigate to="home" replace />} />
       </Routes>
     </Layout>
   );
