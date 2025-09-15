@@ -7,6 +7,8 @@ import { totalUserCountApi } from '../features/userApis';
 import { totalEscalationCountsApi, getEscalationAnalyticsApi, overviewAnalyticsRangeApi } from '../features/escalationsApi';
 import { totalEvaluationCountsApi, getEvaluationAnalyticsApi } from '../features/evaluationApi';
 import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/marketingApi';
+import { Button } from 'react-bootstrap';
+import { Crown } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
@@ -95,18 +97,22 @@ const Overview = () => {
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h4>Dashboard Overview</h4>
+        <div className="d-flex gap-2">
+          <Button variant='success'>Active Users : 15</Button>
+          <Button variant='danger'>InActive Users : 10 </Button>
+        </div>
         <div>
-        {/* <select
-  className="form-select form-select-sm"
-  value={timeRange}
-  onChange={(e) => setTimeRange(e.target.value)}
->
-  <option value="7d">Last 7 days</option>
-  <option value="30d">Last 30 days</option>
-  <option value="month">This month</option>
-  <option value="quarter">Last quarter</option>
-</select> */}
+        <div className='d-flex gap-3'>
+           <div>
+            <Button variant='info'>8 Total Users </Button>
+           </div>
+          <div>
+             <Button variant='dark'>
+            Add User
+          </Button>
+          </div>
+         
+        </div>
         </div>
       </div>
 
@@ -114,15 +120,34 @@ const Overview = () => {
       <div className="row g-3 mb-4">
         <div className="col-12 col-md-6 col-lg-3">
           <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <h6 className="text-muted">Total Users</h6>
-              <div className="d-flex align-items-center">
-                <h2 className="mb-0">{totalUsers ?? 'Loading...'}</h2>
-                <span className="badge bg-success ms-2">+8%</span>
-              </div>
-              <div className="text-muted small mt-2">Compared to last week</div>
-            </div>
-          </div>
+  <div className="card-body">
+    {/* Card Header */}
+    <h5 className="text-muted mb-4 fw-bold">Content Overview</h5>
+
+    {/* Draft Section */}
+    <div className="d-flex align-items-center justify-content-between mb-3 p-2 rounded bg-light">
+      <div>
+        <h6 className="mb-1 fw-semibold">Total Drafts</h6>
+        <small className="text-muted">From: 8</small>
+      </div>
+      <Button variant="info" size="sm">
+        View Drafts
+      </Button>
+    </div>
+
+    {/* Publish Section */}
+    <div className="d-flex align-items-center justify-content-between p-2 rounded bg-light">
+      <div>
+        <h6 className="mb-1 fw-semibold">Total Published</h6>
+        <small className="text-muted">From: 5</small>
+      </div>
+      <Button variant="success" size="sm">
+        View Published
+      </Button>
+    </div>
+  </div>
+</div>
+
         </div>
 
         <div className="col-12 col-md-6 col-lg-3">
@@ -146,7 +171,7 @@ const Overview = () => {
                 <h2 className="mb-0">{totalEvaluationCounts ?? 'Loading...'}</h2>
                 <span className="badge bg-success ms-2">+8%</span>
               </div>
-              <div className="text-muted small mt-2">$10,234 this month</div>
+              
             </div>
           </div>
         </div>
