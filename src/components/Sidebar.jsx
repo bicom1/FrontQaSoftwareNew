@@ -63,8 +63,8 @@ const Sidebar = ({
         </Link>
 
         <Link 
-          to="/dashboard/analytics"
-          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/analytics') ? 'btn-primary' : 'btn-dark'}`}
+          to="/dashboard/qc-team"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/qc-team') ? 'btn-primary' : 'btn-dark'}`}
         >
           <Activity size={20} />
           {sidebarOpen && <span className="ms-2">QC Team</span>}

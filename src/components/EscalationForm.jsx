@@ -10,7 +10,7 @@ const EscalationForm = ({ escalationId }) => {
   const [otherReason, setOtherReason] = useState(""); 
   const [escalation, setEscalation] = useState({
   owner: "",
-  useremail: "", // will be set after loading user
+  useremail: "", 
   leadID: "",
   agentName: "",
   teamleader: "",
@@ -29,7 +29,7 @@ const EscalationForm = ({ escalationId }) => {
 useEffect(() => {
     if (escalationId) {
       axios
-        .get(`https://backendqasoftware-1jfe.onrender.com/api/bitrix24/${escalationId}`)
+        .get(`https://7f014f8e80a7.ngrok-free.app/api/bitrix24/${escalationId}`)
         .then((res) => {
           if (res.data.success) {
             setEscalation((prev) => ({ ...prev, ...res.data.data }));
