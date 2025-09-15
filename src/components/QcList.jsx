@@ -130,15 +130,13 @@ const QcList = () => {
                 <div className="row g-3">
                   {filteredAdmins.map((agent) => (
                     <div key={agent._id} className="col-12">
-                      <div className={`admin-card  card border-0 shadow-sm rounded-3 ${expandedAdmin === agent._id ? 'expanded' : ''}`}>
-                        <div 
-                          className="card-body py-3"
-                          style={{cursor: 'pointer'}}
-                        >
-                          <div className="d-flex align-items-center justify-content-between">
+                      <div className={`admin-card card border-0 shadow-sm rounded-3 ${expandedAdmin === agent._id ? 'expanded' : ''}`}>
+                        <div className="card-body py-3">
+                          <div className="d-flex align-items-center justify-content-between w-100">
                             <div 
-                              className="d-flex align-items-center gap-3"
+                              className="d-flex align-items-center gap-3 flex-grow-1"
                               onClick={() => handleAdminClick(agent.name)}
+                              style={{cursor: 'pointer'}}
                             >
                               <div className="admin-avatar rounded-circle bg-primary-gradient text-white d-flex align-items-center justify-content-center fw-bold">
                                 {agent.name?.charAt(0).toUpperCase()}
@@ -146,7 +144,7 @@ const QcList = () => {
                               </div>
                              
                               <div>
-                                <h6 className="fw-bold mb-0 d-flex  align-items-center gap-2 admin-name-link">
+                                <h6 className="fw-bold mb-0 d-flex align-items-center gap-2 admin-name-link">
                                   {agent.name}
                                   {agent.role === 'superadmin' && <span className="badge bg-warning rounded-pill py-1">Owner</span>}
                                 </h6>
@@ -155,16 +153,21 @@ const QcList = () => {
                                   {agent.email}
                                 </small>
                               </div>
-                               <button 
-                                  className="btn btn-outline-primary btn-sm"
-                                  onClick={() => handleAdminClick(agent._id, agent.name)}
-                                >
-                                  View Full Details
-                                </button>
+                            </div>
+                            
+                            {/* Button moved to extreme right */}
+                            <div className="ms-auto">
+                              <button 
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent triggering the parent click
+                                  handleAdminClick(agent._id, agent.name);
+                                }}
+                              >
+                                View Full Details
+                              </button>
                             </div>
                           </div>
-                          
-                          
                         </div>
                       </div>
                     </div>

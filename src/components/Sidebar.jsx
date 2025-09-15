@@ -1,6 +1,6 @@
 // components/Sidebar.js
 import React, { useEffect, useState } from 'react';
-import { BarChart2, Activity, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target, SquareUserRound, CircleUser } from 'lucide-react';
+import { BarChart2, Activity, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target, SquareUserRound, CircleUser, House, Home } from 'lucide-react';
 import { getProfileApi } from '../features/userApis';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -58,7 +58,7 @@ const Sidebar = ({
           to="/dashboard/home"
           className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/home') ? 'btn-primary' : 'btn-dark'}`}
         >
-          <BarChart2 size={20} />
+          <Home size={20} />
           {sidebarOpen && <span className="ms-2">Home</span>}
         </Link>
 
@@ -69,7 +69,7 @@ const Sidebar = ({
             onClick={handleFormsClick}
           >
             <Briefcase size={20} />
-            {sidebarOpen && <span className="ms-2">Discussion & Feedback</span>}
+            {sidebarOpen && <span className="ms-2">Feedbacks</span>}
             {sidebarOpen && (
               <span className="ms-auto">
                 {formsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
