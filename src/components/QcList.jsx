@@ -130,7 +130,7 @@ const QcList = () => {
                 <div className="row g-3">
                   {filteredAdmins.map((agent) => (
                     <div key={agent._id} className="col-12">
-                      <div className={`admin-card d-flex justify-content-between card border-0 shadow-sm rounded-3 ${expandedAdmin === agent._id ? 'expanded' : ''}`}>
+                      <div className={`admin-card  card border-0 shadow-sm rounded-3 ${expandedAdmin === agent._id ? 'expanded' : ''}`}>
                         <div 
                           className="card-body py-3"
                           style={{cursor: 'pointer'}}
