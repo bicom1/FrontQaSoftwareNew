@@ -1,13 +1,13 @@
 import { SquarePen, Trash, Loader, FileWarning } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { getEvaluationOnwerApi } from "../features/evaluationApi";
-import { getEscalationOnwerApi } from "../features/escalationsApi";
+import { getEscalationOnwerApi, getEscalationsByAgentNameApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache time
 
 const TableAdmin = () => {
-  const { adminId } = useParams();
+  const { agentName } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("evaluations");
   const [evaluations, setEvaluations] = useState([]);
@@ -41,20 +41,20 @@ const TableAdmin = () => {
       setError("");
       try {
         if (activeTab === "evaluations") {
-          const cacheKey = `evaluations_${adminId}`;
+          const cacheKey = `evaluations_${agentName}`;
           const cached = loadFromCache(cacheKey);
           if (cached) setEvaluations(cached);
           else {
-            const evals = await getEvaluationOnwerApi(adminId);
+            const evals = await getEvaluationOnwerApi(agentName);
             setEvaluations(evals);
             saveToCache(cacheKey, evals);
           }
         } else if (activeTab === "escalations") {
-          const cacheKey = `escalations_${adminId}`;
+          const cacheKey = `escalations_${agentName}`;
           const cached = loadFromCache(cacheKey);
           if (cached) setEscalations(cached);
           else {
-            const escs = await getEscalationOnwerApi(adminId);
+            const escs = await getEscalationsByAgentNameApi(agentName);
             setEscalations(escs);
             saveToCache(cacheKey, escs);
           }
@@ -67,7 +67,7 @@ const TableAdmin = () => {
       }
     };
     fetchData();
-  }, [activeTab, adminId]);
+  }, [activeTab, agentName]);
 
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -87,7 +87,7 @@ const TableAdmin = () => {
   const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleString() : "-");
 
   const handleEdit = (id, rowData) => {
-    navigate(`/admin-details/edit?id=${id}`, { state: { row: rowData } });
+    navigate(`/dashboard/qc-team/edit?id=${id}`, { state: { row: rowData } });
   };
 
   const containerStyle = {
@@ -466,7 +466,7 @@ const TableAdmin = () => {
                           <td style={cellStyle}>{row.evaluatedby || '-'}</td>
                           <td style={cellStyle}>{row.agentName || '-'}</td>
                           <td style={cellStyle}>{row.teamleader || '-'}</td>
-                          <td style={cellStyle}>{row.leadSource || '-'}</td>
+                          <td style={cellStyle}>{row.leadsource || '-'}</td>
                           <td style={cellStyle}>{row.leadStatus || '-'}</td>
                           <td style={cellStyle}>{row.escSeverity || '-'}</td>
                           <td style={cellStyle}>{row.issueIden || '-'}</td>

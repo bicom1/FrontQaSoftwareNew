@@ -4,7 +4,6 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./components/Unauthorized";
 import AgentRoutes from "./Routes/AgentRoutes";
-import AdminDetails from "./components/AdminDetails";
 import EditEscalation from "./components/admin/escalation/EditEscalation";
 import EscalationForm from "./components/EscalationForm";
 import AgentForm from "./components/AgentForm";
@@ -76,8 +75,8 @@ function App() {
         }
       />
      
-      <Route path="/admin-details/:adminId" element={<AdminDetails />} />
-      <Route path="/admin-details/edit" element={<EditEscalation />} />
+      
+  
 
       {/* New separate routes with Layout */}
       <Route

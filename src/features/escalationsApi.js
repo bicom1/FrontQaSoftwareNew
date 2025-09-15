@@ -22,6 +22,21 @@ export const getEscalationOnwerApi = async (ownerId) => {
   }
 };
 
+export const getEscalationsByAgentNameApi = async (agentName) => {
+  const token = getToken();
+  try {
+    const res = await axios.get(`${baseUrl}/api/escalations/agent/${agentName}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Always return an array
+    return res.data?.data || [];
+  } catch (err) {
+    console.error("Escalation API error:", err);
+    return [];
+  }
+};
+
+
 
 export const createReportEscalationsApi = async ({ startDate, endDate, agentName,teamleader }) => {
    const token = getToken(); 

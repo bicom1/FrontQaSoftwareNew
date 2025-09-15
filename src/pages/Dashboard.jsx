@@ -9,6 +9,8 @@ import Projects from '../components/Projects';
 import AgentList from '../components/AgentList';
 import ReportDownload from '../components/ReportDownload';
 import Layout from '../components/admin/escalation/Layout';
+import TableAdmin from '../components/TableAdmin';
+import EditEscalation from '../components/admin/escalation/EditEscalation';
 
 
 const Dashboard = ({ setIsLoggedIn }) => {
