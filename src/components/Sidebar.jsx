@@ -43,7 +43,7 @@ const Sidebar = ({
     >
       <div className="d-flex align-items-center mb-4">
         {sidebarOpen && (
-          <h4 className="mb-0 flex-grow-1">DashPro</h4>
+          <h4 className="mb-0 flex-grow-1">Bicomm</h4>
         )}
         <button 
           className="btn btn-dark p-1" 
@@ -55,32 +55,52 @@ const Sidebar = ({
 
       <div className="nav flex-column nav-pills">
         <Link 
-          to="/dashboard/overview"
-          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/overview') ? 'btn-primary' : 'btn-dark'}`}
+          to="/dashboard/home"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/home') ? 'btn-primary' : 'btn-dark'}`}
         >
           <BarChart2 size={20} />
-          {sidebarOpen && <span className="ms-2">Overview</span>}
+          {sidebarOpen && <span className="ms-2">Home</span>}
         </Link>
 
-        <Link 
-          to="/dashboard/qc-team"
-          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/qc-team') ? 'btn-primary' : 'btn-dark'}`}
-        >
-          <Activity size={20} />
-          {sidebarOpen && <span className="ms-2">QC Team</span>}
-        </Link>
+        {/* External forms links Discussion & Feedback */}
+        <div className="mb-2">
+          <button 
+            className={`btn text-start w-100 d-flex align-items-center ${(isActive('dashboard/qc-team') || isActive('dashboard/sales-team')) ? 'btn-primary' : 'btn-dark'}`}
+            onClick={handleFormsClick}
+          >
+            <Briefcase size={20} />
+            {sidebarOpen && <span className="ms-2">Discussion & Feedback</span>}
+            {sidebarOpen && (
+              <span className="ms-auto">
+                {formsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </span>
+            )}
+          </button>
+
+          {/* Sub-menu items for Forms */}
+          {formsExpanded && sidebarOpen && (
+            <div className="ms-3 mt-2">
+              <Link 
+                to="/dashboard/qc-team"
+                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/qc-team') ? 'btn-primary' : 'btn-dark'}`}
+              >
+                <User size={20} />
+                <span className="ms-2">QC Team</span>
+              </Link>
+              <Link 
+                to="/dashboard/sales-team"
+                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/sales-team') ? 'btn-primary' : 'btn-dark'}`}
+              >
+                <ArrowUp size={20} />
+                <span className="ms-2">Sales Team</span>
+              </Link>
+            </div>
+          )}
+        </div>
         
         <Link 
-          to="/dashboard/agent-list"
-          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/agent-list') ? 'btn-primary' : 'btn-dark'}`}
-        >
-          <SquareUserRound size={20} />
-          {sidebarOpen && <span className="ms-2">Agent List</span>}
-        </Link>
-        
-        <Link 
-          to="/dashboard/teamlead"
-          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/teamlead') ? 'btn-primary' : 'btn-dark'}`}
+          to="/dashboard/add-teamlead"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/add-teamlead') ? 'btn-primary' : 'btn-dark'}`}
         >
           <CircleUser size={20} />
           {sidebarOpen && <span className="ms-2">Add Team Lead</span>}
@@ -93,7 +113,7 @@ const Sidebar = ({
             onClick={handleFormsClick}
           >
             <Briefcase size={20} />
-            {sidebarOpen && <span className="ms-2">Forms</span>}
+            {sidebarOpen && <span className="ms-2">Add Form</span>}
             {sidebarOpen && (
               <span className="ms-auto">
                 {formsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -109,7 +129,7 @@ const Sidebar = ({
                 className={`btn text-start mb-2 d-flex align-items-center ${isActive('/evaluation') ? 'btn-primary' : 'btn-dark'}`}
               >
                 <User size={20} />
-                <span className="ms-2">Agent Evaluation</span>
+                <span className="ms-2">Evaluation</span>
               </Link>
               <Link 
                 to="/escalation"
@@ -123,18 +143,18 @@ const Sidebar = ({
                 className={`btn text-start mb-2 d-flex align-items-center ${isActive('/marketing') ? 'btn-primary' : 'btn-dark'}`}
               >
                 <Target size={20} />
-                <span className="ms-2">PPC/Marketing</span>
-              </Link>
-              <Link 
-                to="/dashboard/report-download"
-                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/report-download') ? 'btn-primary' : 'btn-dark'}`}
-              >
-                <Target size={20} />
-                <span className="ms-2">Report Download</span>
+                <span className="ms-2">Marketing Lead QC</span>
               </Link>
             </div>
           )}
         </div>
+        <Link 
+          to="/dashboard/report-download"
+          className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/report-download') ? 'btn-primary' : 'btn-dark'}`}
+        >
+          <Target size={20} />
+          {sidebarOpen && <span className="ms-2">Download Report</span>}
+        </Link>
       </div>
 
       <div className="mt-auto">
