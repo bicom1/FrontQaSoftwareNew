@@ -6,6 +6,20 @@ const authHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+export const onlineUsersCountApi = async () => {
+  const token = getToken();
+  if (!token) return null;
+
+  const response = await axios.get(`${baseUrl}/api/users/online-users-count`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
+
+
 export const LeadRegister = async (data) => {
   const res = await axios.post(`${baseUrl}/api/users/register-user`, data);
   return res;
@@ -75,3 +89,5 @@ export const logoutApi = async () => {
     },
   });
 };
+
+

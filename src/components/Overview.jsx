@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell,
 } from 'recharts';
-import { totalUserCountApi } from '../features/userApis';
+import { onlineUsersCountApi, totalUserCountApi } from '../features/userApis';
 import { totalEscalationCountsApi, getEscalationAnalyticsApi, overviewAnalyticsRangeApi } from '../features/escalationsApi';
 import { totalEvaluationCountsApi, getEvaluationAnalyticsApi } from '../features/evaluationApi';
 import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/marketingApi';
@@ -14,6 +14,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'
 
 const Overview = () => {
   const [totalUsers, setTotalUsers] = useState(null);
+  const [onlineUsersCount, setOnlineUsersCount] = useState(null);
   const [totalEscalationCounts, setTotalEscalationCounts] = useState(null);
   const [totalEvaluationCounts, setTotalEvaluationCounts] = useState(null);
   const [totalMarketingCounts, setTotalMarketingCounts] = useState(null);
@@ -29,78 +30,91 @@ const Overview = () => {
   // const [timeRange, setTimeRange] = useState('7d'); // default 'Last 7 days'
 
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const [
-          users,
-          escalations,
-          evaluations,
-          marketing,
-          escalationAnalyticsData,
-          evaluationAnalyticsData,
-          marketingAnalyticsData,
-        ] = await Promise.all([
-          totalUserCountApi(),
-          totalEscalationCountsApi(),
-          totalEvaluationCountsApi(),
-          totalMarketingCountsApi(),
-          getEscalationAnalyticsApi(),
-          getEvaluationAnalyticsApi(),
-          getMarketingAnalyticsApi(),
-          overviewAnalyticsRangeApi()
-        ]);
+useEffect(() => {
+  const fetchAllData = async () => {
+    try {
+      const [
+        users,
+        escalations,
+        evaluations,
+        marketing,
+        escalationAnalyticsData,
+        evaluationAnalyticsData,
+        marketingAnalyticsData,
+        onlineUsers,
+      ] = await Promise.all([
+        totalUserCountApi(),
+        totalEscalationCountsApi(),
+        totalEvaluationCountsApi(),
+        totalMarketingCountsApi(),
+        getEscalationAnalyticsApi(),
+        getEvaluationAnalyticsApi(),
+        getMarketingAnalyticsApi(),
+        onlineUsersCountApi(), // ✅ removed extra overviewAnalyticsRangeApi
+      ]);
 
-        setTotalUsers(users.count);
-        setTotalEscalationCounts(escalations.count);
-        setTotalEvaluationCounts(evaluations.count);
-        setTotalMarketingCounts(marketing.count);
+      // ✅ Use safe updates with fallbacks
+      setTotalUsers(users?.count ?? 0);
+      setTotalEscalationCounts(escalations?.count ?? 0);
+      setTotalEvaluationCounts(evaluations?.count ?? 0);
+      setTotalMarketingCounts(marketing?.count ?? 0);
+      setOnlineUsersCount(onlineUsers?.count ?? 0);
 
-        setEscalationAnalytics(escalationAnalyticsData);
-        setEvaluationAnalytics({
-          averageScore: evaluationAnalyticsData.avgRating,
-          totalEvaluations: evaluationAnalyticsData.total,
-        });
-        setMarketingAnalytics(marketingAnalyticsData);
+      setEscalationAnalytics(escalationAnalyticsData);
+      setEvaluationAnalytics({
+        averageScore: evaluationAnalyticsData?.avgRating ?? 0,
+        totalEvaluations: evaluationAnalyticsData?.total ?? 0,
+      });
+      setMarketingAnalytics(marketingAnalyticsData);
 
-        // Transform evaluation ratingRanges for BarChart
-        if (evaluationAnalyticsData.ratingRanges) {
-          const ratingRangeArray = Object.entries(evaluationAnalyticsData.ratingRanges).map(
-            ([range, count]) => ({ name: range, count })
-          );
-          setEvaluationRatingRangeData(ratingRangeArray);
-        }
-
-        // Transform marketing sourceCounts for PieChart
-        if (marketingAnalyticsData.sourceCounts) {
-          const marketingSourcesArray = Object.entries(marketingAnalyticsData.sourceCounts).map(
-            ([source, count]) => ({ name: source, value: count })
-          );
-          setMarketingSourceData(marketingSourcesArray);
-        }
-
-        // Transform escalation severityCounts for PieChart
-        if (escalationAnalyticsData.severityCounts) {
-          const escalationSeverityArray = Object.entries(escalationAnalyticsData.severityCounts).map(
-            ([severity, count]) => ({ name: severity, value: count })
-          );
-          setEscalationSeverityData(escalationSeverityArray);
-        }
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
+      // Transform evaluation ratingRanges for BarChart
+      if (evaluationAnalyticsData?.ratingRanges) {
+        const ratingRangeArray = Object.entries(evaluationAnalyticsData.ratingRanges).map(
+          ([range, count]) => ({ name: range, count })
+        );
+        setEvaluationRatingRangeData(ratingRangeArray);
       }
-    };
 
-    fetchAllData();
-  }, []);
+      // Transform marketing sourceCounts for PieChart
+      if (marketingAnalyticsData?.sourceCounts) {
+        const marketingSourcesArray = Object.entries(marketingAnalyticsData.sourceCounts).map(
+          ([source, count]) => ({ name: source, value: count })
+        );
+        setMarketingSourceData(marketingSourcesArray);
+      }
+
+      // Transform escalation severityCounts for PieChart
+      if (escalationAnalyticsData?.severityCounts) {
+        const escalationSeverityArray = Object.entries(escalationAnalyticsData.severityCounts).map(
+          ([severity, count]) => ({ name: severity, value: count })
+        );
+        setEscalationSeverityData(escalationSeverityArray);
+      }
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    }
+  };
+
+  fetchAllData();
+}, []);
+
+
+  
 
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex gap-2">
-          <Button variant='success'>Active Users : 15</Button>
-          <Button variant='danger'>InActive Users : 10 </Button>
-        </div>
+  <Button variant="success">
+    Active Users : {onlineUsersCount ?? "Loading..."}
+  </Button>
+  <Button variant="danger">
+    Inactive Users : {totalUsers && onlineUsersCount !== null 
+      ? totalUsers - onlineUsersCount 
+      : "Loading..."}
+  </Button>
+</div>
+
         <div>
         <div className='d-flex gap-3'>
            <div>
@@ -130,8 +144,8 @@ const Overview = () => {
         <h6 className="mb-1 fw-semibold">Total Drafts</h6>
         <small className="text-muted">From: 8</small>
       </div>
-      <Button variant="info" size="sm">
-        View Drafts
+      <Button variant="dark" size="sm">
+        Publish
       </Button>
     </div>
 
@@ -141,8 +155,8 @@ const Overview = () => {
         <h6 className="mb-1 fw-semibold">Total Published</h6>
         <small className="text-muted">From: 5</small>
       </div>
-      <Button variant="success" size="sm">
-        View Published
+      <Button variant="dark" size="sm">
+        View 
       </Button>
     </div>
   </div>
