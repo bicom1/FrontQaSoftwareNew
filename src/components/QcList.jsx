@@ -161,7 +161,7 @@ const QcList = () => {
                                 className="btn btn-outline-primary btn-sm"
                                 onClick={(e) => {
                                   e.stopPropagation(); // Prevent triggering the parent click
-                                  handleAdminClick(agent._id, agent.name);
+                                  handleAdminClick(agent.name);
                                 }}
                               >
                                 View Full Details
