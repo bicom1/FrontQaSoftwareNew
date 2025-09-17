@@ -86,9 +86,9 @@ const TableAdmin = () => {
 
   const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleString() : "-");
 
-  const handleEdit = (id, rowData) => {
-    navigate(`/dashboard/qc-team/edit?id=${id}`, { state: { row: rowData } });
-  };
+  const handleEdit = (agentName, rowData) => {
+  navigate(`/dashboard/qc-team/edit/${agentName}`, { state: { row: rowData } });
+};
 
   const containerStyle = {
     backgroundColor: '#ffffff',
@@ -477,7 +477,7 @@ const TableAdmin = () => {
                           <td style={cellStyle}>{formatDate(row.createdAt)}</td>
                           <td style={cellStyle}>
                           <button
-                          onClick={() => handleEdit(row._id, row)} // Pass the row data here
+  onClick={() => handleEdit(row.agentName, row)}
   style={{ border: 'none', background: 'none', cursor: 'pointer' }}
 >
   <SquarePen size={18} />

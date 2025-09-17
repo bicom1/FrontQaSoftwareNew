@@ -36,8 +36,6 @@ export const getEscalationsByAgentNameApi = async (agentName) => {
   }
 };
 
-
-
 export const createReportEscalationsApi = async ({ startDate, endDate, agentName,teamleader }) => {
    const token = getToken(); 
   try {
@@ -91,8 +89,6 @@ export const createEscalationApi = async (escalation, otherReason = "") => {
 };
 
 
-
-
 export const getEscalationsApi = async ()=>{
   const responce = await fetch (`${baseUrl}/api/escalations`,{
     headers: authHeader(),
@@ -102,7 +98,6 @@ export const getEscalationsApi = async ()=>{
     throw new Error(errorData.message || "fetch Failed")
   }
 }
-
 
 export const getEscalationByIdApi = async (id) => {
   const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
@@ -116,7 +111,6 @@ export const getEscalationByIdApi = async (id) => {
 
   return await response.json();
 };
-
 
 export const updateEscalationApi = async (id, updatedData) => {
   const formData = new FormData();
