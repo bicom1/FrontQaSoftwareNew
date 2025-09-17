@@ -10,10 +10,12 @@ import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/m
 import { LeadRegister } from '../features/userApis'; // Import the API function
 import { Button, Modal, Form, Alert, Tab, Tabs, Spinner } from 'react-bootstrap';
 import { Crown, Users, Search, Mail, Shield, UserCheck, XCircle, Edit, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
 const Overview = () => {
+  const navigate = useNavigate();
   const [totalUsers, setTotalUsers] = useState(null);
   const [onlineUsersCount, setOnlineUsersCount] = useState(null);
   const [totalEscalationCounts, setTotalEscalationCounts] = useState(null);
