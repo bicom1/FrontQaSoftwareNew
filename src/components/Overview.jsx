@@ -40,6 +40,11 @@ const Overview = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alertMessage, setAlertMessage] = useState({ type: '', message: '' });
 
+  //Admin & Agents
+  const [admins, setAdmins]=  useState([]);
+  const [agents, setAgents] = useState([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+
   // Users Modal states
   const [showUsersModal, setShowUsersModal] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
@@ -128,6 +133,47 @@ const Overview = () => {
     };
 
     fetchAllData();
+  }, []);
+  
+  // Fetch QC list and Agents List
+  useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        setLoadingAgents(true);
+        const res = await getallusersApi();
+        if (Array.isArray(res?.data?.data)) {
+          setAgents(res.data.data.filter((u) => u.role === "agent"));
+        } else {
+          setAgents([]);
+        }
+      } catch (err) {
+        console.error("Error fetching admins", err);
+        setAgents([]);
+      } finally {
+        setLoadingAgents(false);
+      }
+    };
+    fetchAdmins();
+  }, []);
+
+  useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        setLoadingAgents(true);
+        const res = await getallusersApi();
+        if (Array.isArray(res?.data?.data)) {
+          setAdmins(res.data.data.filter((u) => u.role === "admin"));
+        } else {
+          setAdmins([]);
+        }
+      } catch (err) {
+        console.error("Error fetching admins", err);
+        setAdmins([]);
+      } finally {
+        setLoadingAgents(false);
+      }
+    };
+    fetchAdmins();
   }, []);
 
   // Fetch all users for the modal
@@ -969,75 +1015,66 @@ const Overview = () => {
 
       {/* Escalation Severity Pie Chart */}
       <div className="row g-3">
-        <div className="col-12 col-lg-6 card border-0 shadow-sm mb-4">
-          <div className="card-header">
-            <h5>Escalation Severity Distribution</h5>
-          </div>
-          <div className="card-body">
-            {escalationSeverityData.length > 0 ? (
-              <PieChart width={400} height={300}>
-                <Pie
-                  data={escalationSeverityData}
-                  cx={200}
-                  cy={150}
-                  label
-                  outerRadius={100}
-                  fill="#FF8042"
-                  dataKey="value"
+        <div className="col-12 col-lg-6 ">
+      <div className="card border-0 shadow-sm mb-4 h-100">
+        <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">QC Team</h5>
+              <button onClick={() => navigate("/dashboard/qc-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
+            </div>
+        <div className="card-body">
+          {admins.length > 0 ? (
+            <ul className="list-group list-group-flush">
+              {admins.slice(0, 5).map((admin) => (
+                <li
+                  key={admin._id}
+                  className="list-group-item d-flex justify-content-between align-items-center"
                 >
-                  {escalationSeverityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            ) : (
-              <p>Loading Escalation Chart...</p>
-            )}
-          </div>
+                  <div>
+                    <strong>{admin.name}</strong>
+                    <div className="text-muted small">{admin.email}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted text-center my-3">
+              No Admin users found.
+            </p>
+          )}
         </div>
-        
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Recent Activity</h5>
-              <button className="btn btn-sm btn-link text-decoration-none">View All</button>
+      </div>
+         </div>
+        <div className="col-12 col-lg-6 ">
+      <div className="card border-0 shadow-sm mb-4 h-100">
+        <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Sale Agent Team</h5>
+              <button onClick={() => navigate("/dashboard/qc-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
             </div>
-            <div className="card-body p-0">
-              <ul className="list-group list-group-flush">
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
+        <div className="card-body">
+          {agents.length > 0 ? (
+            <ul className="list-group list-group-flush">
+              {agents.slice(0, 5).map((admin) => (
+                <li
+                  key={admin._id}
+                  className="list-group-item d-flex justify-content-between align-items-center"
+                >
                   <div>
-                    <div className="fw-bold">New user registered</div>
-                    <div className="text-muted small">John Smith created an account</div>
+                    <strong>{admin.name}</strong>
+                    <div className="text-muted small">{admin.email}</div>
                   </div>
-                  <span className="text-muted small">2 mins ago</span>
                 </li>
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
-                  <div>
-                    <div className="fw-bold">Project updated</div>
-                    <div className="text-muted small">Mobile App Dashboard v2.0</div>
-                  </div>
-                  <span className="text-muted small">1 hour ago</span>
-                </li>
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
-                  <div>
-                    <div className="fw-bold">New payment received</div>
-                    <div className="text-muted small">From client #40298</div>
-                  </div>
-                  <span className="text-muted small">3 hours ago</span>
-                </li>
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
-                  <div>
-                    <div className="fw-bold">Server maintenance completed</div>
-                    <div className="text-muted small">Server #12 restarted successfully</div>
-                  </div>
-                  <span className="text-muted small">Yesterday</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted text-center my-3">
+              No Admin users found.
+            </p>
+          )}
         </div>
-      </div> 
+      </div>
+        </div>
+
+      </div>
     </>
   );
 };
