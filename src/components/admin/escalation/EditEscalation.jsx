@@ -1,7 +1,8 @@
+//EditEscalation.jsx
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
-import {  updateEscalationApi,  } from "../../../features/escalationsApi";
+import { createWebhookEscalationApi } from "../../../features/escalationsApi";
 
 const EditEscalation = () => {
   const location = useLocation();
@@ -27,6 +28,19 @@ const EditEscalation = () => {
     userrating: ''
   });
 
+  // Function to check if all required fields are filled
+  const isFormComplete = () => {
+    const requiredFields = [
+      'useremail', 'leadID', 'evaluatedby', 'agentName', 'teamleader',
+      'leadSource', 'leadStatus', 'escSeverity', 'issueIden', 'escAction',
+      'documentation', 'successmaration', 'userrating'
+    ];
+    
+    return requiredFields.every(field => 
+      formData[field] && formData[field].toString().trim() !== ''
+    );
+  };
+
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -43,9 +57,16 @@ const EditEscalation = () => {
     setError("");
     
     try {
+      // Determine status based on form completion
+      const status = isFormComplete() ? 'published' : 'draft';
+      const updatedFormData = {
+        ...formData,
+        status: status
+      };
+
       // Send the updated data to your API
-      await updateEscalationApi(row._id, formData);
-      alert('Escalation updated successfully!');
+      await createWebhookEscalationApi(row.id, updatedFormData);
+      alert(`Escalation ${status === 'published' ? 'published' : 'saved as draft'} successfully!`);
       navigate(-1); // Go back to previous page
     } catch (err) {
       setError(err.message || "Failed to update escalation");
@@ -76,13 +97,41 @@ const EditEscalation = () => {
     );
   }
 
+  const completionPercentage = (() => {
+    const requiredFields = [
+      'useremail', 'leadID', 'evaluatedby', 'agentName', 'teamleader',
+      'leadSource', 'leadStatus', 'escSeverity', 'issueIden', 'escAction',
+      'documentation', 'successmaration', 'userrating'
+    ];
+    const filledFields = requiredFields.filter(field => 
+      formData[field] && formData[field].toString().trim() !== ''
+    ).length;
+    return Math.round((filledFields / requiredFields.length) * 100);
+  })();
+
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
         <button style={backButtonStyle} onClick={handleCancel}>
           <ArrowLeft size={20} />
         </button>
-        <h2>Edit Escalation</h2>
+        <div>
+          <h2>Edit Escalation</h2>
+          <div style={progressContainerStyle}>
+            <div style={progressBarStyle}>
+              <div 
+                style={{
+                  ...progressFillStyle,
+                  width: `${completionPercentage}%`,
+                  backgroundColor: completionPercentage === 100 ? '#10b981' : '#3b82f6'
+                }}
+              ></div>
+            </div>
+            <span style={progressTextStyle}>
+              {completionPercentage}% Complete {completionPercentage === 100 && '✓'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -94,7 +143,7 @@ const EditEscalation = () => {
       <form onSubmit={handleSubmit} style={formStyle}>
         <div style={formGridStyle}>
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Email</label>
+            <label style={labelStyle}>Email *</label>
             <input
               type="email"
               name="useremail"
@@ -106,7 +155,7 @@ const EditEscalation = () => {
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Lead ID</label>
+            <label style={labelStyle}>Lead ID *</label>
             <input
               type="text"
               name="leadID"
@@ -118,64 +167,61 @@ const EditEscalation = () => {
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Evaluated By</label>
+            <label style={labelStyle}>Evaluated By *</label>
             <input
               type="text"
               name="evaluatedby"
               value={formData.evaluatedby}
               onChange={handleInputChange}
               style={inputStyle}
+              required
             />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Agent Name</label>
+            <label style={labelStyle}>Agent Name *</label>
             <input
               type="text"
               name="agentName"
               value={formData.agentName}
               onChange={handleInputChange}
               style={inputStyle}
+              required
             />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Team Leader</label>
+            <label style={labelStyle}>Team Leader *</label>
             <input
               type="text"
               name="teamleader"
               value={formData.teamleader}
               onChange={handleInputChange}
               style={inputStyle}
+              required
             />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Lead Source</label>
+            <label style={labelStyle}>Lead Source *</label>
             <input
               type="text"
-              name="teamleader"
-              value={formData.leadsource}
+              name="leadSource"
+              value={formData.leadSource}
               onChange={handleInputChange}
               style={inputStyle}
+              required
             />
-          
-              {/* <option value="">Select Source</option>
-              <option value="Website">Website</option>
-              <option value="Referral">Referral</option>
-              <option value="Social Media">Social Media</option>
-              <option value="Cold Call">Cold Call</option>
-              <option value="Email Campaign">Email Campaign</option> */}
-        
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Lead Status</label>
+            <label style={labelStyle}>Lead Status *</label>
             <select
               name="leadStatus"
               value={formData.leadStatus}
               onChange={handleInputChange}
               style={inputStyle}
+              required
             >
               <option value="">Select Status</option>
               <option value="New">New</option>
@@ -188,12 +234,13 @@ const EditEscalation = () => {
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Escalation Severity</label>
+            <label style={labelStyle}>Escalation Severity *</label>
             <select
               name="escSeverity"
               value={formData.escSeverity}
               onChange={handleInputChange}
               style={inputStyle}
+              required
             >
               <option value="">Select Severity</option>
               <option value="Low">Low</option>
@@ -204,52 +251,57 @@ const EditEscalation = () => {
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Issue Identified</label>
+            <label style={labelStyle}>Issue Identified *</label>
             <textarea
               name="issueIden"
               value={formData.issueIden}
               onChange={handleInputChange}
               style={{...inputStyle, minHeight: '80px'}}
+              required
             />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Escalation Action</label>
+            <label style={labelStyle}>Escalation Action *</label>
             <textarea
               name="escAction"
               value={formData.escAction}
               onChange={handleInputChange}
               style={{...inputStyle, minHeight: '80px'}}
+              required
             />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Documentation</label>
+            <label style={labelStyle}>Documentation *</label>
             <textarea
               name="documentation"
               value={formData.documentation}
               onChange={handleInputChange}
               style={{...inputStyle, minHeight: '80px'}}
+              required
             />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Success Metrics</label>
+            <label style={labelStyle}>Success Metrics *</label>
             <textarea
               name="successmaration"
               value={formData.successmaration}
               onChange={handleInputChange}
               style={{...inputStyle, minHeight: '80px'}}
+              required
             />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>User Rating</label>
+            <label style={labelStyle}>User Rating *</label>
             <select
               name="userrating"
               value={formData.userrating}
               onChange={handleInputChange}
               style={inputStyle}
+              required
             >
               <option value="">Select Rating</option>
               <option value="1">1 - Very Poor</option>
@@ -272,11 +324,19 @@ const EditEscalation = () => {
           </button>
           <button 
             type="submit" 
-            style={submitButtonStyle}
+            style={{
+              ...submitButtonStyle,
+              backgroundColor: isFormComplete() ? '#10b981' : '#3b82f6'
+            }}
             disabled={isSubmitting}
           >
             <Save size={18} style={{ marginRight: '8px' }} />
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {isSubmitting 
+              ? 'Saving...' 
+              : isFormComplete() 
+                ? 'Publish' 
+                : 'Save as Draft'
+            }
           </button>
         </div>
       </form>
@@ -284,8 +344,34 @@ const EditEscalation = () => {
   );
 };
 
-// Styles
+// Additional styles for progress indicator
+const progressContainerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  marginTop: '8px'
+};
 
+const progressBarStyle = {
+  width: '200px',
+  height: '8px',
+  backgroundColor: '#e5e7eb',
+  borderRadius: '4px',
+  overflow: 'hidden'
+};
+
+const progressFillStyle = {
+  height: '100%',
+  transition: 'width 0.3s ease, background-color 0.3s ease'
+};
+
+const progressTextStyle = {
+  fontSize: '14px',
+  fontWeight: '600',
+  color: '#374151'
+};
+
+// Existing styles
 const errorStyle = {
   backgroundColor: '#fee',
   color: '#c33',
@@ -294,7 +380,6 @@ const errorStyle = {
   marginBottom: '20px',
   border: '1px solid #fcc'
 };
-
 
 const containerStyle = {
   maxWidth: '1200px',
@@ -305,7 +390,7 @@ const containerStyle = {
 
 const headerStyle = {
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   marginBottom: '32px',
   paddingBottom: '16px',
   borderBottom: '2px solid #e5e7eb'
@@ -316,6 +401,7 @@ const backButtonStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   marginRight: '16px',
+  marginTop: '4px',
   padding: '8px',
   backgroundColor: '#f3f4f6',
   border: 'none',
