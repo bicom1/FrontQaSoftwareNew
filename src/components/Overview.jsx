@@ -790,9 +790,8 @@ const Overview = () => {
       </div>
 
      
- <div className="row g-3">
-       
-       <div className="col-12 col-lg-6 ">
+      <div className="row g-3">
+        <div className="col-12 col-lg-6 ">
       <div className="card border-0 shadow-sm mb-4 h-100">
         <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">QC Team</h5>
@@ -820,8 +819,8 @@ const Overview = () => {
           )}
         </div>
       </div>
-    </div>
-      <div className="col-12 col-lg-6 ">
+         </div>
+        <div className="col-12 col-lg-6 ">
       <div className="card border-0 shadow-sm mb-4 h-100">
         <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Sale Agent Team</h5>
@@ -849,8 +848,8 @@ const Overview = () => {
           )}
         </div>
       </div>
-    </div>
-        
+        </div>
+
       </div>
     </>
   );
