@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
+
 const Overview = () => {
   const navigate = useNavigate();
   const [totalUsers, setTotalUsers] = useState(null);
