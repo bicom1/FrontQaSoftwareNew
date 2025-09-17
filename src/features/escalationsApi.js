@@ -8,6 +8,49 @@ const authHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+/**
+ * Create escalation from frontend
+ * @param {Object} queryParams - Query data like { leadID, agentName, leadsource }
+ * @param {Object} bodyData - Body data like { leadStatus, teamleader, escSeverity, issueIden, escAction, documentation }
+ * @param {File} audioFile - Optional audio file
+ */
+export const createWebhookEscalationApi = async (queryParams, bodyData, audioFile) => {
+  try {
+    // Construct query string
+    const queryString = new URLSearchParams(queryParams).toString();
+
+    // FormData for body + file
+    const formData = new FormData();
+    Object.entries(bodyData).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        formData.append(key, value);
+      }
+    });
+
+    if (audioFile) {
+      formData.append("audio", audioFile);
+    }
+
+    const response = await axios.post(
+      `${baseUrl}/api/bitrix24/webhook?${queryString}`,
+      formData,
+      {
+        headers: {
+          ...authHeader(),
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error creating escalation:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+
+
 export const getEscalationOnwerApi = async (ownerId) => {
   const token = getToken();
   try {

@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
+import { createWebhookEscalationApi,  } from "../../../features/escalationsApi";
 
 const EditEscalation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const row = location.state?.row;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   // State for form fields
   const [formData, setFormData] = useState(row || {
@@ -34,12 +37,22 @@ const EditEscalation = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would typically send the updated data to your API
-    console.log('Updated data:', formData);
-    alert('Escalation updated successfully!');
-    navigate(-1); // Go back to previous page
+    setIsSubmitting(true);
+    setError("");
+    
+    try {
+      // Send the updated data to your API
+      await createWebhookEscalationApi(row.id, formData);
+      alert('Escalation updated successfully!');
+      navigate(-1); // Go back to previous page
+    } catch (err) {
+      setError(err.message || "Failed to update escalation");
+      console.error('Update error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle cancel
@@ -71,6 +84,12 @@ const EditEscalation = () => {
         </button>
         <h2>Edit Escalation</h2>
       </div>
+
+      {error && (
+        <div style={errorStyle}>
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={formStyle}>
         <div style={formGridStyle}>
@@ -133,19 +152,21 @@ const EditEscalation = () => {
 
           <div style={formGroupStyle}>
             <label style={labelStyle}>Lead Source</label>
-            <select
-              name="leadSource"
-              value={formData.leadSource}
+            <input
+              type="text"
+              name="teamleader"
+              value={formData.leadsource}
               onChange={handleInputChange}
               style={inputStyle}
-            >
-              <option value="">Select Source</option>
+            />
+          
+              {/* <option value="">Select Source</option>
               <option value="Website">Website</option>
               <option value="Referral">Referral</option>
               <option value="Social Media">Social Media</option>
               <option value="Cold Call">Cold Call</option>
-              <option value="Email Campaign">Email Campaign</option>
-            </select>
+              <option value="Email Campaign">Email Campaign</option> */}
+        
           </div>
 
           <div style={formGroupStyle}>
@@ -241,12 +262,21 @@ const EditEscalation = () => {
         </div>
 
         <div style={buttonContainerStyle}>
-          <button type="button" style={cancelButtonStyle} onClick={handleCancel}>
+          <button 
+            type="button" 
+            style={cancelButtonStyle} 
+            onClick={handleCancel}
+            disabled={isSubmitting}
+          >
             Cancel
           </button>
-          <button type="submit" style={submitButtonStyle}>
+          <button 
+            type="submit" 
+            style={submitButtonStyle}
+            disabled={isSubmitting}
+          >
             <Save size={18} style={{ marginRight: '8px' }} />
-            Save Changes
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
@@ -255,6 +285,17 @@ const EditEscalation = () => {
 };
 
 // Styles
+
+const errorStyle = {
+  backgroundColor: '#fee',
+  color: '#c33',
+  padding: '12px',
+  borderRadius: '4px',
+  marginBottom: '20px',
+  border: '1px solid #fcc'
+};
+
+
 const containerStyle = {
   maxWidth: '1200px',
   margin: '0 auto',
