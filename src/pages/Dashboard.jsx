@@ -21,7 +21,7 @@ const Dashboard = ({ setIsLoggedIn }) => {
         <Route path="home" element={<Overview />} />
         <Route path="qc-team" element={<QcList />} />
         <Route path="qc-team/:agentName" element={<TableAdmin/>} />
-        <Route path="qc-team/edit/:agentName" element={<EditEscalation/>} />
+        <Route path="qc-team/edit/:id" element={<EditEscalation/>} />
         <Route path="users" element={<UserManagement />} />
         <Route path="add-teamlead" element={<AddTeamLead />} />
         <Route path="projects" element={<Projects />} />

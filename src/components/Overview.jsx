@@ -736,7 +736,7 @@ const Overview = () => {
       <div className="row g-3 mb-4">
         <div className="col-12 col-lg-6 card border-0 shadow-sm mb-4">
           <div className="card-header">
-            <h5>Evaluation Rating Ranges</h5>
+            <h5>Agent Highest From Submit </h5>
           </div>
           <div className="card-body">
             {evaluationRatingRangeData.length > 0 ? (

@@ -4,7 +4,7 @@ import { getEvaluationOnwerApi } from "../features/evaluationApi";
 import { getEscalationOnwerApi, getEscalationsByAgentNameApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache time
+const CACHE_TTL =  1000; // 5 minutes cache time
 
 const TableAdmin = () => {
   const { agentName } = useParams();
@@ -86,8 +86,8 @@ const TableAdmin = () => {
 
   const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleString() : "-");
 
-  const handleEdit = (agentName, rowData) => {
-  navigate(`/dashboard/qc-team/edit/${agentName}`, { state: { row: rowData } });
+  const handleEdit = (id, rowData) => {
+  navigate(`/dashboard/qc-team/edit/${id}`, { state: { row: rowData } });
 };
 
   const containerStyle = {
@@ -477,7 +477,7 @@ const TableAdmin = () => {
                           <td style={cellStyle}>{formatDate(row.createdAt)}</td>
                           <td style={cellStyle}>
                           <button
-  onClick={() => handleEdit(row.agentName, row)}
+  onClick={() => handleEdit(row._id, row)}
   style={{ border: 'none', background: 'none', cursor: 'pointer' }}
 >
   <SquarePen size={18} />

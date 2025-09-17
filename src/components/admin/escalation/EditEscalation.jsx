@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
-import { createWebhookEscalationApi,  } from "../../../features/escalationsApi";
+import {  updateEscalationApi,  } from "../../../features/escalationsApi";
 
 const EditEscalation = () => {
   const location = useLocation();
@@ -44,7 +44,7 @@ const EditEscalation = () => {
     
     try {
       // Send the updated data to your API
-      await createWebhookEscalationApi(row.id, formData);
+      await updateEscalationApi(row._id, formData);
       alert('Escalation updated successfully!');
       navigate(-1); // Go back to previous page
     } catch (err) {

@@ -8,47 +8,6 @@ const authHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-/**
- * Create escalation from frontend
- * @param {Object} queryParams - Query data like { leadID, agentName, leadsource }
- * @param {Object} bodyData - Body data like { leadStatus, teamleader, escSeverity, issueIden, escAction, documentation }
- * @param {File} audioFile - Optional audio file
- */
-export const createWebhookEscalationApi = async (queryParams, bodyData, audioFile) => {
-  try {
-    // Construct query string
-    const queryString = new URLSearchParams(queryParams).toString();
-
-    // FormData for body + file
-    const formData = new FormData();
-    Object.entries(bodyData).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        formData.append(key, value);
-      }
-    });
-
-    if (audioFile) {
-      formData.append("audio", audioFile);
-    }
-
-    const response = await axios.post(
-      `${baseUrl}/api/bitrix24/webhook?${queryString}`,
-      formData,
-      {
-        headers: {
-          ...authHeader(),
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error("Error creating escalation:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
 
 
 export const getEscalationOnwerApi = async (ownerId) => {
@@ -168,6 +127,30 @@ export const updateEscalationApi = async (id, updatedData) => {
 
   const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
     method: "PUT",
+    body: formData,
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to update escalation");
+  }
+
+  return await response.json();
+};
+export const patchEscalationApi = async (id, updatedData) => {
+  const formData = new FormData();
+
+  Object.entries(updatedData).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") {
+      if (key !== "audio") formData.append(key, value);
+    }
+  });
+
+  if (updatedData.audio) formData.append("audio", updatedData.audio);
+
+  const response = await fetch(`${baseUrl}/api/escalations/escalation-patch/${id}`, {
+    method: "PATCH",
     body: formData,
     headers: authHeader(),
   });
