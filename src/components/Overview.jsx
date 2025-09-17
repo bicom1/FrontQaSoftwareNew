@@ -10,10 +10,12 @@ import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/m
 import { LeadRegister } from '../features/userApis'; // Import the API function
 import { Button, Modal, Form, Alert, Tab, Tabs, Spinner } from 'react-bootstrap';
 import { Crown, Users, Search, Mail, Shield, UserCheck, XCircle, Edit, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
 const Overview = () => {
+  const navigate = useNavigate();
   const [totalUsers, setTotalUsers] = useState(null);
   const [onlineUsersCount, setOnlineUsersCount] = useState(null);
   const [totalEscalationCounts, setTotalEscalationCounts] = useState(null);
@@ -28,6 +30,49 @@ const Overview = () => {
   const [evaluationRatingRangeData, setEvaluationRatingRangeData] = useState([]);
   const [marketingSourceData, setMarketingSourceData] = useState([]);
   const [escalationSeverityData, setEscalationSeverityData] = useState([]);
+  const [admins, setAdmins]=  useState([]);
+  const [agents, setAgents] = useState([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+
+  useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        setLoadingAgents(true);
+        const res = await getallusersApi();
+        if (Array.isArray(res?.data?.data)) {
+          setAgents(res.data.data.filter((u) => u.role === "agent"));
+        } else {
+          setAgents([]);
+        }
+      } catch (err) {
+        console.error("Error fetching admins", err);
+        setAgents([]);
+      } finally {
+        setLoadingAgents(false);
+      }
+    };
+    fetchAdmins();
+  }, []);
+
+  useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        setLoadingAgents(true);
+        const res = await getallusersApi();
+        if (Array.isArray(res?.data?.data)) {
+          setAdmins(res.data.data.filter((u) => u.role === "admin"));
+        } else {
+          setAdmins([]);
+        }
+      } catch (err) {
+        console.error("Error fetching admins", err);
+        setAdmins([]);
+      } finally {
+        setLoadingAgents(false);
+      }
+    };
+    fetchAdmins();
+  }, []);
 
   // Modal states for Add User
   const [showModal, setShowModal] = useState(false);
@@ -744,77 +789,69 @@ const Overview = () => {
         </div>
       </div>
 
-      {/* Escalation Severity Pie Chart */}
-      <div className="row g-3">
-        <div className="col-12 col-lg-6 card border-0 shadow-sm mb-4">
-          <div className="card-header">
-            <h5>Escalation Severity Distribution</h5>
-          </div>
-          <div className="card-body">
-            {escalationSeverityData.length > 0 ? (
-              <PieChart width={400} height={300}>
-                <Pie
-                  data={escalationSeverityData}
-                  cx={200}
-                  cy={150}
-                  label
-                  outerRadius={100}
-                  fill="#FF8042"
-                  dataKey="value"
+     
+ <div className="row g-3">
+       
+       <div className="col-12 col-lg-6 ">
+      <div className="card border-0 shadow-sm mb-4 h-100">
+        <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">QC Team</h5>
+              <button onClick={() => navigate("/dashboard/qc-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
+            </div>
+        <div className="card-body">
+          {admins.length > 0 ? (
+            <ul className="list-group list-group-flush">
+              {admins.slice(0, 5).map((admin) => (
+                <li
+                  key={admin._id}
+                  className="list-group-item d-flex justify-content-between align-items-center"
                 >
-                  {escalationSeverityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            ) : (
-              <p>Loading Escalation Chart...</p>
-            )}
-          </div>
+                  <div>
+                    <strong>{admin.name}</strong>
+                    <div className="text-muted small">{admin.email}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted text-center my-3">
+              No Admin users found.
+            </p>
+          )}
         </div>
+      </div>
+    </div>
+      <div className="col-12 col-lg-6 ">
+      <div className="card border-0 shadow-sm mb-4 h-100">
+        <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Sale Agent Team</h5>
+              <button onClick={() => navigate("/dashboard/qc-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
+            </div>
+        <div className="card-body">
+          {agents.length > 0 ? (
+            <ul className="list-group list-group-flush">
+              {agents.slice(0, 5).map((admin) => (
+                <li
+                  key={admin._id}
+                  className="list-group-item d-flex justify-content-between align-items-center"
+                >
+                  <div>
+                    <strong>{admin.name}</strong>
+                    <div className="text-muted small">{admin.email}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted text-center my-3">
+              No Admin users found.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
         
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Recent Activity</h5>
-              <button className="btn btn-sm btn-link text-decoration-none">View All</button>
-            </div>
-            <div className="card-body p-0">
-              <ul className="list-group list-group-flush">
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
-                  <div>
-                    <div className="fw-bold">New user registered</div>
-                    <div className="text-muted small">John Smith created an account</div>
-                  </div>
-                  <span className="text-muted small">2 mins ago</span>
-                </li>
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
-                  <div>
-                    <div className="fw-bold">Project updated</div>
-                    <div className="text-muted small">Mobile App Dashboard v2.0</div>
-                  </div>
-                  <span className="text-muted small">1 hour ago</span>
-                </li>
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
-                  <div>
-                    <div className="fw-bold">New payment received</div>
-                    <div className="text-muted small">From client #40298</div>
-                  </div>
-                  <span className="text-muted small">3 hours ago</span>
-                </li>
-                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
-                  <div>
-                    <div className="fw-bold">Server maintenance completed</div>
-                    <div className="text-muted small">Server #12 restarted successfully</div>
-                  </div>
-                  <span className="text-muted small">Yesterday</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div> 
+      </div>
     </>
   );
 };
