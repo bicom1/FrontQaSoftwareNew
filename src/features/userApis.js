@@ -45,6 +45,26 @@ export const resetPasswordApi = async (data) => {
   return res; 
 };
 
+export const patchUserApi = async (id, userData) => {
+  const token = getToken();
+  const res = await axios.patch(`${baseUrl}/api/users/patch/${id}`, userData, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  return res; 
+};
+
+export const deleteUserApi = async (id) => {
+  const token = getToken();
+  const res = await axios.delete(`${baseUrl}/api/users/delete/${id}` ,{
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  return res; 
+};
+
 export const getProfileApi = async () => {
   const token = getToken();
   const res = await axios.get(`${baseUrl}/api/users/my-profile`, {

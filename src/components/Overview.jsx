@@ -3,19 +3,17 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell,
 } from 'recharts';
-import { onlineUsersCountApi, totalUserCountApi, getallusersApi} from '../features/userApis';
+import { onlineUsersCountApi, totalUserCountApi, getallusersApi, patchUserApi, deleteUserApi} from '../features/userApis';
 import { totalEscalationCountsApi, getEscalationAnalyticsApi, overviewAnalyticsRangeApi } from '../features/escalationsApi';
 import { totalEvaluationCountsApi, getEvaluationAnalyticsApi } from '../features/evaluationApi';
 import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/marketingApi';
 import { LeadRegister } from '../features/userApis'; // Import the API function
 import { Button, Modal, Form, Alert, Tab, Tabs, Spinner } from 'react-bootstrap';
 import { Crown, Users, Search, Mail, Shield, UserCheck, XCircle, Edit, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
 const Overview = () => {
-  const navigate = useNavigate();
   const [totalUsers, setTotalUsers] = useState(null);
   const [onlineUsersCount, setOnlineUsersCount] = useState(null);
   const [totalEscalationCounts, setTotalEscalationCounts] = useState(null);
@@ -30,49 +28,6 @@ const Overview = () => {
   const [evaluationRatingRangeData, setEvaluationRatingRangeData] = useState([]);
   const [marketingSourceData, setMarketingSourceData] = useState([]);
   const [escalationSeverityData, setEscalationSeverityData] = useState([]);
-  const [admins, setAdmins]=  useState([]);
-  const [agents, setAgents] = useState([]);
-  const [loadingAgents, setLoadingAgents] = useState(false);
-
-  useEffect(() => {
-    const fetchAdmins = async () => {
-      try {
-        setLoadingAgents(true);
-        const res = await getallusersApi();
-        if (Array.isArray(res?.data?.data)) {
-          setAgents(res.data.data.filter((u) => u.role === "agent"));
-        } else {
-          setAgents([]);
-        }
-      } catch (err) {
-        console.error("Error fetching admins", err);
-        setAgents([]);
-      } finally {
-        setLoadingAgents(false);
-      }
-    };
-    fetchAdmins();
-  }, []);
-
-  useEffect(() => {
-    const fetchAdmins = async () => {
-      try {
-        setLoadingAgents(true);
-        const res = await getallusersApi();
-        if (Array.isArray(res?.data?.data)) {
-          setAdmins(res.data.data.filter((u) => u.role === "admin"));
-        } else {
-          setAdmins([]);
-        }
-      } catch (err) {
-        console.error("Error fetching admins", err);
-        setAdmins([]);
-      } finally {
-        setLoadingAgents(false);
-      }
-    };
-    fetchAdmins();
-  }, []);
 
   // Modal states for Add User
   const [showModal, setShowModal] = useState(false);
@@ -92,6 +47,21 @@ const Overview = () => {
   const [activeTab, setActiveTab] = useState('admin');
   const [searchTerm, setSearchTerm] = useState('');
   const [usersError, setUsersError] = useState('');
+
+  // Edit User Modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    email: ''
+  });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [editAlertMessage, setEditAlertMessage] = useState({ type: '', message: '' });
+
+  // Delete confirmation states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -217,14 +187,126 @@ const Overview = () => {
 
   // Handle edit user
   const handleEditUser = (user) => {
-    console.log('Edit user:', user);
-    // Add your edit logic here
+    setEditingUser(user);
+    setEditFormData({
+      name: user.name || '',
+      email: user.email || ''
+    });
+    setEditAlertMessage({ type: '', message: '' });
+    setShowEditModal(true);
   };
 
   // Handle delete user
   const handleDeleteUser = (user) => {
-    console.log('Delete user:', user);
-    // Add your delete logic here
+    setDeletingUser(user);
+    setShowDeleteModal(true);
+  };
+
+  // Handle edit form input changes
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Submit edit user form
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setIsEditSubmitting(true);
+    setEditAlertMessage({ type: '', message: '' });
+
+    try {
+      // Validate form data
+      if (!editFormData.name.trim() || !editFormData.email.trim()) {
+        setEditAlertMessage({ type: 'danger', message: 'Name and email are required.' });
+        setIsEditSubmitting(false);
+        return;
+      }
+
+      console.log('Editing user:', editingUser._id, 'with data:', editFormData);
+
+      // Call the patch API - you may need to modify your API to accept data
+      const response = await patchUserApi(editingUser._id, editFormData);
+      
+      console.log('Edit response:', response);
+      
+      if (response.status === 200 || response.status === 201) {
+        setEditAlertMessage({ type: 'success', message: 'User updated successfully!' });
+        
+        // Refresh the users list
+        await fetchAllUsers();
+        
+        // Refresh total users count
+        const updatedUsers = await totalUserCountApi();
+        setTotalUsers(updatedUsers?.count ?? 0);
+        
+        // Close modal after a short delay
+        setTimeout(() => {
+          handleCloseEditModal();
+        }, 1500);
+      } else {
+        setEditAlertMessage({ type: 'danger', message: 'Unexpected response from server.' });
+      }
+    } catch (error) {
+      console.error('Edit user error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update user. Please try again.';
+      setEditAlertMessage({ type: 'danger', message: errorMessage });
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  // Confirm delete user
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    
+    try {
+      console.log('Deleting user:', deletingUser._id);
+      
+      const response = await deleteUserApi(deletingUser._id);
+      
+      console.log('Delete response:', response);
+      
+      if (response.status === 200 || response.status === 201) {
+        // Refresh the users list
+        await fetchAllUsers();
+        
+        // Refresh total users count
+        const updatedUsers = await totalUserCountApi();
+        setTotalUsers(updatedUsers?.count ?? 0);
+        
+        // Close delete modal
+        setShowDeleteModal(false);
+        setDeletingUser(null);
+        
+        // Show success message
+        alert('User deleted successfully!');
+      } else {
+        alert('Unexpected response from server.');
+      }
+    } catch (error) {
+      console.error('Delete user error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete user. Please try again.';
+      alert('Error: ' + errorMessage);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Close edit modal
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingUser(null);
+    setEditFormData({ name: '', email: '' });
+    setEditAlertMessage({ type: '', message: '' });
+  };
+
+  // Close delete modal
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingUser(null);
   };
 
   // User card component
@@ -534,6 +616,102 @@ const Overview = () => {
         </Modal.Footer>
       </Modal>
 
+      {/* Edit User Modal */}
+      <Modal show={showEditModal} onHide={handleCloseEditModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Edit User</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {editAlertMessage.message && (
+            <Alert variant={editAlertMessage.type} className="mb-3">
+              {editAlertMessage.message}
+            </Alert>
+          )}
+          
+          <Form onSubmit={handleEditSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Name *</Form.Label>
+              <Form.Control
+                type="text"
+                name="name"
+                value={editFormData.name}
+                onChange={handleEditInputChange}
+                placeholder="Enter full name"
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Email *</Form.Label>
+              <Form.Control
+                type="email"
+                name="email"
+                value={editFormData.email}
+                onChange={handleEditInputChange}
+                placeholder="Enter email address"
+                required
+              />
+            </Form.Group>
+
+            <div className="text-muted small mb-3">
+              <strong>Current Role:</strong> {editingUser?.role || 'Unknown'}
+            </div>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseEditModal} disabled={isEditSubmitting}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleEditSubmit} 
+            disabled={isEditSubmitting}
+          >
+            {isEditSubmitting ? 'Updating...' : 'Update User'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={handleCloseDeleteModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="text-danger">Confirm Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="text-center">
+            <Trash2 size={48} className="text-danger mb-3" />
+            <h5>Are you sure you want to delete this user?</h5>
+            <p className="text-muted mb-3">This action cannot be undone.</p>
+            
+            {deletingUser && (
+              <div className="border rounded p-3 bg-light">
+                <div className="d-flex align-items-center gap-2 justify-content-center">
+                  <div className="admin-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style={{width: '32px', height: '32px'}}>
+                    {deletingUser.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                  <div>
+                    <div className="fw-bold">{deletingUser.name}</div>
+                    <small className="text-muted">{deletingUser.email}</small>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseDeleteModal} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            variant="danger" 
+            onClick={handleConfirmDelete} 
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete User'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       {/* Add User Modal */}
       <Modal show={showModal} onHide={handleCloseModal} centered>
         <Modal.Header closeButton>
@@ -789,68 +967,77 @@ const Overview = () => {
         </div>
       </div>
 
-     
+      {/* Escalation Severity Pie Chart */}
       <div className="row g-3">
-        <div className="col-12 col-lg-6 ">
-      <div className="card border-0 shadow-sm mb-4 h-100">
-        <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">QC Team</h5>
-              <button onClick={() => navigate("/dashboard/qc-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
-            </div>
-        <div className="card-body">
-          {admins.length > 0 ? (
-            <ul className="list-group list-group-flush">
-              {admins.slice(0, 5).map((admin) => (
-                <li
-                  key={admin._id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
+        <div className="col-12 col-lg-6 card border-0 shadow-sm mb-4">
+          <div className="card-header">
+            <h5>Escalation Severity Distribution</h5>
+          </div>
+          <div className="card-body">
+            {escalationSeverityData.length > 0 ? (
+              <PieChart width={400} height={300}>
+                <Pie
+                  data={escalationSeverityData}
+                  cx={200}
+                  cy={150}
+                  label
+                  outerRadius={100}
+                  fill="#FF8042"
+                  dataKey="value"
                 >
-                  <div>
-                    <strong>{admin.name}</strong>
-                    <div className="text-muted small">{admin.email}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted text-center my-3">
-              No Admin users found.
-            </p>
-          )}
+                  {escalationSeverityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            ) : (
+              <p>Loading Escalation Chart...</p>
+            )}
+          </div>
         </div>
-      </div>
-         </div>
-        <div className="col-12 col-lg-6 ">
-      <div className="card border-0 shadow-sm mb-4 h-100">
-        <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Sale Agent Team</h5>
-              <button onClick={() => navigate("/dashboard/qc-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
+        
+        <div className="col-12 col-lg-6">
+          <div className="card border-0 shadow-sm">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Recent Activity</h5>
+              <button className="btn btn-sm btn-link text-decoration-none">View All</button>
             </div>
-        <div className="card-body">
-          {agents.length > 0 ? (
-            <ul className="list-group list-group-flush">
-              {agents.slice(0, 5).map((admin) => (
-                <li
-                  key={admin._id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
-                >
+            <div className="card-body p-0">
+              <ul className="list-group list-group-flush">
+                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
                   <div>
-                    <strong>{admin.name}</strong>
-                    <div className="text-muted small">{admin.email}</div>
+                    <div className="fw-bold">New user registered</div>
+                    <div className="text-muted small">John Smith created an account</div>
                   </div>
+                  <span className="text-muted small">2 mins ago</span>
                 </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted text-center my-3">
-              No Admin users found.
-            </p>
-          )}
+                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
+                  <div>
+                    <div className="fw-bold">Project updated</div>
+                    <div className="text-muted small">Mobile App Dashboard v2.0</div>
+                  </div>
+                  <span className="text-muted small">1 hour ago</span>
+                </li>
+                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
+                  <div>
+                    <div className="fw-bold">New payment received</div>
+                    <div className="text-muted small">From client #40298</div>
+                  </div>
+                  <span className="text-muted small">3 hours ago</span>
+                </li>
+                <li className="list-group-item d-flex justify-content-between align-items-center p-3">
+                  <div>
+                    <div className="fw-bold">Server maintenance completed</div>
+                    <div className="text-muted small">Server #12 restarted successfully</div>
+                  </div>
+                  <span className="text-muted small">Yesterday</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
-      </div>
-        </div>
-
-      </div>
+      </div> 
     </>
   );
 };
