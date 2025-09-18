@@ -1,8 +1,8 @@
 //TableAdmin.jsx
 import { SquarePen, Trash, Loader, FileWarning, CheckCircle, Edit } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { getEvaluationOnwerApi } from "../features/evaluationApi";
-import { getEscalationOnwerApi, getEscalationsByAgentNameApi } from "../features/escalationsApi";
+import { getEvaluationOnwerApi, getEvaluationsByAgentNameApi } from "../features/evaluationApi";
+import { getEscalationsByAgentNameApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
 const CACHE_TTL = 1000; // 1 second cache time
@@ -68,7 +68,7 @@ const TableAdmin = () => {
           const cached = loadFromCache(cacheKey);
           if (cached) setEvaluations(cached);
           else {
-            const evals = await getEvaluationOnwerApi(agentName);
+            const evals = await getEvaluationsByAgentNameApi(agentName);
             setEvaluations(evals);
             saveToCache(cacheKey, evals);
           }
@@ -601,6 +601,7 @@ const TableAdmin = () => {
           )}
         </div>
       )}
+      
 
       {/* Evaluations Tab */}
       {activeTab === "evaluations" && (
@@ -660,7 +661,7 @@ const TableAdmin = () => {
                           <td style={cellStyle}>{formatDate(row.createdAt)}</td>
                           <td style={cellStyle}>
                             <button style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
-                              <SquarePen size={18} />
+                              <SquarePen onClick={() => handleEdit(row.agentName, row)} size={18} />
                             </button>
                           </td>
                           <td style={lastCellStyle}>
