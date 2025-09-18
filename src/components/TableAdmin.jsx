@@ -1,7 +1,7 @@
 //TableAdmin.jsx
 import { SquarePen, Trash, Loader, FileWarning, CheckCircle, Edit } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { getEvaluationOnwerApi, getEvaluationsByAgentNameApi } from "../features/evaluationApi";
+import {  getEvaluationsByAgentNameApi } from "../features/evaluationApi";
 import { getEscalationsByAgentNameApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -121,9 +121,13 @@ const TableAdmin = () => {
 
   const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleString() : "-");
 
-  const handleEdit = (agentName, rowData) => {
-    navigate(`/dashboard/qc-team/edit/${agentName}`, { state: { row: rowData } });
+  const handleEdit = (id, rowData) => {
+    navigate(`/dashboard/qc-team/editescalation/${id}`, { state: { row: rowData } });
   };
+   const handleEdits = (id, rowData) => {
+    navigate(`/dashboard/qc-team/editevaluation/${id}`, { state: { row: rowData } });
+  };
+  
 
   const containerStyle = {
     backgroundColor: '#ffffff',
@@ -528,7 +532,7 @@ const TableAdmin = () => {
                             <td style={cellStyle}>{formatDate(row.createdAt)}</td>
                             <td style={cellStyle}>
                               <button
-                                onClick={() => handleEdit(row.agentName, row)}
+                                onClick={() => handleEdit(row._id, row)}
                                 style={{ 
                                   border: 'none', 
                                   background: 'none', 
@@ -606,6 +610,42 @@ const TableAdmin = () => {
       {/* Evaluations Tab */}
       {activeTab === "evaluations" && (
         <div>
+          <div style={subTabContainerStyle}>
+            <button
+              onClick={() => {
+                setActiveEscalationTab("published");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEscalationTab === "published")}
+            >
+              <CheckCircle size={16} />
+              Published
+              <span style={{
+                ...getBadgeStyle(activeEscalationTab === "published"),
+                backgroundColor: activeEscalationTab === "published" ? '#10b981' : '#e5e7eb',
+                color: activeEscalationTab === "published" ? '#ffffff' : '#374151'
+              }}>
+                {publishedEscalations.length}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveEscalationTab("draft");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEscalationTab === "draft")}
+            >
+              <Edit size={16} />
+              Drafts
+              <span style={{
+                ...getBadgeStyle(activeEscalationTab === "draft"),
+                backgroundColor: activeEscalationTab === "draft" ? '#f59e0b' : '#e5e7eb',
+                color: activeEscalationTab === "draft" ? '#ffffff' : '#374151'
+              }}>
+                {draftEscalations.length}
+              </span>
+            </button>
+          </div>
           {loading ? (
             <div style={loadingStyle}>
               <Loader size={32} className="animate-spin" />
@@ -629,7 +669,6 @@ const TableAdmin = () => {
                       <th style={headerCellStyle}>Closing</th>
                       <th style={headerCellStyle}>Bonus</th>
                       <th style={headerCellStyle}>Evaluation Summary</th>
-                      <th style={headerCellStyle}>Rating</th>
                       <th style={headerCellStyle}>Created At</th>
                       <th style={headerCellStyle}>Edit</th>
                       <th style={lastHeaderCellStyle}>Delete</th>
@@ -657,11 +696,10 @@ const TableAdmin = () => {
                           <td style={cellStyle}>{row.closing || '-'}</td>
                           <td style={cellStyle}>{row.bonus || '-'}</td>
                           <td style={cellStyle}>{row.evaluationsummary || '-'}</td>
-                          <td style={cellStyle}>{row.rating || '-'}</td>
                           <td style={cellStyle}>{formatDate(row.createdAt)}</td>
                           <td style={cellStyle}>
                             <button style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
-                              <SquarePen onClick={() => handleEdit(row.agentName, row)} size={18} />
+                              <SquarePen onClick={() => handleEdits(row._id, row)} size={18} />
                             </button>
                           </td>
                           <td style={lastCellStyle}>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
-// import { createWebhookEscalationApi } from "../../../features/escalationsApi";
+import {  updateEscalationApi,  } from "../../../features/escalationsApi";
 
 const EditEscalation = () => {
   const location = useLocation();
@@ -51,22 +51,14 @@ const EditEscalation = () => {
   };
 
   // Handle form submission
-  const handleSubmit = async (e) => {
+   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError("");
-    
     try {
-      // Determine status based on form completion
-      const status = isFormComplete() ? 'published' : 'draft';
-      const updatedFormData = {
-        ...formData,
-        status: status
-      };
-
       // Send the updated data to your API
-      await createWebhookEscalationApi(row.id, updatedFormData);
-      alert(`Escalation ${status === 'published' ? 'published' : 'saved as draft'} successfully!`);
+      await updateEscalationApi(row._id, formData);
+      alert('Escalation updated successfully!');
       navigate(-1); // Go back to previous page
     } catch (err) {
       setError(err.message || "Failed to update escalation");
@@ -75,12 +67,25 @@ const EditEscalation = () => {
       setIsSubmitting(false);
     }
   };
-
   // Handle cancel
   const handleCancel = () => {
     navigate(-1); // Go back to previous page
   };
-
+  if (!row) {
+    return (
+      <div style={containerStyle}>
+        <div style={headerStyle}>
+          <h2>Edit Escalation</h2>
+        </div>
+        <div style={noDataStyle}>
+          <p>No escalation data found. Please go back and select an escalation to edit.</p>
+          <button style={buttonStyle} onClick={handleCancel}>
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!row) {
     return (
       <div style={containerStyle}>
