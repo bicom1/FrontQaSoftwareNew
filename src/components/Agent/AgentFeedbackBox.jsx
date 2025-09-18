@@ -1,26 +1,62 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, Upload, MessageSquare, Phone, FileText, X, AlertTriangle, Clock, Calendar, Send, Star } from 'lucide-react';
+import { getLowRatingCallApi } from '../../features/agents';
+
 
 const AgentFeedbackBox = () => {
   const [activeTab, setActiveTab] = useState('flagged-chats');
   const [expandedChats, setExpandedChats] = useState({});
-  const [expandedCalls, setExpandedCalls] = useState({});
+ const [expandedCalls, setExpandedCalls] = useState({});
   const [comments, setComments] = useState({});
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [generalComment, setGeneralComment] = useState('');
   const [generalFiles, setGeneralFiles] = useState([]);
+   const [flaggedCalls, setFlaggedCalls] = useState([]);
+   const [loading, setLoading] = useState(true);
+
+   
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    const response = await getLowRatingCallApi();
+
+    // Ensure data is always an array
+    const rawData = Array.isArray(response?.data) 
+      ? response.data 
+      : Array.isArray(response) 
+        ? response 
+        : [];
+
+    const mappedData = rawData.map((call) => ({
+      id: call._id,
+      title: `Call with ${call.agentName}`,
+      time: new Date(call.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      date: new Date(call.createdAt).toLocaleDateString(),
+      duration: `${Math.floor(Math.random() * 15) + 5}:${String(
+        Math.floor(Math.random() * 59)
+      ).padStart(2, "0")}`,
+      severity: call.rating <= 40 ? "high" : call.rating <= 70 ? "medium" : "low",
+      agent: call.agentName,
+      raw: call,
+    }));
+
+    setFlaggedCalls(mappedData);
+    setLoading(false);
+  };
+
+  fetchData();
+}, []);
+
+
 
   // Mock data for flagged chats and calls
   const flaggedChats = [
     { id: 1, title: 'Chat with John Doe', time: '2:30 PM', date: '2025-08-19', severity: 'high', agent: 'Sarah Johnson', duration: '12 min' },
     { id: 2, title: 'Chat with Jane Smith', time: '1:15 PM', date: '2025-08-19', severity: 'medium', agent: 'Mike Wilson', duration: '8 min' },
     { id: 3, title: 'Chat with Mike Johnson', time: '11:45 AM', date: '2025-08-18', severity: 'low', agent: 'Lisa Chen', duration: '15 min' },
-  ];
-
-  const flaggedCalls = [
-    { id: 1, title: 'Call with Sarah Wilson', time: '3:45 PM', date: '2025-08-19', duration: '15:30', severity: 'high', agent: 'Tom Brown' },
-    { id: 2, title: 'Call with Tom Brown', time: '2:20 PM', date: '2025-08-19', duration: '8:45', severity: 'medium', agent: 'Anna Davis' },
-    { id: 3, title: 'Call with Lisa Davis', time: '10:30 AM', date: '2025-08-18', duration: '12:15', severity: 'low', agent: 'John Smith' },
   ];
 
   const toggleChatExpanded = (chatId) => {
@@ -30,10 +66,10 @@ const AgentFeedbackBox = () => {
     }));
   };
 
-  const toggleCallExpanded = (callId) => {
-    setExpandedCalls(prev => ({
+    const toggleCallExpanded = (callId) => {
+    setExpandedCalls((prev) => ({
       ...prev,
-      [callId]: !prev[callId]
+      [callId]: !prev[callId],
     }));
   };
 
@@ -718,45 +754,69 @@ const AgentFeedbackBox = () => {
           )}
 
           {activeTab === 'flagged-calls' && (
-            <div style={{ padding: '32px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: '#dcfce7',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '16px'
-                }}>
-                  <Phone style={{ width: '24px', height: '24px', color: '#059669' }} />
-                </div>
-                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: 0 }}>Flagged Call Recordings</h2>
-              </div>
-              {flaggedCalls.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '64px 0' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    backgroundColor: '#f3f4f6',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 16px'
-                  }}>
-                    <Phone style={{ width: '40px', height: '40px', color: '#9ca3af' }} />
-                  </div>
-                  <p style={{ color: '#6b7280', fontSize: '18px', margin: '0 0 8px 0' }}>No flagged calls to review</p>
-                  <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>All call interactions are meeting standards!</p>
-                </div>
-              ) : (
-                <div>
-                  {flaggedCalls.map(call => renderFlaggedItem(call, 'call', expandedCalls, toggleCallExpanded))}
-                </div>
-              )}
+           <div style={{ padding: "32px" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: "24px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              backgroundColor: "#dcfce7",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: "16px",
+            }}
+          >
+            <Phone style={{ width: "24px", height: "24px", color: "#059669" }} />
+          </div>
+          <h2
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              color: "#111827",
+              margin: 0,
+            }}
+          >
+            Flagged Call Recordings
+          </h2>
+        </div>
+
+        {/* Loader */}
+        {loading ? (
+          <p style={{ textAlign: "center", color: "#6b7280" }}>Loading calls...</p>
+        ) : flaggedCalls.length === 0 ? (
+          // No data state
+          <div style={{ textAlign: "center", padding: "64px 0" }}>
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                backgroundColor: "#f3f4f6",
+                borderRadius: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+              }}
+            >
+              <Phone style={{ width: "40px", height: "40px", color: "#9ca3af" }} />
             </div>
+            <p style={{ color: "#6b7280", fontSize: "18px", margin: "0 0 8px 0" }}>
+              No flagged calls to review
+            </p>
+            <p style={{ color: "#9ca3af", fontSize: "14px", margin: 0 }}>
+              All call interactions are meeting standards!
+            </p>
+          </div>
+        ) : (
+          <div>
+            {flaggedCalls.map((call) =>
+              renderFlaggedItem(call, "call", expandedCalls, toggleCallExpanded)
+            )}
+          </div>
+        )}
+      </div>
           )}
 
           {activeTab === 'general' && (

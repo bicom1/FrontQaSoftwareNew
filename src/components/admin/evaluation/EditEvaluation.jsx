@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
-// import { createWebhookEscalationApi } from "../../../features/escalationsApi";
+import { updateEvaluationApi } from "../../../features/evaluationApi";
+
 
 const EditEvaluation = () => {
   const location = useLocation();
@@ -11,9 +12,7 @@ const EditEvaluation = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  
 
-  // State for form fields
   const [formData, setFormData] = useState(row || {
     useremail: '',
     leadID: '',
@@ -27,17 +26,15 @@ const EditEvaluation = () => {
     closing: '',
     bonus: '',
     evaluationsummary: '',
-    rating: ''
   });
 
 
 
-  // Function to check if all required fields are filled
   const isFormComplete = () => {
     const requiredFields = [
       'useremail', 'leadID', 'agentName','mod', 'teamleader',
       'greetings', 'accuracy', 'building', 'presenting', 'closing',
-      'bonus', 'evaluationsummary', 'rating'
+      'bonus', 'evaluationsummary'
     ];
     
     return requiredFields.every(field => 
@@ -54,45 +51,33 @@ const EditEvaluation = () => {
     }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError("");
-    
-    try {
-      // Determine status based on form completion
-      const status = isFormComplete() ? 'published' : 'draft';
-      const updatedFormData = {
-        ...formData,
-        status: status
-      };
-
-      // Send the updated data to your API
-      await createWebhookEscalationApi(row.id, updatedFormData);
-      alert(`Evaluation ${status === 'published' ? 'published' : 'saved as draft'} successfully!`);
-      navigate(-1); // Go back to previous page
-    } catch (err) {
-      setError(err.message || "Failed to update Evaluation");
-      console.error('Update error:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle cancel
+     e.preventDefault();
+     setIsSubmitting(true);
+     setError("");
+     try {
+       // Send the updated data to your API
+       await updateEvaluationApi(row._id, formData);
+       alert('Evaluation updated successfully!');
+       navigate(-1); // Go back to previous page
+     } catch (err) {
+       setError(err.message || "Failed to update Evaluation");
+       console.error('Update error:', err);
+     } finally {
+       setIsSubmitting(false);
+     }
+   };
   const handleCancel = () => {
-    navigate(-1); // Go back to previous page
+    navigate(-1); 
   };
-
   if (!row) {
     return (
       <div style={containerStyle}>
         <div style={headerStyle}>
-          <h2>Edit Evalutions</h2>
+          <h2>Edit Evaluation</h2>
         </div>
         <div style={noDataStyle}>
-          <p>No evaluation data found. Please go back and select an evaluation to edit.</p>
+          <p>No Evaluation data found. Please go back and select an Evaluation to edit.</p>
           <button style={buttonStyle} onClick={handleCancel}>
             Go Back
           </button>
@@ -100,6 +85,7 @@ const EditEvaluation = () => {
       </div>
     );
   }
+
 
   const completionPercentage = (() => {
     const requiredFields = [
