@@ -139,6 +139,20 @@ export const deleteEvaluationApi = async (id) => {
     }
   };
 
+export const getEvaluationsByAgentNameApi = async (agentName) => {
+  const token = getToken();
+  try {
+    const res = await axios.get(`${baseUrl}/api/evaluations/agent/${agentName}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Always return an array
+    return res.data?.data || [];
+  } catch (err) {
+    console.error("Evaluation API error:", err);
+    return [];
+  }
+};
+
 // export const getEvaluationOnwerApi = async (ownerId ) => {
 //   const token = getToken();
 //   return await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId }`, {

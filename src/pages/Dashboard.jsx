@@ -11,6 +11,7 @@ import ReportDownload from '../components/ReportDownload';
 import Layout from '../components/admin/escalation/Layout';
 import TableAdmin from '../components/TableAdmin';
 import EditEscalation from '../components/admin/escalation/EditEscalation';
+import EditEvaluation from '../components/admin/evaluation/EditEvaluation';
 
 
 const Dashboard = ({ setIsLoggedIn }) => {
@@ -22,6 +23,7 @@ const Dashboard = ({ setIsLoggedIn }) => {
         <Route path="qc-team" element={<QcList />} />
         <Route path="qc-team/:agentName" element={<TableAdmin/>} />
         <Route path="qc-team/edit/:id" element={<EditEscalation/>} />
+        <Route path="qc-team/edit/:id" element={<EditEvaluation/>} />
         <Route path="users" element={<UserManagement />} />
         <Route path="add-teamlead" element={<AddTeamLead />} />
         <Route path="projects" element={<Projects />} />

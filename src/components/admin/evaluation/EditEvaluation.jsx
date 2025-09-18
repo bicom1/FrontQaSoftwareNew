@@ -1,39 +1,43 @@
-//EditEscalation.jsx
+//EditEvaluation.jsx
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
 // import { createWebhookEscalationApi } from "../../../features/escalationsApi";
 
-const EditEscalation = () => {
+const EditEvaluation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const row = location.state?.row;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  
+
   // State for form fields
   const [formData, setFormData] = useState(row || {
     useremail: '',
     leadID: '',
-    evaluatedby: '',
     agentName: '',
+    mod:'',
     teamleader: '',
-    leadSource: '',
-    leadStatus: '',
-    escSeverity: '',
-    issueIden: '',
-    escAction: '',
-    documentation: '',
-    successmaration: '',
-    userrating: ''
+    greetings: '',
+    accuracy: '',
+    building: '',
+    presenting: '',
+    closing: '',
+    bonus: '',
+    evaluationsummary: '',
+    rating: ''
   });
+
+
 
   // Function to check if all required fields are filled
   const isFormComplete = () => {
     const requiredFields = [
-      'useremail', 'leadID', 'evaluatedby', 'agentName', 'teamleader',
-      'leadSource', 'leadStatus', 'escSeverity', 'issueIden', 'escAction',
-      'documentation', 'successmaration', 'userrating'
+      'useremail', 'leadID', 'agentName','mod', 'teamleader',
+      'greetings', 'accuracy', 'building', 'presenting', 'closing',
+      'bonus', 'evaluationsummary', 'rating'
     ];
     
     return requiredFields.every(field => 
@@ -66,10 +70,10 @@ const EditEscalation = () => {
 
       // Send the updated data to your API
       await createWebhookEscalationApi(row.id, updatedFormData);
-      alert(`Escalation ${status === 'published' ? 'published' : 'saved as draft'} successfully!`);
+      alert(`Evaluation ${status === 'published' ? 'published' : 'saved as draft'} successfully!`);
       navigate(-1); // Go back to previous page
     } catch (err) {
-      setError(err.message || "Failed to update escalation");
+      setError(err.message || "Failed to update Evaluation");
       console.error('Update error:', err);
     } finally {
       setIsSubmitting(false);
@@ -85,10 +89,10 @@ const EditEscalation = () => {
     return (
       <div style={containerStyle}>
         <div style={headerStyle}>
-          <h2>Edit Escalation</h2>
+          <h2>Edit Evalutions</h2>
         </div>
         <div style={noDataStyle}>
-          <p>No escalation data found. Please go back and select an escalation to edit.</p>
+          <p>No evaluation data found. Please go back and select an evaluation to edit.</p>
           <button style={buttonStyle} onClick={handleCancel}>
             Go Back
           </button>
@@ -99,9 +103,9 @@ const EditEscalation = () => {
 
   const completionPercentage = (() => {
     const requiredFields = [
-      'useremail', 'leadID', 'evaluatedby', 'agentName', 'teamleader',
-      'leadSource', 'leadStatus', 'escSeverity', 'issueIden', 'escAction',
-      'documentation', 'successmaration', 'userrating'
+      'useremail', 'leadID', 'agentName','mod', 'teamleader',
+      'greetings', 'accuracy', 'building', 'presenting', 'closing',
+      'bonus', 'evaluationsummary', 'rating'
     ];
     const filledFields = requiredFields.filter(field => 
       formData[field] && formData[field].toString().trim() !== ''
@@ -116,7 +120,7 @@ const EditEscalation = () => {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h2>Edit Escalation</h2>
+          <h2>Edit Evaluation</h2>
           <div style={progressContainerStyle}>
             <div style={progressBarStyle}>
               <div 
@@ -167,18 +171,6 @@ const EditEscalation = () => {
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Evaluated By *</label>
-            <input
-              type="text"
-              name="evaluatedby"
-              value={formData.evaluatedby}
-              onChange={handleInputChange}
-              style={inputStyle}
-              required
-            />
-          </div>
-
-          <div style={formGroupStyle}>
             <label style={labelStyle}>Agent Name *</label>
             <input
               type="text"
@@ -203,11 +195,11 @@ const EditEscalation = () => {
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Lead Source *</label>
+            <label style={labelStyle}>Greetings *</label>
             <input
               type="text"
-              name="leadSource"
-              value={formData.leadSource}
+              name="greetings"
+              value={formData.greetings}
               onChange={handleInputChange}
               style={inputStyle}
               required
@@ -215,101 +207,60 @@ const EditEscalation = () => {
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Lead Status *</label>
-            <select
-              name="leadStatus"
-              value={formData.leadStatus}
-              onChange={handleInputChange}
-              style={inputStyle}
-              required
-            >
-              <option value="">Select Status</option>
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Qualified">Qualified</option>
-              <option value="Unqualified">Unqualified</option>
-              <option value="Converted">Converted</option>
-              <option value="Escalated">Escalated</option>
-            </select>
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Escalation Severity *</label>
-            <select
-              name="escSeverity"
-              value={formData.escSeverity}
+            <label style={labelStyle}>Accuracy *</label>
+            <input
+              name="accuracy"
+              value={formData.accuracy}
               onChange={handleInputChange}
               style={inputStyle}
               required
             >
-              <option value="">Select Severity</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
+            </input>
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Issue Identified *</label>
-            <textarea
-              name="issueIden"
-              value={formData.issueIden}
-              onChange={handleInputChange}
-              style={{...inputStyle, minHeight: '80px'}}
-              required
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Escalation Action *</label>
-            <textarea
-              name="escAction"
-              value={formData.escAction}
-              onChange={handleInputChange}
-              style={{...inputStyle, minHeight: '80px'}}
-              required
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Documentation *</label>
-            <textarea
-              name="documentation"
-              value={formData.documentation}
-              onChange={handleInputChange}
-              style={{...inputStyle, minHeight: '80px'}}
-              required
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Success Metrics *</label>
-            <textarea
-              name="successmaration"
-              value={formData.successmaration}
-              onChange={handleInputChange}
-              style={{...inputStyle, minHeight: '80px'}}
-              required
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>User Rating *</label>
-            <select
-              name="userrating"
-              value={formData.userrating}
+            <label style={labelStyle}>Presnting *</label>
+            <input
+              name="presenting"
+              value={formData.presenting}
               onChange={handleInputChange}
               style={inputStyle}
               required
             >
-              <option value="">Select Rating</option>
-              <option value="1">1 - Very Poor</option>
-              <option value="2">2 - Poor</option>
-              <option value="3">3 - Average</option>
-              <option value="4">4 - Good</option>
-              <option value="5">5 - Excellent</option>
-            </select>
+            </input>
+          </div>
+
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>Closing*</label>
+            <textarea
+              name="closing"
+              value={formData.closing}
+              onChange={handleInputChange}
+              style={{...inputStyle, minHeight: '80px'}}
+              required
+            />
+          </div>
+
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>Bonus*</label>
+            <textarea
+              name="bonus"
+              value={formData.bonus}
+              onChange={handleInputChange}
+              style={{...inputStyle, minHeight: '80px'}}
+              required
+            />
+          </div>
+
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>Evaluationsummary *</label>
+            <textarea
+              name="evaluationsummary"
+              value={formData.evaluationsummary}
+              onChange={handleInputChange}
+              style={{...inputStyle, minHeight: '80px'}}
+              required
+            />
           </div>
         </div>
 
@@ -497,4 +448,4 @@ const noDataStyle = {
   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
 };
 
-export default EditEscalation;
+export default EditEvaluation;
