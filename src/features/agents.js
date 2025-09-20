@@ -13,3 +13,16 @@ export const getLowRatingCallApi = async () => {
       return [];
     }
   };
+
+  export const getLowRatingChatsApi = async () => {
+    try {
+      const token = getToken();
+      const res = await axios.get(`${baseUrl}/api/agents/low-rating-chats`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "" },
+      });
+      return res.data;
+    } catch (err) {
+      console.error("Error fetching low rating chats:", err);
+      return [];
+    }
+  };
