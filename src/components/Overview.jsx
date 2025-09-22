@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { onlineUsersCountApi, totalUserCountApi, getallusersApi, patchUserApi, deleteUserApi} from '../features/userApis';
-import { totalEscalationCountsApi, getEscalationAnalyticsApi, overviewAnalyticsRangeApi } from '../features/escalationsApi';
+import { totalEscalationCountsApi, getEscalationAnalyticsApi, } from '../features/escalationsApi';
 import { totalEvaluationCountsApi, getEvaluationAnalyticsApi } from '../features/evaluationApi';
 import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/marketingApi';
 import { LeadRegister } from '../features/userApis'; // Import the API function
