@@ -118,7 +118,7 @@ function Login({ onLoginSuccess }) {
       bottom: "0",
       left: "50%",
       transform: "translateX(-50%)",
-      width: "60px",
+      width: "80px",
       height: "4px",
       background: "linear-gradient(90deg, #2575fc, #6a11cb)",
       borderRadius: "2px",
@@ -234,7 +234,7 @@ function Login({ onLoginSuccess }) {
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.header}>
-          Welcome Back
+        BICOMM.
           <span style={styles.headerUnderline}></span>
         </h2>
         <form onSubmit={handleLogin} noValidate>

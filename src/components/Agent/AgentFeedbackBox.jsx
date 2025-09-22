@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, Upload, MessageSquare, Phone, FileText, X, AlertTriangle, Clock, Calendar, Send, Star } from 'lucide-react';
+import { getLowRatingCallApi, getLowRatingChatsApi } from '../../features/agents';
+import { getToken } from '../../features/config';
+
 
 const AgentFeedbackBox = () => {
   const [activeTab, setActiveTab] = useState('flagged-chats');
@@ -9,19 +12,71 @@ const AgentFeedbackBox = () => {
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [generalComment, setGeneralComment] = useState('');
   const [generalFiles, setGeneralFiles] = useState([]);
+   const [flaggedCalls, setFlaggedCalls] = useState([]);
+   const [flaggedChats, setFlaggedChats] = useState([]);
+   const [loading, setLoading] = useState(true);
+   const token = getToken();
+   const decoded = JSON.parse(atob(token.split(".")[1])); 
+   const currentUserName = decoded.name;
+   const currentUserEmail = decoded.email;
+    const currentUserId = decoded.id; // if you store user id
 
-  // Mock data for flagged chats and calls
-  const flaggedChats = [
-    { id: 1, title: 'Chat with John Doe', time: '2:30 PM', date: '2025-08-19', severity: 'high', agent: 'Sarah Johnson', duration: '12 min' },
-    { id: 2, title: 'Chat with Jane Smith', time: '1:15 PM', date: '2025-08-19', severity: 'medium', agent: 'Mike Wilson', duration: '8 min' },
-    { id: 3, title: 'Chat with Mike Johnson', time: '11:45 AM', date: '2025-08-18', severity: 'low', agent: 'Lisa Chen', duration: '15 min' },
-  ];
 
-  const flaggedCalls = [
-    { id: 1, title: 'Call with Sarah Wilson', time: '3:45 PM', date: '2025-08-19', duration: '15:30', severity: 'high', agent: 'Tom Brown' },
-    { id: 2, title: 'Call with Tom Brown', time: '2:20 PM', date: '2025-08-19', duration: '8:45', severity: 'medium', agent: 'Anna Davis' },
-    { id: 3, title: 'Call with Lisa Davis', time: '10:30 AM', date: '2025-08-18', duration: '12:15', severity: 'low', agent: 'John Smith' },
-  ];
+
+
+const normalizeData = (rawData, type) => {
+  return rawData.map((item) => ({
+    id: item._id,
+    title: `${type === 'chat' ? 'Chat' : 'Call'} with ${item.agentName}`,
+    time: new Date(item.createdAt).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    date: new Date(item.createdAt).toLocaleDateString(),
+    duration: `${Math.floor(Math.random() * 15) + 5}:${String(
+      Math.floor(Math.random() * 59)
+    ).padStart(2, "0")}`,
+    severity: item.rating <= 40 ? "high" : item.rating <= 70 ? "medium" : "low",
+    agent: item.agentName,
+    raw: item,
+  }));
+};
+
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const token = getToken();
+      const decoded = JSON.parse(atob(token.split(".")[1]));
+      const currentUserName = (decoded.name || "").toLowerCase(); // 👈 "haris"
+
+      const [callsRes, chatsRes] = await Promise.all([
+        getLowRatingCallApi(),
+        getLowRatingChatsApi()
+      ]);
+
+      // Filter calls by current user's name
+      const callsRaw = (Array.isArray(callsRes?.data) ? callsRes.data : [])
+        .filter(item => (item.agentName || "").toLowerCase() === currentUserName);
+
+      // Filter chats by current user's name
+      const chatsRaw = (Array.isArray(chatsRes?.data) ? chatsRes.data : [])
+        .filter(item => (item.agentName || "").toLowerCase() === currentUserName);
+
+      setFlaggedCalls(normalizeData(callsRaw, "call"));
+      setFlaggedChats(normalizeData(chatsRaw, "chat"));
+    } catch (error) {
+      console.error("Error fetching flagged data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
+
+
 
   const toggleChatExpanded = (chatId) => {
     setExpandedChats(prev => ({
@@ -30,12 +85,13 @@ const AgentFeedbackBox = () => {
     }));
   };
 
-  const toggleCallExpanded = (callId) => {
-    setExpandedCalls(prev => ({
+    const toggleCallExpanded = (callId) => {
+    setExpandedCalls((prev) => ({
       ...prev,
-      [callId]: !prev[callId]
+      [callId]: !prev[callId],
     }));
   };
+
 
   const handleCommentChange = (type, id, value) => {
     setComments(prev => ({
@@ -44,29 +100,6 @@ const AgentFeedbackBox = () => {
     }));
   };
 
-  const handleFileUpload = (type, id, files) => {
-    const fileArray = Array.from(files);
-    setUploadedFiles(prev => ({
-      ...prev,
-      [`${type}-${id}`]: [...(prev[`${type}-${id}`] || []), ...fileArray]
-    }));
-  };
-
-  const removeFile = (type, id, fileIndex) => {
-    setUploadedFiles(prev => ({
-      ...prev,
-      [`${type}-${id}`]: prev[`${type}-${id}`].filter((_, index) => index !== fileIndex)
-    }));
-  };
-
-  const handleGeneralFileUpload = (files) => {
-    const fileArray = Array.from(files);
-    setGeneralFiles(prev => [...prev, ...fileArray]);
-  };
-
-  const removeGeneralFile = (fileIndex) => {
-    setGeneralFiles(prev => prev.filter((_, index) => index !== fileIndex));
-  };
 
   const getSeverityConfig = (severity) => {
     switch (severity) {
@@ -101,65 +134,7 @@ const AgentFeedbackBox = () => {
     }
   };
 
-  const renderFileList = (files, type, id = null) => {
-    if (!files || files.length === 0) return null;
-    
-    return (
-      <div style={{ marginTop: '16px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px' }}>Uploaded Files</h4>
-        {files.map((file, index) => (
-          <div key={index} style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'linear-gradient(to right, #eff6ff, #e0e7ff)',
-            padding: '12px',
-            borderRadius: '8px',
-            border: '1px solid #bfdbfe',
-            marginBottom: '8px'
-          }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                backgroundColor: '#dbeafe',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: '12px'
-              }}>
-                <FileText style={{ width: '16px', height: '16px', color: '#2563eb' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '14px', fontWeight: '500', color: '#111827', margin: 0 }}>{file.name}</p>
-                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>{(file.size / 1024).toFixed(1)} KB</p>
-              </div>
-            </span>
-            <button
-              onClick={() => id ? removeFile(type, id, index) : removeGeneralFile(index)}
-              style={{
-                width: '24px',
-                height: '24px',
-                backgroundColor: '#fee2e2',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#fecaca'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#fee2e2'}
-            >
-              <X style={{ width: '12px', height: '12px', color: '#dc2626' }} />
-            </button>
-          </div>
-        ))}
-      </div>
-    );
-  };
+ 
 
   const renderFlaggedItem = (item, type, expandedState, toggleExpanded) => {
     const isExpanded = expandedState[item.id];
@@ -325,82 +300,6 @@ const AgentFeedbackBox = () => {
                 </div>
               </div>
               
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#111827',
-                  marginBottom: '12px'
-                }}>
-                  <Upload style={{ width: '16px', height: '16px', marginRight: '8px', color: '#059669' }} />
-                  Supporting Documents
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <label style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '100%',
-                    height: '144px',
-                    border: '2px dashed #d1d5db',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    background: 'linear-gradient(to bottom right, #eff6ff, #e0e7ff)',
-                    transition: 'all 0.3s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(to bottom right, #dbeafe, #c7d2fe)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(to bottom right, #eff6ff, #e0e7ff)';
-                  }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      paddingTop: '20px',
-                      paddingBottom: '24px'
-                    }}>
-                      <div style={{
-                        width: '48px',
-                        height: '48px',
-                        backgroundColor: '#dbeafe',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: '12px',
-                        transition: 'all 0.2s'
-                      }}>
-                        <Upload style={{ width: '24px', height: '24px', color: '#2563eb' }} />
-                      </div>
-                      <p style={{ 
-                        marginBottom: '8px', 
-                        fontSize: '14px', 
-                        color: '#374151', 
-                        fontWeight: '500',
-                        margin: '0 0 8px 0'
-                      }}>
-                        <span style={{ fontWeight: '600', color: '#2563eb' }}>Click to upload</span> or drag files here
-                      </p>
-                      <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>PNG, JPG, PDF, DOC (Max 10MB each)</p>
-                    </div>
-                    <input
-                      type="file"
-                      style={{ display: 'none' }}
-                      multiple
-                      onChange={(e) => handleFileUpload(type, item.id, e.target.files)}
-                      accept=".png,.jpg,.jpeg,.pdf,.doc,.docx,.txt"
-                    />
-                  </label>
-                </div>
-                {renderFileList(uploadedFiles[key], type, item.id)}
-              </div>
               
               <div style={{ 
                 display: 'flex', 
@@ -717,47 +616,21 @@ const AgentFeedbackBox = () => {
             </div>
           )}
 
-          {activeTab === 'flagged-calls' && (
-            <div style={{ padding: '32px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: '#dcfce7',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '16px'
-                }}>
-                  <Phone style={{ width: '24px', height: '24px', color: '#059669' }} />
-                </div>
-                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: 0 }}>Flagged Call Recordings</h2>
-              </div>
-              {flaggedCalls.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '64px 0' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    backgroundColor: '#f3f4f6',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 16px'
-                  }}>
-                    <Phone style={{ width: '40px', height: '40px', color: '#9ca3af' }} />
-                  </div>
-                  <p style={{ color: '#6b7280', fontSize: '18px', margin: '0 0 8px 0' }}>No flagged calls to review</p>
-                  <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>All call interactions are meeting standards!</p>
-                </div>
-              ) : (
-                <div>
-                  {flaggedCalls.map(call => renderFlaggedItem(call, 'call', expandedCalls, toggleCallExpanded))}
-                </div>
-              )}
-            </div>
-          )}
+         {activeTab === 'flagged-calls' && (
+  loading ? (
+    
+    <p style={{ textAlign: "center", color: "#6b7280" }}>Loading flagged calls...</p>
+  ) : (
+    flaggedCalls.length > 0 ? (
+      flaggedCalls.map((call) =>
+        renderFlaggedItem(call, "call", expandedCalls, toggleCallExpanded)
+      )
+    ) : (
+      
+      <p style={{ textAlign: "center", color: "#6b7280" }}>No flagged calls found</p>
+    )
+  )
+)}
 
           {activeTab === 'general' && (
             <div style={{ padding: '32px' }}>
@@ -830,83 +703,6 @@ const AgentFeedbackBox = () => {
                       {generalComment.length}/1000
                     </div>
                   </div>
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#111827',
-                    marginBottom: '16px'
-                  }}>
-                    <Upload style={{ width: '16px', height: '16px', marginRight: '8px', color: '#059669' }} />
-                    Upload Supporting Documents
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <label style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '100%',
-                      height: '192px',
-                      border: '2px dashed #d1d5db',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      background: 'linear-gradient(to bottom right, #f3e8ff, #ede9fe)',
-                      transition: 'all 0.3s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to bottom right, #e9d5ff, #ddd6fe)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to bottom right, #f3e8ff, #ede9fe)';
-                    }}
-                    >
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingTop: '20px',
-                        paddingBottom: '24px'
-                      }}>
-                        <div style={{
-                          width: '64px',
-                          height: '64px',
-                          backgroundColor: '#e9d5ff',
-                          borderRadius: '16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginBottom: '16px',
-                          transition: 'all 0.2s'
-                        }}>
-                          <Upload style={{ width: '32px', height: '32px', color: '#7c3aed' }} />
-                        </div>
-                        <p style={{ 
-                          marginBottom: '8px', 
-                          fontSize: '16px', 
-                          color: '#374151', 
-                          fontWeight: '600',
-                          margin: '0 0 8px 0'
-                        }}>
-                          <span style={{ fontWeight: 'bold', color: '#7c3aed' }}>Click to upload</span> or drag files here
-                        </p>
-                        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>PNG, JPG, PDF, DOC up to 10MB each</p>
-                      </div>
-                      <input
-                        type="file"
-                        style={{ display: 'none' }}
-                        multiple
-                        onChange={(e) => handleGeneralFileUpload(e.target.files)}
-                        accept=".png,.jpg,.jpeg,.pdf,.doc,.docx,.txt"
-                      />
-                    </label>
-                  </div>
-                  {renderFileList(generalFiles, 'general')}
                 </div>
                 
                 <div style={{ 

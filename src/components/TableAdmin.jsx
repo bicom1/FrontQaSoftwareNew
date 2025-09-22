@@ -1,15 +1,17 @@
-import { SquarePen, Trash, Loader, FileWarning } from "lucide-react";
+//TableAdmin.jsx
+import { SquarePen, Trash, Loader, FileWarning, CheckCircle, Edit } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { getEvaluationOnwerApi } from "../features/evaluationApi";
-import { getEscalationOnwerApi } from "../features/escalationsApi";
+import {  getEvaluationsByAgentNameApi } from "../features/evaluationApi";
+import { getEscalationsByAgentNameApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache time
+const CACHE_TTL = 1000; // 1 second cache time
 
 const TableAdmin = () => {
-  const { adminId } = useParams();
+  const { agentName } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("evaluations");
+  const [activeEscalationTab, setActiveEscalationTab] = useState("published");
   const [evaluations, setEvaluations] = useState([]);
   const [escalations, setEscalations] = useState([]);
   const [marketing, setMarketing] = useState([]);
@@ -18,6 +20,27 @@ const TableAdmin = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [hoveredRow, setHoveredRow] = useState(null);
+
+  // Function to check if escalation is complete
+  const isEscalationComplete = (escalation) => {
+    const requiredFields = [
+      'useremail', 'leadID', 'evaluatedby', 'agentName', 'teamleader',
+      'leadsource', 'leadStatus', 'escSeverity', 'issueIden', 'escAction',
+      'documentation', 'successmaration', 'userrating'
+    ];
+    
+    return requiredFields.every(field => 
+      escalation[field] && escalation[field].toString().trim() !== ''
+    );
+  };
+
+  // Filter escalations based on completion status
+  const publishedEscalations = escalations.filter(esc => 
+    esc.status === 'published' || isEscalationComplete(esc)
+  );
+  const draftEscalations = escalations.filter(esc => 
+    esc.status === 'draft' || !isEscalationComplete(esc)
+  );
 
   // Cache handling
   const loadFromCache = (key) => {
@@ -41,20 +64,20 @@ const TableAdmin = () => {
       setError("");
       try {
         if (activeTab === "evaluations") {
-          const cacheKey = `evaluations_${adminId}`;
+          const cacheKey = `evaluations_${agentName}`;
           const cached = loadFromCache(cacheKey);
           if (cached) setEvaluations(cached);
           else {
-            const evals = await getEvaluationOnwerApi(adminId);
+            const evals = await getEvaluationsByAgentNameApi(agentName);
             setEvaluations(evals);
             saveToCache(cacheKey, evals);
           }
         } else if (activeTab === "escalations") {
-          const cacheKey = `escalations_${adminId}`;
+          const cacheKey = `escalations_${agentName}`;
           const cached = loadFromCache(cacheKey);
           if (cached) setEscalations(cached);
           else {
-            const escs = await getEscalationOnwerApi(adminId);
+            const escs = await getEscalationsByAgentNameApi(agentName);
             setEscalations(escs);
             saveToCache(cacheKey, escs);
           }
@@ -67,28 +90,44 @@ const TableAdmin = () => {
       }
     };
     fetchData();
-  }, [activeTab, adminId]);
+  }, [activeTab, agentName]);
+
+  // Get current escalations based on active sub-tab
+  const getCurrentEscalations = () => {
+    const currentData = activeEscalationTab === "published" ? publishedEscalations : draftEscalations;
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    return currentData.slice(indexOfFirstItem, indexOfLastItem);
+  };
 
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentEvaluations = evaluations.slice(indexOfFirstItem, indexOfLastItem);
-  const currentEscalations = escalations.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(
-    activeTab === "evaluations"
-      ? evaluations.length / itemsPerPage
-      : activeTab === "escalations"
-      ? escalations.length / itemsPerPage
-      : marketing.length / itemsPerPage
-  );
+  const currentEscalations = getCurrentEscalations();
+  
+  const getTotalPages = () => {
+    if (activeTab === "evaluations") return Math.ceil(evaluations.length / itemsPerPage);
+    if (activeTab === "escalations") {
+      const dataLength = activeEscalationTab === "published" ? publishedEscalations.length : draftEscalations.length;
+      return Math.ceil(dataLength / itemsPerPage);
+    }
+    return Math.ceil(marketing.length / itemsPerPage);
+  };
+  
+  const totalPages = getTotalPages();
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleString() : "-");
 
   const handleEdit = (id, rowData) => {
-    navigate(`/admin-details/edit?id=${id}`, { state: { row: rowData } });
+    navigate(`/dashboard/qc-team/editescalation/${id}`, { state: { row: rowData } });
   };
+   const handleEdits = (id, rowData) => {
+    navigate(`/dashboard/qc-team/editevaluation/${id}`, { state: { row: rowData } });
+  };
+  
 
   const containerStyle = {
     backgroundColor: '#ffffff',
@@ -108,6 +147,16 @@ const TableAdmin = () => {
     paddingBottom: '8px'
   };
 
+  const subTabContainerStyle = {
+    display: 'flex',
+    gap: '16px',
+    marginBottom: '24px',
+    backgroundColor: '#f9fafb',
+    padding: '8px',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb'
+  };
+
   const getTabStyle = (isActive) => ({
     paddingBottom: '12px',
     paddingLeft: '8px',
@@ -117,6 +166,21 @@ const TableAdmin = () => {
     borderBottom: isActive ? '3px solid #6b7280' : '3px solid transparent',
     color: isActive ? '#374151' : '#6b7280',
     backgroundColor: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  });
+
+  const getSubTabStyle = (isActive) => ({
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    borderRadius: '6px',
+    color: isActive ? '#ffffff' : '#374151',
+    backgroundColor: isActive ? '#6b7280' : 'transparent',
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -139,9 +203,23 @@ const TableAdmin = () => {
     color: isActive ? '#ffffff' : '#374151'
   });
 
+  const getStatusBadgeStyle = (status) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    paddingLeft: '8px',
+    paddingRight: '8px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: '600',
+    backgroundColor: status === 'published' ? '#dcfce7' : '#fef3c7',
+    color: status === 'published' ? '#166534' : '#92400e'
+  });
+
   // Scrollable container style
   const scrollableContainerStyle = {
-    oveflowX: 'scroll',
+    overflowX: 'scroll',
     borderRadius: '8px',
     border: '1px solid #d1d5db',
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
@@ -151,8 +229,7 @@ const TableAdmin = () => {
   const tableStyle = {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '1000px' // Ensures table doesn't collapse on smaller screens
-    
+    minWidth: '1000px'
   };
 
   const headerStyle = {
@@ -265,7 +342,7 @@ const TableAdmin = () => {
             key={tab}
             onClick={() => {
               setActiveTab(tab);
-              setCurrentPage(1); // Reset to first page when changing tabs
+              setCurrentPage(1);
             }}
             style={getTabStyle(activeTab === tab)}
             onMouseEnter={(e) => {
@@ -290,6 +367,7 @@ const TableAdmin = () => {
           </button>
         ))}
       </div>
+
       {error && (
         <div style={{
           padding: '12px',
@@ -306,9 +384,46 @@ const TableAdmin = () => {
         </div>
       )}
 
-      {/* Evaluations Tab */}
-      {activeTab === "evaluations" && (
+      {/* Escalations Tab with Sub-tabs */}
+      {activeTab === "escalations" && (
         <div>
+          <div style={subTabContainerStyle}>
+            <button
+              onClick={() => {
+                setActiveEscalationTab("published");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEscalationTab === "published")}
+            >
+              <CheckCircle size={16} />
+              Published
+              <span style={{
+                ...getBadgeStyle(activeEscalationTab === "published"),
+                backgroundColor: activeEscalationTab === "published" ? '#10b981' : '#e5e7eb',
+                color: activeEscalationTab === "published" ? '#ffffff' : '#374151'
+              }}>
+                {publishedEscalations.length}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveEscalationTab("draft");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEscalationTab === "draft")}
+            >
+              <Edit size={16} />
+              Drafts
+              <span style={{
+                ...getBadgeStyle(activeEscalationTab === "draft"),
+                backgroundColor: activeEscalationTab === "draft" ? '#f59e0b' : '#e5e7eb',
+                color: activeEscalationTab === "draft" ? '#ffffff' : '#374151'
+              }}>
+                {draftEscalations.length}
+              </span>
+            </button>
+          </div>
+
           {loading ? (
             <div style={loadingStyle}>
               <Loader size={32} className="animate-spin" />
@@ -320,64 +435,135 @@ const TableAdmin = () => {
                   <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
+                      <th style={headerCellStyle}>Status</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
+                      <th style={headerCellStyle}>Evaluated By</th>
                       <th style={headerCellStyle}>Agent Name</th>
-                      <th style={headerCellStyle}>MOD</th>
                       <th style={headerCellStyle}>Team Leader</th>
-                      <th style={headerCellStyle}>Greetings</th>
-                      <th style={headerCellStyle}>Accuracy</th>
-                      <th style={headerCellStyle}>Building</th>
-                      <th style={headerCellStyle}>Presenting</th>
-                      <th style={headerCellStyle}>Closing</th>
-                      <th style={headerCellStyle}>Bonus</th>
-                      <th style={headerCellStyle}>Evaluation Summary</th>
-                      <th style={headerCellStyle}>Rating</th>
+                      <th style={headerCellStyle}>Lead Source</th>
+                      <th style={headerCellStyle}>Lead Status</th>
+                      <th style={headerCellStyle}>Esc Severity</th>
+                      <th style={headerCellStyle}>Issue Identified</th>
+                      <th style={headerCellStyle}>Escalation Action</th>
+                      <th style={headerCellStyle}>Documentation</th>
+                      <th style={headerCellStyle}>Success Metrics</th>
+                      <th style={headerCellStyle}>User Rating</th>
                       <th style={headerCellStyle}>Created At</th>
                       <th style={headerCellStyle}>Edit</th>
                       <th style={lastHeaderCellStyle}>Delete</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentEvaluations.length > 0 ? (
-                      currentEvaluations.map((row, index) => (
-                        <tr
-                          key={row._id || index}
-                          style={getRowStyle(hoveredRow === index)}
-                          onMouseEnter={() => setHoveredRow(index)}
-                          onMouseLeave={() => setHoveredRow(null)}
-                        >
-                          <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
-                          <td style={cellStyle}>{row.useremail || '-'}</td>
-                          <td style={cellStyle}>{row.leadID || '-'}</td>
-                          <td style={cellStyle}>{row.agentName || '-'}</td>
-                          <td style={cellStyle}>{row.mod || '-'}</td>
-                          <td style={cellStyle}>{row.teamleader || '-'}</td>
-                          <td style={cellStyle}>{row.greetings || '-'}</td>
-                          <td style={cellStyle}>{row.accuracy || '-'}</td>
-                          <td style={cellStyle}>{row.building || '-'}</td>
-                          <td style={cellStyle}>{row.presenting || '-'}</td>
-                          <td style={cellStyle}>{row.closing || '-'}</td>
-                          <td style={cellStyle}>{row.bonus || '-'}</td>
-                          <td style={cellStyle}>{row.evaluationsummary || '-'}</td>
-                          <td style={cellStyle}>{row.rating || '-'}</td>
-                          <td style={cellStyle}>{formatDate(row.createdAt)}</td>
-                          <td style={cellStyle}>
-                            <button style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
-                              <SquarePen size={18} />
-                            </button>
-                          </td>
-                          <td style={lastCellStyle}>
-                            <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}>
-                              <Trash size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                    {currentEscalations.length > 0 ? (
+                      currentEscalations.map((row, index) => {
+                        const isComplete = isEscalationComplete(row);
+                        const status = row.status || (isComplete ? 'published' : 'draft');
+                        return (
+                          <tr
+                            key={row._id || index}
+                            style={getRowStyle(hoveredRow === index)}
+                            onMouseEnter={() => setHoveredRow(index)}
+                            onMouseLeave={() => setHoveredRow(null)}
+                          >
+                            <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
+                            <td style={cellStyle}>
+                              <span style={getStatusBadgeStyle(status)}>
+                                {status === 'published' ? '✓ Published' : '⚠ Draft'}
+                              </span>
+                            </td>
+                            <td style={cellStyle}>{row.useremail || '-'}</td>
+                            <td style={cellStyle}>{row.leadID || '-'}</td>
+                            <td style={cellStyle}>{row.evaluatedby || '-'}</td>
+                            <td style={cellStyle}>{row.agentName || '-'}</td>
+                            <td style={cellStyle}>{row.teamleader || '-'}</td>
+                            <td style={cellStyle}>{row.leadsource || '-'}</td>
+                            <td style={cellStyle}>{row.leadStatus || '-'}</td>
+                            <td style={cellStyle}>{row.escSeverity || '-'}</td>
+                            <td style={cellStyle}>
+                              {row.issueIden ? (
+                                <div style={{
+                                  maxWidth: '150px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }} title={row.issueIden}>
+                                  {row.issueIden}
+                                </div>
+                              ) : '-'}
+                            </td>
+                            <td style={cellStyle}>
+                              {row.escAction ? (
+                                <div style={{
+                                  maxWidth: '150px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }} title={row.escAction}>
+                                  {row.escAction}
+                                </div>
+                              ) : '-'}
+                            </td>
+                            <td style={cellStyle}>
+                              {row.documentation ? (
+                                <div style={{
+                                  maxWidth: '150px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }} title={row.documentation}>
+                                  {row.documentation}
+                                </div>
+                              ) : '-'}
+                            </td>
+                            <td style={cellStyle}>
+                              {row.successmaration ? (
+                                <div style={{
+                                  maxWidth: '150px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }} title={row.successmaration}>
+                                  {row.successmaration}
+                                </div>
+                              ) : '-'}
+                            </td>
+                            <td style={cellStyle}>{row.userrating || '-'}</td>
+                            <td style={cellStyle}>{formatDate(row.createdAt)}</td>
+                            <td style={cellStyle}>
+                              <button
+                                onClick={() => handleEdit(row._id, row)}
+                                style={{ 
+                                  border: 'none', 
+                                  background: 'none', 
+                                  cursor: 'pointer',
+                                  color: status === 'draft' ? '#f59e0b' : '#6b7280'
+                                }}
+                                title={status === 'draft' ? 'Complete and publish' : 'Edit'}
+                              >
+                                <SquarePen size={18} />
+                              </button>
+                            </td>
+                            <td style={lastCellStyle}>
+                              <button style={{ 
+                                border: 'none', 
+                                background: 'none', 
+                                cursor: 'pointer', 
+                                color: '#ef4444' 
+                              }}>
+                                <Trash size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan="17" style={{ ...cellStyle, textAlign: 'center' }}>
-                          No evaluations found
+                        <td colSpan="18" style={{ ...cellStyle, textAlign: 'center' }}>
+                          {activeEscalationTab === "published" 
+                            ? "No published escalations found"
+                            : "No draft escalations found"
+                          }
                         </td>
                       </tr>
                     )}
@@ -385,7 +571,8 @@ const TableAdmin = () => {
                 </table>
               </div>
               {/* Pagination */}
-              {evaluations.length > itemsPerPage && (
+              {((activeEscalationTab === "published" && publishedEscalations.length > itemsPerPage) ||
+                (activeEscalationTab === "draft" && draftEscalations.length > itemsPerPage)) && (
                 <div style={paginationContainerStyle}>
                   <div style={paginationStyle}>
                     <button
@@ -418,10 +605,47 @@ const TableAdmin = () => {
           )}
         </div>
       )}
+      
 
-      {/* Escalations Tab */}
-      {activeTab === "escalations" && (
+      {/* Evaluations Tab */}
+      {activeTab === "evaluations" && (
         <div>
+          <div style={subTabContainerStyle}>
+            <button
+              onClick={() => {
+                setActiveEscalationTab("published");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEscalationTab === "published")}
+            >
+              <CheckCircle size={16} />
+              Published
+              <span style={{
+                ...getBadgeStyle(activeEscalationTab === "published"),
+                backgroundColor: activeEscalationTab === "published" ? '#10b981' : '#e5e7eb',
+                color: activeEscalationTab === "published" ? '#ffffff' : '#374151'
+              }}>
+                {publishedEscalations.length}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveEscalationTab("draft");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEscalationTab === "draft")}
+            >
+              <Edit size={16} />
+              Drafts
+              <span style={{
+                ...getBadgeStyle(activeEscalationTab === "draft"),
+                backgroundColor: activeEscalationTab === "draft" ? '#f59e0b' : '#e5e7eb',
+                color: activeEscalationTab === "draft" ? '#ffffff' : '#374151'
+              }}>
+                {draftEscalations.length}
+              </span>
+            </button>
+          </div>
           {loading ? (
             <div style={loadingStyle}>
               <Loader size={32} className="animate-spin" />
@@ -435,25 +659,24 @@ const TableAdmin = () => {
                       <th style={headerCellStyle}>#</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
-                      <th style={headerCellStyle}>Evaluated By</th>
                       <th style={headerCellStyle}>Agent Name</th>
+                      <th style={headerCellStyle}>MOD</th>
                       <th style={headerCellStyle}>Team Leader</th>
-                      <th style={headerCellStyle}>Lead Source</th>
-                      <th style={headerCellStyle}>Lead Status</th>
-                      <th style={headerCellStyle}>Esc Severity</th>
-                      <th style={headerCellStyle}>Issue Identified</th>
-                      <th style={headerCellStyle}>Escalation Action</th>
-                      <th style={headerCellStyle}>Documentation</th>
-                      <th style={headerCellStyle}>Success Metrics</th>
-                      <th style={headerCellStyle}>User Rating</th>
+                      <th style={headerCellStyle}>Greetings</th>
+                      <th style={headerCellStyle}>Accuracy</th>
+                      <th style={headerCellStyle}>Building</th>
+                      <th style={headerCellStyle}>Presenting</th>
+                      <th style={headerCellStyle}>Closing</th>
+                      <th style={headerCellStyle}>Bonus</th>
+                      <th style={headerCellStyle}>Evaluation Summary</th>
                       <th style={headerCellStyle}>Created At</th>
                       <th style={headerCellStyle}>Edit</th>
                       <th style={lastHeaderCellStyle}>Delete</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentEscalations.length > 0 ? (
-                      currentEscalations.map((row, index) => (
+                    {currentEvaluations.length > 0 ? (
+                      currentEvaluations.map((row, index) => (
                         <tr
                           key={row._id || index}
                           style={getRowStyle(hoveredRow === index)}
@@ -463,25 +686,21 @@ const TableAdmin = () => {
                           <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
                           <td style={cellStyle}>{row.useremail || '-'}</td>
                           <td style={cellStyle}>{row.leadID || '-'}</td>
-                          <td style={cellStyle}>{row.evaluatedby || '-'}</td>
                           <td style={cellStyle}>{row.agentName || '-'}</td>
+                          <td style={cellStyle}>{row.mod || '-'}</td>
                           <td style={cellStyle}>{row.teamleader || '-'}</td>
-                          <td style={cellStyle}>{row.leadSource || '-'}</td>
-                          <td style={cellStyle}>{row.leadStatus || '-'}</td>
-                          <td style={cellStyle}>{row.escSeverity || '-'}</td>
-                          <td style={cellStyle}>{row.issueIden || '-'}</td>
-                          <td style={cellStyle}>{row.escAction || '-'}</td>
-                          <td style={cellStyle}>{row.documentation || '-'}</td>
-                          <td style={cellStyle}>{row.successmaration || '-'}</td>
-                          <td style={cellStyle}>{row.userrating || '-'}</td>
+                          <td style={cellStyle}>{row.greetings || '-'}</td>
+                          <td style={cellStyle}>{row.accuracy || '-'}</td>
+                          <td style={cellStyle}>{row.building || '-'}</td>
+                          <td style={cellStyle}>{row.presenting || '-'}</td>
+                          <td style={cellStyle}>{row.closing || '-'}</td>
+                          <td style={cellStyle}>{row.bonus || '-'}</td>
+                          <td style={cellStyle}>{row.evaluationsummary || '-'}</td>
                           <td style={cellStyle}>{formatDate(row.createdAt)}</td>
                           <td style={cellStyle}>
-                          <button
-                          onClick={() => handleEdit(row._id, row)} // Pass the row data here
-  style={{ border: 'none', background: 'none', cursor: 'pointer' }}
->
-  <SquarePen size={18} />
-</button>
+                            <button style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
+                              <SquarePen onClick={() => handleEdits(row._id, row)} size={18} />
+                            </button>
                           </td>
                           <td style={lastCellStyle}>
                             <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}>
@@ -493,7 +712,7 @@ const TableAdmin = () => {
                     ) : (
                       <tr>
                         <td colSpan="17" style={{ ...cellStyle, textAlign: 'center' }}>
-                          No escalations found
+                          No evaluations found
                         </td>
                       </tr>
                     )}
@@ -501,7 +720,7 @@ const TableAdmin = () => {
                 </table>
               </div>
               {/* Pagination */}
-              {escalations.length > itemsPerPage && (
+              {evaluations.length > itemsPerPage && (
                 <div style={paginationContainerStyle}>
                   <div style={paginationStyle}>
                     <button

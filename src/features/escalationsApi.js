@@ -8,6 +8,8 @@ const authHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+
+
 export const getEscalationOnwerApi = async (ownerId) => {
   const token = getToken();
   try {
@@ -22,6 +24,19 @@ export const getEscalationOnwerApi = async (ownerId) => {
   }
 };
 
+export const getEscalationsByAgentNameApi = async (agentName) => {
+  const token = getToken();
+  try {
+    const res = await axios.get(`${baseUrl}/api/escalations/agent/${agentName}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Always return an array
+    return res.data?.data || [];
+  } catch (err) {
+    console.error("Escalation API error:", err);
+    return [];
+  }
+};
 
 export const createReportEscalationsApi = async ({ startDate, endDate, agentName,teamleader }) => {
    const token = getToken(); 
@@ -76,8 +91,6 @@ export const createEscalationApi = async (escalation, otherReason = "") => {
 };
 
 
-
-
 export const getEscalationsApi = async ()=>{
   const responce = await fetch (`${baseUrl}/api/escalations`,{
     headers: authHeader(),
@@ -87,7 +100,6 @@ export const getEscalationsApi = async ()=>{
     throw new Error(errorData.message || "fetch Failed")
   }
 }
-
 
 export const getEscalationByIdApi = async (id) => {
   const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
@@ -102,7 +114,6 @@ export const getEscalationByIdApi = async (id) => {
   return await response.json();
 };
 
-
 export const updateEscalationApi = async (id, updatedData) => {
   const formData = new FormData();
 
@@ -116,6 +127,30 @@ export const updateEscalationApi = async (id, updatedData) => {
 
   const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
     method: "PUT",
+    body: formData,
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to update escalation");
+  }
+
+  return await response.json();
+};
+export const patchEscalationApi = async (id, updatedData) => {
+  const formData = new FormData();
+
+  Object.entries(updatedData).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") {
+      if (key !== "audio") formData.append(key, value);
+    }
+  });
+
+  if (updatedData.audio) formData.append("audio", updatedData.audio);
+
+  const response = await fetch(`${baseUrl}/api/escalations/escalation-patch/${id}`, {
+    method: "PATCH",
     body: formData,
     headers: authHeader(),
   });

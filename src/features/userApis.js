@@ -6,6 +6,20 @@ const authHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+export const onlineUsersCountApi = async () => {
+  const token = getToken();
+  if (!token) return null;
+
+  const response = await axios.get(`${baseUrl}/api/users/online-users-count`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
+
+
 export const LeadRegister = async (data) => {
   const res = await axios.post(`${baseUrl}/api/users/register-user`, data);
   return res;
@@ -24,6 +38,26 @@ export const forgotPasswordApi = async (email) => {
 export const resetPasswordApi = async (data) => {
   const token = getToken();
   const res = await axios.post(`${baseUrl}/api/users/reset-password`, data, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  return res; 
+};
+
+export const patchUserApi = async (id, userData) => {
+  const token = getToken();
+  const res = await axios.patch(`${baseUrl}/api/users/patch/${id}`, userData, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  return res; 
+};
+
+export const deleteUserApi = async (id) => {
+  const token = getToken();
+  const res = await axios.delete(`${baseUrl}/api/users/delete/${id}` ,{
     headers: {
       Authorization: token ? `Bearer ${token}` : "",
     },
@@ -75,3 +109,5 @@ export const logoutApi = async () => {
     },
   });
 };
+
+
