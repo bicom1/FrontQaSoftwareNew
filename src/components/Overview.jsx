@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { onlineUsersCountApi, totalUserCountApi, getallusersApi, patchUserApi, deleteUserApi} from '../features/userApis';
-import { totalEscalationCountsApi, getEscalationAnalyticsApi, overviewAnalyticsRangeApi } from '../features/escalationsApi';
+import { totalEscalationCountsApi, getEscalationAnalyticsApi, } from '../features/escalationsApi';
 import { totalEvaluationCountsApi, getEvaluationAnalyticsApi } from '../features/evaluationApi';
 import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/marketingApi';
 import { LeadRegister } from '../features/userApis'; // Import the API function
@@ -12,6 +12,7 @@ import { Button, Modal, Form, Alert, Tab, Tabs, Spinner } from 'react-bootstrap'
 import { Crown, Users, Search, Mail, Shield, UserCheck, XCircle, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgentFormSubmitsApi } from '../features/analytics';
+import EscalationRatingPieChart from './admin/escalation/EscalationRatingPieChart';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
@@ -106,36 +107,13 @@ const Overview = () => {
         setTotalMarketingCounts(marketing?.count ?? 0);
         setOnlineUsersCount(onlineUsers?.count ?? 0);
 
-        setEscalationAnalytics(escalationAnalyticsData);
-        setEvaluationAnalytics({
-          averageScore: evaluationAnalyticsData?.avgRating ?? 0,
-          totalEvaluations: evaluationAnalyticsData?.total ?? 0,
-        });
-        setMarketingAnalytics(marketingAnalyticsData);
+       
 
-        // Transform evaluation ratingRanges for BarChart
-        if (evaluationAnalyticsData?.ratingRanges) {
-          const ratingRangeArray = Object.entries(evaluationAnalyticsData.ratingRanges).map(
-            ([range, count]) => ({ name: range, count })
-          );
-          setEvaluationRatingRangeData(ratingRangeArray);
-        }
+      
 
-        // Transform marketing sourceCounts for PieChart
-        if (marketingAnalyticsData?.sourceCounts) {
-          const marketingSourcesArray = Object.entries(marketingAnalyticsData.sourceCounts).map(
-            ([source, count]) => ({ name: source, value: count })
-          );
-          setMarketingSourceData(marketingSourcesArray);
-        }
+    
 
-        // Transform escalation severityCounts for PieChart
-        if (escalationAnalyticsData?.severityCounts) {
-          const escalationSeverityArray = Object.entries(escalationAnalyticsData.severityCounts).map(
-            ([severity, count]) => ({ name: severity, value: count })
-          );
-          setEscalationSeverityData(escalationSeverityArray);
-        }
+        
       } catch (err) {
         console.error("Failed to fetch data:", err);
       }
@@ -844,7 +822,7 @@ const Overview = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Rest of your existing Overview component code... */}
+      
       {/* Stats Cards */}
       <div className="row g-3 mb-4">
         <div className="col-12 col-md-6 col-lg-3">
@@ -857,9 +835,9 @@ const Overview = () => {
               <div className="d-flex align-items-center justify-content-between mb-3 p-2 rounded bg-light">
                 <div>
                   <h6 className="mb-1 fw-semibold">Total Drafts</h6>
-                  <small className="text-muted">From: 8</small>
+                  
                 </div>
-                <Button variant="dark" size="sm">
+                <Button   variant="dark" size="sm">
                   Publish
                 </Button>
               </div>
@@ -868,7 +846,7 @@ const Overview = () => {
               <div className="d-flex align-items-center justify-content-between p-2 rounded bg-light">
                 <div>
                   <h6 className="mb-1 fw-semibold">Total Published</h6>
-                  <small className="text-muted">From: 5</small>
+                 
                 </div>
                 <Button variant="dark" size="sm">
                   View 
@@ -923,7 +901,7 @@ const Overview = () => {
   <div className="card-header bg-gradient p-3 " style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}>
     <h5 className="mb-0"> Top 5 Evaluation Form Submissions</h5>
   </div>
-  <div className="card-body">
+  <div className="card-body mx-auto">
     {chartData.length > 0 ? (
       <BarChart
         width={600}
@@ -942,7 +920,7 @@ const Overview = () => {
         <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
         <XAxis
           dataKey="agentName"
-          label={{ value: "Agent Name", position: "insideBottom", offset: -5 }}
+          label={{ position: "insideBottom", offset: -5 }}
           tick={{ fill: "#333", fontSize: 12, fontWeight: 500 }}
         />
         <YAxis
@@ -974,13 +952,9 @@ const Overview = () => {
         </div>
       
         <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm h-100">
+          <div  className="card border-0 shadow-sm h-100">
             <div className="card-body">
-              <h6 className="text-muted">Evaluation Score Avg</h6>
-              <h2>{evaluationAnalytics ? evaluationAnalytics.averageScore : 'Loading...'}</h2>
-              <div className="text-muted small mt-2">
-                From {evaluationAnalytics ? evaluationAnalytics.totalEvaluations : 0} evaluations
-              </div>
+             <EscalationRatingPieChart/>
             </div>
           </div>
         </div>
@@ -989,7 +963,7 @@ const Overview = () => {
       
 
       
-      <div className="row g-3">
+      <div style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="row g-3">
         <div className="col-12 col-lg-6 ">
       <div className="card border-0 shadow-sm mb-4 h-100">
         <div className="card-header d-flex justify-content-between align-items-center">
