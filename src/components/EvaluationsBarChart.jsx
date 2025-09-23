@@ -18,7 +18,9 @@ const EvaluationsBarChart = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/evaluations/dailyEvaluationFormSubmit");
+        // const res = await axios.get("http://localhost:3001/api/evaluations/dailyEvaluationFormSubmit");
+        const res = await axios.get("https://backendqasoftware-1jfe.onrender.com/api/evaluations/dailyEvaluationFormSubmit");
+
         
         // Sort data by date in ascending order and take last 5 entries
         const sortedData = res.data.sort((a, b) => new Date(a.date) - new Date(b.date));

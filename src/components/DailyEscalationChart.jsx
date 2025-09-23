@@ -19,7 +19,9 @@ const DailyEscalationLineChart = () => {
     const fetchData = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:3001/api/escalations/dailyescalationformsubmit"
+        //   "http://localhost:3001/api/escalations/dailyescalationformsubmit"
+          "https://backendqasoftware-1jfe.onrender.com/api/escalations/dailyescalationformsubmit"
+
         );
 
         if (res.data.success) {
