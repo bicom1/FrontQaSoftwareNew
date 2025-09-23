@@ -43,7 +43,9 @@ const Sidebar = ({
     >
       <div className="d-flex align-items-center mb-4">
         {sidebarOpen && (
-          <h4 className="mb-0 flex-grow-1">Bicomm</h4>
+          // <h4 className="mb-0 flex-grow-1">Bicomm</h4
+          <img style={{width:"50px"}}src="/src/assets/BiLOgo.png"/>
+          
         )}
         <button 
           className="btn btn-dark p-1" 

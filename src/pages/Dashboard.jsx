@@ -12,6 +12,7 @@ import Layout from '../components/admin/escalation/Layout';
 import TableAdmin from '../components/TableAdmin';
 import EditEscalation from '../components/admin/escalation/EditEscalation';
 import EditEvaluation from '../components/admin/evaluation/EditEvaluation';
+import ProtectedAgent from '../components/ProtectedAgent';
 
 
 const Dashboard = ({ setIsLoggedIn }) => {
@@ -21,7 +22,9 @@ const Dashboard = ({ setIsLoggedIn }) => {
         <Route path="/" element={<Navigate to="home" replace />} />
         <Route path="home" element={<Overview />} />
         <Route path="qc-team" element={<QcList />} />
-        <Route path="qc-team/:agentName" element={<TableAdmin/>} />
+         {/* ✅ Protected route */}
+        <Route path="qc-team/:agentName" element={<ProtectedAgent />} />
+        {/* <Route path="qc-team/:agentName" element={<TableAdmin/>} /> */}
         <Route path="qc-team/editescalation/:id" element={<EditEscalation/>} />
         <Route path="qc-team/editevaluation/:id" element={<EditEvaluation/>} />
         <Route path="users" element={<UserManagement />} />
