@@ -11,6 +11,8 @@ import PpcForm from "./components/PpcForm";
 import Layout from "./components/admin/escalation/Layout";
 
 function RequireAuth({ children, allowedRoles }) {
+
+  
   const token = localStorage.getItem("token");
   const role = (localStorage.getItem("userRole") || "").toLowerCase();
 
