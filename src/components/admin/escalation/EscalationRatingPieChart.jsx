@@ -60,10 +60,10 @@ const EscalationRatingDoughnutChart = () => {
   }
 
   return (
-    <div className="card border-0 shadow-sm p-4">
+    <div className="card  border-0 shadow-sm p-4">
       <h5 className="text-dark mb-4">Escalation Ratings Overview</h5>
       {chartData ? (
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "350px" }}>
+        <div className="d-flex justify-content-center  align-items-center" style={{ minHeight: "350px" }}>
           <div style={{ width: "100%", maxWidth: "450px", height: "350px" }}>
             <Doughnut
               data={chartData}

@@ -12,6 +12,7 @@ const TableAdmin = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("evaluations");
   const [activeEscalationTab, setActiveEscalationTab] = useState("published");
+  const [activeEvaluationTab, setActiveEvaluationTab] = useState("published");
   const [evaluations, setEvaluations] = useState([]);
   const [escalations, setEscalations] = useState([]);
   const [marketing, setMarketing] = useState([]);
@@ -20,6 +21,26 @@ const TableAdmin = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [hoveredRow, setHoveredRow] = useState(null);
+
+  const isEvaluationComplete = (evaluation) => {
+  const requiredFields = [
+    'useremail', 'leadID', 'agentName', 'mod', 'teamleader',
+    'greetings', 'accuracy', 'building', 'presenting', 'closing',
+    'bonus', 'evaluationSummary'
+  ];
+  return requiredFields.every(field =>
+    evaluation[field] && evaluation[field].toString().trim() !== ''
+  );
+};
+
+const publishedEvaluations = evaluations.filter(ev =>
+  ev.status === 'published' || isEvaluationComplete(ev)
+);
+const draftEvaluations = evaluations.filter(ev =>
+  ev.status === 'draft' || !isEvaluationComplete(ev)
+);
+
+
 
   // Function to check if escalation is complete
   const isEscalationComplete = (escalation) => {
@@ -92,6 +113,14 @@ const TableAdmin = () => {
     fetchData();
   }, [activeTab, agentName]);
 
+  const getCurrentEvaluations = () => {
+  const currentData = activeEvaluationTab === "published" ? publishedEvaluations : draftEvaluations;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  return currentData.slice(indexOfFirstItem, indexOfLastItem);
+};
+
+
   // Get current escalations based on active sub-tab
   const getCurrentEscalations = () => {
     const currentData = activeEscalationTab === "published" ? publishedEscalations : draftEscalations;
@@ -103,11 +132,16 @@ const TableAdmin = () => {
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentEvaluations = evaluations.slice(indexOfFirstItem, indexOfLastItem);
+  const currentEvaluations = getCurrentEvaluations();
   const currentEscalations = getCurrentEscalations();
   
   const getTotalPages = () => {
-    if (activeTab === "evaluations") return Math.ceil(evaluations.length / itemsPerPage);
+    if (activeTab === "evaluations") {
+      const dataLengths = activeEvaluationTab == "published"? publishedEvaluations.length : draftEvaluations.length;
+      return Math.ceil(dataLengths / itemsPerPage);
+    } 
+    
+    
     if (activeTab === "escalations") {
       const dataLength = activeEscalationTab === "published" ? publishedEscalations.length : draftEscalations.length;
       return Math.ceil(dataLength / itemsPerPage);
@@ -432,7 +466,7 @@ const TableAdmin = () => {
             <>
               <div style={scrollableContainerStyle}>
                 <table style={tableStyle}>
-                  <thead style={headerStyle}>
+                  <thead   style={headerStyle }>
                     <tr>
                       <th style={headerCellStyle}>#</th>
                       <th style={headerCellStyle}>Status</th>
@@ -610,42 +644,42 @@ const TableAdmin = () => {
       {/* Evaluations Tab */}
       {activeTab === "evaluations" && (
         <div>
-          <div style={subTabContainerStyle}>
-            <button
-              onClick={() => {
-                setActiveEscalationTab("published");
-                setCurrentPage(1);
-              }}
-              style={getSubTabStyle(activeEscalationTab === "published")}
-            >
-              <CheckCircle size={16} />
-              Published
-              <span style={{
-                ...getBadgeStyle(activeEscalationTab === "published"),
-                backgroundColor: activeEscalationTab === "published" ? '#10b981' : '#e5e7eb',
-                color: activeEscalationTab === "published" ? '#ffffff' : '#374151'
-              }}>
-                {publishedEscalations.length}
-              </span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveEscalationTab("draft");
-                setCurrentPage(1);
-              }}
-              style={getSubTabStyle(activeEscalationTab === "draft")}
-            >
-              <Edit size={16} />
-              Drafts
-              <span style={{
-                ...getBadgeStyle(activeEscalationTab === "draft"),
-                backgroundColor: activeEscalationTab === "draft" ? '#f59e0b' : '#e5e7eb',
-                color: activeEscalationTab === "draft" ? '#ffffff' : '#374151'
-              }}>
-                {draftEscalations.length}
-              </span>
-            </button>
-          </div>
+    <div style={subTabContainerStyle}>
+      <button
+        onClick={() => {
+          setActiveEvaluationTab("published"); // ✅ Correct
+          setCurrentPage(1);
+        }}
+        style={getSubTabStyle(activeEvaluationTab === "published")} // ✅ Correct
+      >
+        <CheckCircle size={16} />
+        Published
+        <span style={{
+          ...getBadgeStyle(activeEvaluationTab === "published"),
+          backgroundColor: activeEvaluationTab === "published" ? '#10b981' : '#e5e7eb',
+          color: activeEvaluationTab === "published" ? '#ffffff' : '#374151'
+        }}>
+          {publishedEvaluations.length}  // ✅ Correct data
+        </span>
+      </button>
+      <button
+        onClick={() => {
+          setActiveEvaluationTab("draft"); // ✅ Correct
+          setCurrentPage(1);
+        }}
+        style={getSubTabStyle(activeEvaluationTab === "draft")} // ✅ Correct
+      >
+        <Edit size={16} />
+        Drafts
+        <span style={{
+          ...getBadgeStyle(activeEvaluationTab === "draft"),
+          backgroundColor: activeEvaluationTab === "draft" ? '#f59e0b' : '#e5e7eb',
+          color: activeEvaluationTab === "draft" ? '#ffffff' : '#374151'
+        }}>
+          {draftEvaluations.length}  // ✅ Correct data
+        </span>
+      </button>
+    </div>
           {loading ? (
             <div style={loadingStyle}>
               <Loader size={32} className="animate-spin" />
@@ -657,6 +691,7 @@ const TableAdmin = () => {
                   <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
+                      <th style={headerCellStyle}>Status</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
                       <th style={headerCellStyle}>Agent Name</th>
@@ -684,6 +719,11 @@ const TableAdmin = () => {
                           onMouseLeave={() => setHoveredRow(null)}
                         >
                           <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
+                          <td style={cellStyle}>
+                              <span style={getStatusBadgeStyle(status)}>
+                                {status === 'published' ? '✓ Published' : '⚠ Draft'}
+                              </span>
+                            </td>
                           <td style={cellStyle}>{row.useremail || '-'}</td>
                           <td style={cellStyle}>{row.leadID || '-'}</td>
                           <td style={cellStyle}>{row.agentName || '-'}</td>

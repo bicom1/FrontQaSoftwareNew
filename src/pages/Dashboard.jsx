@@ -17,7 +17,7 @@ import ProtectedAgent from '../components/ProtectedAgent';
 
 const Dashboard = ({ setIsLoggedIn }) => {
   return (
-    <Layout setIsLoggedIn={setIsLoggedIn}>
+    <Layout  setIsLoggedIn={setIsLoggedIn}>
       <Routes>
         <Route path="/" element={<Navigate to="home" replace />} />
         <Route path="home" element={<Overview />} />

@@ -94,85 +94,13 @@ const Header = ({
       {/* Right Side Actions */}
       <div className="d-flex align-items-center gap-2">
 
-        {/* Notifications */}
-        {/* <div className="dropdown position-relative">
-          <button 
-            className="btn btn-light border-0 rounded-3 p-2 position-relative hover-lift" 
-            onClick={() => setShowNotifications(!showNotifications)}
-            style={{ 
-              background: unreadCount > 0 
-                ? 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' 
-                : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-              transition: 'all 0.3s ease'
-            }}
-            title={`${unreadCount} unread notifications`}
-          >
-            <Bell size={18} className="text-dark" />
-            {unreadCount > 0 && (
-              <span 
-                className="position-absolute top-0 start-100 translate-middle badge rounded-pill d-flex align-items-center justify-content-center"
-                style={{ 
-                  fontSize: '10px',
-                  background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-                  color: 'white',
-                  minWidth: '18px',
-                  height: '18px',
-                  animation: 'pulse 2s infinite'
-                }}
-              >
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </button>
-          
-          {showNotifications && (
-            <>
-              <div className="position-fixed top-0 start-0 w-100 h-100"
-                style={{ zIndex: 999 }}
-                onClick={() => setShowNotifications(false)}
-              />
-              <div className="position-absolute end-0 mt-3 bg-white rounded-4 shadow-lg border-0 overflow-hidden"
-                style={{ width: '350px', zIndex: 1000 }}>
-                <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom"
-                  style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                  <h6 className="mb-0 text-white fw-semibold">Notifications</h6>
-                  <button 
-                    className="btn btn-sm btn-link text-white p-0 hover-underline" 
-                    onClick={markAllAsRead}
-                    style={{ fontSize: '12px' }}
-                  >
-                    Mark all as read
-                  </button>
-                </div>
-                <div style={{ maxHeight: '350px', overflowY: 'auto' }} className="custom-scrollbar">
-                  {notifications.length > 0 ? (
-                    notifications.map(note => (
-                      <div key={note.id} 
-                        className={`px-4 py-3 border-bottom ${!note.read ? 'bg-light' : ''}`}
-                        style={{ borderLeft: !note.read ? '3px solid #667eea' : '3px solid transparent' }}
-                      >
-                        <p className="mb-1 fw-medium" style={{ fontSize: '14px' }}>{note.text}</p>
-                        <small className="text-muted">{note.time}</small>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-5 text-center text-muted">
-                      <Bell size={32} className="mb-2 opacity-50" />
-                      <p className="mb-0">No notifications</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div> */}
 
         {/* User Menu */}
         <div className="dropdown position-relative">
           <button 
             className="btn btn-light border-0 rounded-3 p-2 d-flex align-items-center gap-2 hover-lift" 
             onClick={() => setShowUserMenu(!showUserMenu)}
-            style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+            style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)", }}
           >
             <div className="d-flex align-items-center justify-content-center rounded-circle bg-white" style={{ width: '24px', height: '24px' }}>
               <User size={14} className="text-primary" />

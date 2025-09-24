@@ -7,9 +7,10 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
-import axios from "axios";
+import { getDailyEvaluations } from "../features/evaluationApi";
+
 
 const EvaluationsBarChart = () => {
   const [chartData, setChartData] = useState([]);
@@ -17,52 +18,36 @@ const EvaluationsBarChart = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        // const res = await axios.get("http://localhost:3001/api/evaluations/dailyEvaluationFormSubmit");
-        const res = await axios.get("https://backendqasoftware-1jfe.onrender.com/api/evaluations/dailyEvaluationFormSubmit");
-
-        
-        // Sort data by date in ascending order and take last 5 entries
-        const sortedData = res.data.sort((a, b) => new Date(a.date) - new Date(b.date));
-        const lastFiveDays = sortedData.slice(-5);
-
-        // Convert to chart format
-        const formattedData = lastFiveDays.map(item => ({
-          date: item.date,
-          count: item.count
-        }));
-
-        setChartData(formattedData);
-      } catch (error) {
-        console.error("Error fetching chart data:", error);
-      } finally {
-        setLoading(false);
-      }
+      const data = await getDailyEvaluations();
+      setChartData(data);
+      setLoading(false);
     };
 
     fetchData();
   }, []);
 
-  if (loading) return <p>Loading Daily Evaluations Chart...</p>;
+  if (loading)
+    return (
+      <div className="d-flex justify-content-center align-items-center py-5">
+        <span className="text-muted">Loading Daily Evaluations Chart...</span>
+      </div>
+    );
 
   return (
-    <div className="card border-0 shadow-sm mb-4">
+    <div className="card border-0 shadow-sm h-100">
       <div
-        className="card-header text-white p-3"
+        className="card-header text-white"
         style={{
-          background: "linear-gradient(90deg, #2196f3, #03a9f4)",
-          borderRadius: "0.5rem 0.5rem 0 0"
+          background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+          borderRadius: "0.5rem 0.5rem 0 0",
         }}
       >
-        <h5 className="mb-0">Daily Evaluations (Last 5 Days)</h5>
+        <p style={{fontSize:"23px"}} className="mb-0">Daily Evaluations (Last 5 Days)</p>
       </div>
-      <div className="card-body">
+      <div className="card-body p-2">
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
-            >
+            <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
               <XAxis
                 dataKey="date"
@@ -77,21 +62,15 @@ const EvaluationsBarChart = () => {
                   backgroundColor: "#fff",
                   border: "1px solid #ddd",
                   borderRadius: "8px",
-                  boxShadow: "0px 4px 6px rgba(0,0,0,0.1)"
+                  boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
                 }}
               />
               <Legend wrapperStyle={{ fontWeight: "bold" }} />
-              <Bar
-                dataKey="count"
-                fill="#2196f3"
-                stroke="#1976d2"
-                strokeWidth={1}
-                radius={[4, 4, 0, 0]}
-              />
+              <Bar dataKey="count" fill="#2196f3" radius={[4, 4, 0, 0]} barSize={30} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-muted">No data available</p>
+          <p className="text-center text-muted my-3">No data available</p>
         )}
       </div>
     </div>

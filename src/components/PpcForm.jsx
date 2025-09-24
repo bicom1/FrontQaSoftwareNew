@@ -336,8 +336,8 @@ const PPCForm = () => {
             <div className="col-12 col-xl-10">
               {/* Progress Card */}
               <div className="custom-card mb-4">
-                <div className="progress-header text-white p-4">
-                  <div className="d-flex align-items-center justify-content-between">
+                <div style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="progress-header text-white p-4">
+                  <div  className="d-flex align-items-center justify-content-between">
                     <div className="d-flex align-items-center">
                       <TrendingUp size={20} className="me-2" />
                       <span className="fw-semibold">Evaluation Progress</span>

@@ -587,10 +587,10 @@ const handleSubmit = async (e) => {
         {/* Main Form Content */}
         <div className="container-fluid py-4">
           <div className="row justify-content-center">
-            <div className="col-12 col-xl-10">
+            <div  className="col-12 col-xl-10">
               {/* Progress Card */}
-              <div className="custom-card mb-4">
-                <div className="progress-header text-white p-4">
+              <div  className="custom-card mb-4">
+                <div  style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="progress-header text-white p-4">
                   <div className="d-flex align-items-center justify-content-between">
                     <div className="d-flex align-items-center">
                       <TrendingUp size={20} className="me-2" />
