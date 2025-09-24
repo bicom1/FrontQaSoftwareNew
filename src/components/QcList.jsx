@@ -19,8 +19,11 @@ import {
 import BitrixLeadDetails from "./BitrixLeadDetails";
 import { getallusersApi } from "../features/userApis";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+import './ContentOverview.css'
+
 
 const QcList = () => {
+  
   const [leadId, setLeadId] = useState("");
   const [inputId, setInputId] = useState("");
   const [agents, setAgents] = useState([]);
@@ -101,7 +104,7 @@ const QcList = () => {
                 </h5>
                 
               </div>
-              <span className="badge bg-primary rounded-pill px-3 py-2">{agents.length} Admins</span>
+              <span style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="badge  rounded-pill px-3 py-2">{agents.length} Admins</span>
             </div>
 
             <div className="card-body">
@@ -122,7 +125,7 @@ const QcList = () => {
               </div>
 
               {loadingAgents ? (
-                <div className="d-flex justify-content-center align-items-center py-5">
+                <div className="d-flex justify-content-center  align-items-center py-5">
                   <Loader2 size={28} className="me-2 text-primary spin" />
                   <span>Loading admin team...</span>
                 </div>
@@ -132,13 +135,13 @@ const QcList = () => {
                     <div key={agent._id} className="col-12">
                       <div className={`admin-card card border-0 shadow-sm rounded-3 ${expandedAdmin === agent._id ? 'expanded' : ''}`}>
                         <div className="card-body py-3">
-                          <div className="d-flex align-items-center justify-content-between w-100">
-                            <div 
-                              className="d-flex align-items-center gap-3 flex-grow-1"
+                          <div  className="d-flex align-items-center justify-content-between w-100">
+                            <div  
+                              className="d-flex align-items-center text-capitalize gap-3 flex-grow-1"
                               onClick={() => handleAdminClick(agent.name)}
                               style={{cursor: 'pointer'}}
                             >
-                              <div className="admin-avatar rounded-circle bg-primary-gradient text-white d-flex align-items-center justify-content-center fw-bold">
+                              <div style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}  className="admin-avatar rounded-circle  text-white d-flex align-items-center justify-content-center fw-bold">
                                 {agent.name?.charAt(0).toUpperCase()}
                                 {agent.role === 'superadmin' && <span className="admin-badge"><Crown size={10} /></span>}
                               </div>
@@ -157,8 +160,8 @@ const QcList = () => {
                             
                             {/* Button moved to extreme right */}
                             <div className="ms-auto">
-                              <button 
-                                className="btn btn-outline-primary btn-sm"
+                              <button style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
+                                className="btn text-white "
                                 onClick={(e) => {
                                   e.stopPropagation(); // Prevent triggering the parent click
                                   handleAdminClick(agent.name);

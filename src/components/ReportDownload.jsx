@@ -387,8 +387,8 @@ const ReportDownload = () => {
             )}
 
             <div className="d-flex justify-content-center mt-4">
-              <Button
-                variant={activeTab === "evaluations" ? "primary" : "danger"}
+              <Button style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
+                variant={activeTab === "evaluations" ? "" : "danger"}
                 onClick={() => downloadCSV(activeTab)}
                 disabled={loading || !startDate || !endDate}
                 size="lg"

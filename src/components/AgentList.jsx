@@ -99,7 +99,7 @@ const AgentList = () => {
                 </h5>
                 <small className="text-muted">Manage your administrator accounts</small>
               </div>
-              <span className="badge bg-primary rounded-pill px-3 py-2">{agents.length} Agent</span>
+              <span style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="badge  rounded-pill px-3 py-2">{agents.length} Agent</span>
             </div>
 
             <div className="card-body">
@@ -138,12 +138,12 @@ const AgentList = () => {
                               className="d-flex align-items-center gap-3"
                             
                             >
-                              <div className="admin-avatar rounded-circle bg-primary-gradient text-white d-flex align-items-center justify-content-center fw-bold">
+                              <div style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="admin-avatar rounded-circle  text-white d-flex align-items-center justify-content-center fw-bold">
                                 {agent.name?.charAt(0).toUpperCase()}
                                 {agent.role === 'superadmin' && <span className="admin-badge"><Crown size={10} /></span>}
                               </div>
                               <div>
-                                <h6 className="fw-bold mb-0 d-flex align-items-center gap-2 admin-name-link">
+                                <h6 className="fw-bold mb-0 d-flex align-items-center text-capitalize gap-2 admin-name-link">
                                   {agent.name}
                                   {agent.role === 'superadmin' && <span className="badge bg-warning rounded-pill py-1">Owner</span>}
                                 </h6>

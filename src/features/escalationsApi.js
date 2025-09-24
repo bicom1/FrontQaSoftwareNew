@@ -9,6 +9,27 @@ const authHeader = () => {
 };
 
 
+export const getDailyEscalations = async () => {
+  try {
+    const res = await axios.get(`${baseUrl}/api/escalations/dailyescalationformsubmit`, {
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+      },
+    });
+
+    if (res.data.success) {
+      return res.data.data.map((item) => ({
+        date: item.date,
+        count: item.count,
+      }));
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error("Error fetching daily escalations:", error);
+    return [];
+  }
+};
 
 export const getEscalationOnwerApi = async (ownerId) => {
   const token = getToken();

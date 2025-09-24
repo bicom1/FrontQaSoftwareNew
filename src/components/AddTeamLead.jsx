@@ -204,11 +204,11 @@ const TeamLeadManagement = () => {
         <Col>
           <div className="d-flex justify-content-between align-items-center">
             <div>
-              <h2 className="fw-bold text-primary mb-1">Team Lead Management</h2>
+              <h2 className="fw-bold mb-1">Team Lead Management</h2>
               <p className="text-muted mb-0">Manage your team leads efficiently</p>
             </div>
             <Button
-              variant="primary"
+              style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
               onClick={openAddModal}
               className="rounded-3 fw-semibold px-4"
               size="lg"
@@ -237,11 +237,10 @@ const TeamLeadManagement = () => {
           </InputGroup>
         </Col>
         <Col md={4}>
-          <Card className="bg-primary text-white h-100">
+          <Card style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className=" text-white h-100">
             <Card.Body className="d-flex align-items-center justify-content-between">
               <div>
-                <h4 className="mb-1">{teamLeads.length}</h4>
-                <small>Total Team Leads</small>
+                <small>{teamLeads.length} Total Team Leads</small>
               </div>
               <i className="fas fa-users fa-2x opacity-75"></i>
             </Card.Body>
@@ -286,9 +285,9 @@ const TeamLeadManagement = () => {
                   <tr key={teamLead._id}>
                     <td className="py-3 ps-4">
                       <div className="d-flex align-items-center">
-                        <div
-                          className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-                          style={{ width: "40px", height: "40px", fontSize: "16px" }}
+                        <div 
+                          className=" text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                          style={{ width: "40px", height: "40px", fontSize: "16px", background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
                         >
                           {teamLead.name.charAt(0).toUpperCase()}
                         </div>

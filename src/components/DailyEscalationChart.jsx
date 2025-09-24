@@ -1,0 +1,87 @@
+import React, { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { getDailyEscalations } from "../features/escalationsApi";
+
+
+const DailyEscalationLineChart = () => {
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await getDailyEscalations();
+      setChartData(data);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading)
+    return (
+      <div className="d-flex justify-content-center align-items-center py-5">
+        <span className="text-muted">Loading Daily Escalation Line Chart...</span>
+      </div>
+    );
+
+  return (
+    <div className="card border-0 shadow-sm h-100">
+      <div
+        className="card-header text-white"
+        style={{
+          background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+          borderRadius: "0.5rem 0.5rem 0 0",
+        }}
+      >
+        <p style={{fontSize:"23px"}} className="mb-0">Daily Escalation Form Submissions</p>
+      </div>
+      <div className="card-body p-2">
+        {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: "#333", fontSize: 12, fontWeight: 500 }}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fill: "#333", fontSize: 12, fontWeight: 500 }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
+                }}
+              />
+              <Legend wrapperStyle={{ fontWeight: "bold" }} />
+              <Line
+                type="monotone"
+                dataKey="count"
+                stroke="#42a5f5"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-center text-muted my-3">No data available</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DailyEscalationLineChart;

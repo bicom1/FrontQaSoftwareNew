@@ -1,6 +1,6 @@
 // components/Sidebar.js
 import React, { useEffect, useState } from 'react';
-import { BarChart2, Activity, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target, SquareUserRound, CircleUser, House, Home } from 'lucide-react';
+import { BarChart2, Activity, Briefcase, User, Menu, X, ChevronDown, ChevronRight, ArrowUp, Target, CircleUser, House, Home } from 'lucide-react';
 import { getProfileApi } from '../features/userApis';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -38,12 +38,22 @@ const Sidebar = ({
 
   return (
     <div 
-      className={`bg-dark text-white ${sidebarOpen ? 'p-3 d-flex' : 'p-3 d-none d-md-flex'}`} 
-      style={{ width: sidebarOpen ? '250px' : '70px', flexDirection: 'column', transition: 'width 0.3s ease' }}
-    >
+  className={`bg-dark text-white ${sidebarOpen ? 'p-3 d-flex' : 'p-3 d-none d-md-flex'}`} 
+  style={{ 
+    width: sidebarOpen ? '250px' : '70px',
+    minWidth: sidebarOpen ? '250px' : '70px',
+    maxWidth: sidebarOpen ? '250px' : '70px',
+    flexDirection: 'column',
+    flexShrink: 0,   // 🚀 sidebar never shrinks
+    transition: 'width 0.3s ease'
+  }}
+>
+
       <div className="d-flex align-items-center mb-4">
         {sidebarOpen && (
           <h4 className="mb-0 flex-grow-1">Bicomm</h4>
+          // <img style={{width:"50px"}}src="/src/assets/BiLOgo.png"/>
+          
         )}
         <button 
           className="btn btn-dark p-1" 
@@ -78,24 +88,25 @@ const Sidebar = ({
           </button>
 
           {/* Sub-menu items for Forms */}
-          {formsExpanded && sidebarOpen && (
-            <div className="ms-3 mt-2">
-              <Link 
-                to="/dashboard/qc-team"
-                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/qc-team') ? 'btn-primary' : 'btn-dark'}`}
-              >
-                <User size={20} />
-                <span className="ms-2">QC Team</span>
-              </Link>
-              <Link 
-                to="/dashboard/sales-team"
-                className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/sales-team') ? 'btn-primary' : 'btn-dark'}`}
-              >
-                <ArrowUp size={20} />
-                <span className="ms-2">Sales Team</span>
-              </Link>
-            </div>
-          )}
+         {formsExpanded && sidebarOpen && (
+  <div className="mt-2" style={{ width: "100%", overflow: "hidden" }}>
+    <Link 
+      to="/dashboard/qc-team"
+      className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/qc-team') ? 'btn-primary' : 'btn-dark'}`}
+    >
+      <User size={20} />
+      <span className="ms-2 sidebar-text">QC Team</span>
+    </Link>
+    <Link 
+      to="/dashboard/sales-team"
+      className={`btn text-start mb-2 d-flex align-items-center ${isActive('/dashboard/sales-team') ? 'btn-primary' : 'btn-dark'}`}
+    >
+      <ArrowUp size={20} />
+      <span className="ms-2 sidebar-text">Sales Team</span>
+    </Link>
+  </div>
+)}
+
         </div>
         
         <Link 

@@ -1,0 +1,10 @@
+file : evaluationbarchat.jsx has local link
+
+
+<div className="col-12 col-md-6 col-lg-3">
+    <div className="card border-0 shadow-sm h-100">
+      <div className="card-body">
+        <DailyMarketingLineChart className="w-100 h-100" />
+      </div>
+    </div>
+  </div>

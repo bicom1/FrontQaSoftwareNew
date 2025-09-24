@@ -2,17 +2,23 @@ import React, { useEffect, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell,
+  ResponsiveContainer,
 } from 'recharts';
 import { onlineUsersCountApi, totalUserCountApi, getallusersApi, patchUserApi, deleteUserApi} from '../features/userApis';
 import { totalEscalationCountsApi, getEscalationAnalyticsApi, } from '../features/escalationsApi';
 import { totalEvaluationCountsApi, getEvaluationAnalyticsApi } from '../features/evaluationApi';
 import { totalMarketingCountsApi, getMarketingAnalyticsApi } from '../features/marketingApi';
-import { LeadRegister } from '../features/userApis'; // Import the API function
+import { LeadRegister } from '../features/userApis';
 import { Button, Modal, Form, Alert, Tab, Tabs, Spinner } from 'react-bootstrap';
 import { Crown, Users, Search, Mail, Shield, UserCheck, XCircle, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgentFormSubmitsApi } from '../features/analytics';
 import EscalationRatingPieChart from './admin/escalation/EscalationRatingPieChart';
+import jwtDecode from "jwt-decode";
+import EvaluationsBarChart from './EvaluationsBarChart';
+import ReportDownload from './ReportDownload';
+import DailyEscalationChart from './DailyEscalationChart';
+import DailyMarketingLineChart from './DailyMarketingLineChart.jsx';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#6633AA'];
 
@@ -25,6 +31,16 @@ const Overview = () => {
   const [totalMarketingCounts, setTotalMarketingCounts] = useState(null);
   const [chartData, setChartData] = useState([]);
   const [evaluationAnalytics, setEvaluationAnalytics] = useState(null);
+  const token = localStorage.getItem("token");
+  let username = null;
+if (token) {
+  try {
+    const decoded = jwtDecode(token);
+    username = decoded.name; // stays as 'name', no need to change to id
+  } catch (err) {
+    console.error("Invalid token", err);
+  }
+}
 
 
  useEffect(() => {
@@ -469,7 +485,9 @@ const Overview = () => {
         <div>
           <div className='d-flex gap-3'>
             <div>
-              <Button variant='info' onClick={handleShowUsersModal}>
+              <Button style={{
+          background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+        }} onClick={handleShowUsersModal}>
                 <Users size={16} className="me-1" />
                 {totalUsers ?? 0} Total Users
               </Button>
@@ -824,206 +842,266 @@ const Overview = () => {
 
       
       {/* Stats Cards */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              {/* Card Header */}
-              <h5 className="text-muted mb-4 fw-bold">Content Overview</h5>
+      <div className="container-fluid p-2">
+  {/* Row 1: Content Overview + Charts */}
+  <div className="row g-3 mb-4">
+  {/* Column 1: Content Overview */}
+  <div className="col-12 col-md-4">
+    <div className="card border-0 shadow-sm h-100">
+      <div  className="card-body">
+        <p style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)",borderRadius: "0.5rem 0.5rem 0 0", fontSize:"23px" }} className="text-white p-2 mb-4">Content Overview</p>
 
-              {/* Draft Section */}
-              <div className="d-flex align-items-center justify-content-between mb-3 p-2 rounded bg-light">
-                <div>
-                  <h6 className="mb-1 fw-semibold">Total Drafts</h6>
-                  
-                </div>
-                <Button   variant="dark" size="sm">
-                  Publish
-                </Button>
-              </div>
-
-              {/* Publish Section */}
-              <div className="d-flex align-items-center justify-content-between p-2 rounded bg-light">
-                <div>
-                  <h6 className="mb-1 fw-semibold">Total Published</h6>
-                 
-                </div>
-                <Button variant="dark" size="sm">
-                  View 
-                </Button>
-              </div>
-            </div>
+        {/* Draft Section */}
+        <div className="d-flex align-items-center justify-content-between mb-3 p-2 rounded bg-light">
+          <div>
+            <h5 className="mb-0 fw-semibold">Total Drafts</h5>
           </div>
+          <Button
+            variant="dark"
+            size="sm"
+            onClick={() => navigate(`/dashboard/qc-team/${username}`)}
+          >
+            Publish
+          </Button>
         </div>
 
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <h6 className="text-muted">Total Escalation Forms</h6>
-              <div className="d-flex align-items-center">
-                <h2 className="mb-0">{totalEscalationCounts ?? 'Loading...'}</h2>
-                <span className="badge bg-success ms-2">+8%</span>
-              </div>
-              <div className="text-muted small mt-2">2 projects completed this week</div>
-            </div>
+        {/* Publish Section */}
+        <div className="d-flex align-items-center justify-content-between p-2 rounded bg-light mb-3">
+          <div>
+            <h5 className="mb-0 fw-semibold">Total Published</h5>
           </div>
+          <Button
+            variant="dark"
+            size="sm"
+            onClick={() => navigate(`/dashboard/qc-team/${username}`)}
+          >
+            View
+          </Button>
         </div>
 
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <h6 className="text-muted">Total Evaluation Forms</h6>
-              <div className="d-flex align-items-center">
-                <h2 className="mb-0">{totalEvaluationCounts ?? 'Loading...'}</h2>
-                <span className="badge bg-success ms-2">+8%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <h6 className="text-muted">Total Marketing Forms</h6>
-              <div className="d-flex align-items-center">
-                <h2 className="mb-0">{totalMarketingCounts ?? 'Loading...'}</h2>
-                <span className="badge bg-success ms-2">+24%</span>
-              </div>
-              <div className="text-muted small mt-2">32 tasks pending</div>
-            </div>
-          </div>
+        {/* Recent Activity Section */}
+        <div className="mt-4">
+          <h5 className="text-muted mb-3 fw-bold">Recent Activity</h5>
+          <ul className="list-group list-group-flush">
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span>John submitted a draft</span>
+              <small className="text-muted">2h ago</small>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span>Mary published content</span>
+              <small className="text-muted">5h ago</small>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span>Alex commented on draft</span>
+              <small className="text-muted">1d ago</small>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span>Emily updated a post</span>
+              <small className="text-muted">2d ago</small>
+            </li>
+          </ul>
         </div>
       </div>
-
-     
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-lg-6 card border-0 shadow-sm mb-4">
-  <div className="card-header bg-gradient p-3 " style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}>
-    <h5 className="mb-0"> Top 5 Evaluation Form Submissions</h5>
+    </div>
   </div>
-  <div className="card-body mx-auto">
-    {chartData.length > 0 ? (
-      <BarChart
-        width={600}
-        height={320}
-        data={chartData}
-        margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+
+  {/* Column 2: Evaluations Chart */}
+  <div className="col-12 col-md-4">
+    <div className="card border-0 shadow-sm h-100">
+      <div className="card-body d-flex flex-column">
+        <EvaluationsBarChart />
+      </div>
+    </div>
+  </div>
+
+  {/* Column 3: Daily Escalation Chart */}
+  <div className="col-12 col-md-4">
+    <div className="card border-0 shadow-sm h-100">
+      <div className="card-body d-flex flex-column">
+        <DailyEscalationChart />
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  {/* Row 2: Top Charts & Stats */}
+  <div className="row g-4 mb-4">
+  {/* Column 1: Top 5 Evaluation Forms */}
+  <div className="col-12 col-lg-4">
+    <div className="card border-0 shadow-sm h-100">
+      <div
+        className="card-header text-white p-2"
+        style={{
+          background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+          borderRadius: "0.5rem 0.5rem 0 0",
+          fontSize:"23px"
+        }}
       >
-        <defs>
-          {/* Gradient fill for bars */}
-          <linearGradient id="barColor" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#42a5f5" stopOpacity={0.9} />
-            <stop offset="100%" stopColor="#66bb6a" stopOpacity={0.9} />
-          </linearGradient>
-        </defs>
-
-        <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-        <XAxis
-          dataKey="agentName"
-          label={{ position: "insideBottom", offset: -5 }}
-          tick={{ fill: "#333", fontSize: 12, fontWeight: 500 }}
-        />
-        <YAxis
-          allowDecimals={false}
-          label={{ value: "Number of From Submits", angle: -90, position: "" }}
-          tick={{ fill: "#333", fontSize: 12, fontWeight: 500 }}
-        />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#fff",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            boxShadow: "0px 4px 6px rgba(0,0,0,0.1)"
-          }}
-        />
-        <Legend wrapperStyle={{ fontWeight: "bold" }} />
-        <Bar
-          dataKey="formSubmit"
-          fill="url(#barColor)"
-          name="Form Submits"
-          radius={[8, 8, 0, 0]} // rounded top
-          barSize={40}
-        />
-      </BarChart>
-    ) : (
-      <p>Loading Evaluation Chart...</p>
-    )}
+        <p className="mb-0">Top 5 Evaluation Form Submissions</p>
+      </div>
+      <div
+        className="card-body d-flex justify-content-center align-items-center"
+        style={{ minHeight: "300px" }}
+      >
+        {chartData?.length > 0 ? (
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={chartData}>
+              <defs>
+                <linearGradient id="barColor" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#42a5f5" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#66bb6a" stopOpacity={0.9} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <XAxis
+                dataKey="agentName"
+                tick={{ fill: "#333", fontSize: 12, fontWeight: 500 }}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fill: "#333", fontSize: 12, fontWeight: 500 }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
+                }}
+              />
+              <Legend wrapperStyle={{ fontWeight: "bold" }} />
+              <Bar
+                dataKey="formSubmit"
+                fill="url(#barColor)"
+                name="Form Submits"
+                radius={[8, 8, 0, 0]}
+                barSize={35}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-muted">Loading Evaluation Chart...</p>
+        )}
+      </div>
+    </div>
   </div>
-        </div>
-      
-        <div className="col-12 col-lg-6">
-          <div  className="card border-0 shadow-sm h-100">
+
+  {/* Column 2: Escalation Ratings */}
+  <div className="col-12 col-lg-4">
+    <div className="card border-0 shadow-sm h-100">
+      <div
+        className="card-header p-2"
+        style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+          borderRadius: "0.5rem 0.5rem 0 0",
+          fontSize:"23px" }}
+      >
+        <p className="mb-0 text-white">Escalation Ratings</p>
+      </div>
+      <div
+        className="card-body d-flex justify-content-center align-items-center"
+        style={{ minHeight: "300px" }}
+      >
+        <EscalationRatingPieChart />
+      </div>
+    </div>
+  </div>
+
+  {/* Column 3: Stats & Report */}
+  <div className="col-12 col-lg-4">
+    <div className="row g-4">
+      {[
+        {
+          title: "Total Escalation Forms",
+          value: totalEscalationCounts,
+          badge: "+8%",
+          badgeClass: "bg-success",
+          desc: "2 projects completed this week",
+        },
+        {
+          title: "Total Evaluation Forms",
+          value: totalEvaluationCounts,
+          badge: "+12%",
+          badgeClass: "bg-success",
+          desc: "Updated daily at midnight",
+        },
+        {
+          title: "Total Marketing Forms",
+          value: totalMarketingCounts,
+          badge: "+24%",
+          badgeClass: "bg-primary",
+          desc: "32 tasks pending",
+        },
+      ].map((item, idx) => (
+        <div className="col-12" key={idx}>
+          <div className="card border-0 shadow-sm h-100">
             <div className="card-body">
-             <EscalationRatingPieChart/>
+              <h6 className="text-muted">{item.title}</h6>
+              <div className="d-flex align-items-center">
+                <h2 style={{fontSize:"50px"}} className="mb-0">{item.value ?? "Loading..."}</h2>
+                <span className={`badge ms-2 ${item.badgeClass}`}>
+                  {item.badge}
+                </span>
+              </div>
+              <div className="text-muted small mt-2">{item.desc}</div>
             </div>
           </div>
         </div>
-      </div>
+      ))}
 
-      
-
-      
-      <div style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="row g-3">
-        <div className="col-12 col-lg-6 ">
-      <div className="card border-0 shadow-sm mb-4 h-100">
-        <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">QC Team</h5>
-              <button onClick={() => navigate("/dashboard/qc-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
-            </div>
-        <div className="card-body">
-          {admins.length > 0 ? (
-            <ul className="list-group list-group-flush">
-              {admins.slice(0, 5).map((admin) => (
-                <li
-                  key={admin._id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
-                >
-                  <div>
-                    <strong>{admin.name}</strong>
-                    <div className="text-muted small">{admin.email}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted text-center my-3">
-              No Admin users found.
-            </p>
-          )}
+      {/* Report Download */}
+      <div className="col-12">
+        <div className="card p-3 border-0 shadow-sm h-100 d-flex align-items-center justify-content-center">
+          <button style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)",borderRadius: "0.5rem 0.5rem 0.5rem 0.5rem" }}  onClick={() => navigate("/dashboard/report-download")} className="btn text-white w-75">
+             Download Report
+          </button>
         </div>
       </div>
-         </div>
-        <div className="col-12 col-lg-6 ">
-      <div className="card border-0 shadow-sm mb-4 h-100">
-        <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Sale Agent Team</h5>
-              <button onClick={() => navigate("/dashboard/sales-team")} className="btn btn-sm btn-link text-decoration-none">View All</button>
-            </div>
-        <div className="card-body">
-          {agents.length > 0 ? (
-            <ul className="list-group list-group-flush">
-              {agents.slice(0, 5).map((admin) => (
-                <li
-                  key={admin._id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
-                >
-                  <div>
-                    <strong>{admin.name}</strong>
-                    <div className="text-muted small">{admin.email}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted text-center my-3">
-              No Admin users found.
-            </p>
-          )}
-        </div>
-      </div>
-        </div>
+    </div>
+  </div>
+</div>
 
+
+  {/* Row 3: QC & Sales Teams */}
+  <div className="row g-3 ">
+    {[
+      { title: "QC Team", data: admins, link: "/dashboard/qc-team" },
+      { title: "Sale Agent Team", data: agents, link: "/dashboard/sales-team" },
+    ].map((team, idx) => (
+      <div className="col-12 col-lg-6" key={idx}>
+        <div  className="card border-0 text-white shadow-sm mb-4 h-100">
+          <div style={{
+          background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+          borderRadius: "0.5rem 0.5rem 0 0",
+          fontSize:"23px"
+        }} className="card-header d-flex justify-content-between align-items-center">
+            <p className="mb-0">{team.title}</p>
+            <button onClick={() => navigate(team.link)} className="btn text-white border btn-sm btn-link text-decoration-none">View All</button>
+          </div>
+          <div className="card-body">
+            {team.data.length > 0 ? (
+              <ul className="list-group list-group-flush">
+                {team.data.slice(0, 5).map((member) => (
+                  <li key={member._id} className="list-group-item  text-capitalize d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>{member.name}</strong>
+                      <div className="text-muted small">{member.email}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted text-center my-3">
+                No users found.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
+    ))}
+  </div>
+</div>
+
     </>
   );
 };

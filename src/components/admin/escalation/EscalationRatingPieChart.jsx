@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Pie } from "react-chartjs-2";
+import { Doughnut } from "react-chartjs-2"; // Changed from Pie to Doughnut
 import "chart.js/auto";
 import { getEscalationAnalyticsApi } from "../../../features/escalationsApi";
 
-const EscalationRatingPieChart = () => {
+const EscalationRatingDoughnutChart = () => {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +28,7 @@ const EscalationRatingPieChart = () => {
               data: values,
               backgroundColor: ["#ef4444", "#facc15", "#22c55e"], // red, yellow, green
               borderWidth: 1,
-              hoverOffset: 15, // Added hover effect
+              hoverOffset: 15,
             },
           ],
         });
@@ -50,7 +50,7 @@ const EscalationRatingPieChart = () => {
     return (
       <div
         className="d-flex justify-content-center align-items-center"
-        style={{ height: "400px" }} // Increased height for better spacing
+        style={{ height: "400px" }}
       >
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading...</span>
@@ -60,30 +60,27 @@ const EscalationRatingPieChart = () => {
   }
 
   return (
-    <div className="card border-0 shadow-sm p-4"> {/* Increased padding */}
-      <h5 className="text-dark mb-4">Escalation Ratings Overview</h5> {/* Improved heading */}
+    <div className="card  border-0 shadow-sm p-4">
+      <h5 className="text-dark mb-4">Escalation Ratings Overview</h5>
       {chartData ? (
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "350px" }}>
-          <div style={{ width: "100%", maxWidth: "450px", height: "350px" }}> {/* Increased dimensions */}
-            <Pie 
-              data={chartData} 
-              options={{ 
+        <div className="d-flex justify-content-center  align-items-center" style={{ minHeight: "350px" }}>
+          <div style={{ width: "100%", maxWidth: "450px", height: "350px" }}>
+            <Doughnut
+              data={chartData}
+              options={{
                 maintainAspectRatio: false,
+                cutout: "50%", // Makes it a doughnut
                 plugins: {
                   legend: {
-                    position: 'bottom',
+                    position: "bottom",
                     labels: {
                       padding: 20,
-                      font: {
-                        size: 13
-                      }
-                    }
-                  }
+                      font: { size: 13 },
+                    },
+                  },
                 },
-                layout: {
-                  padding: 10
-                }
-              }} 
+                layout: { padding: 10 },
+              }}
             />
           </div>
         </div>
@@ -96,4 +93,4 @@ const EscalationRatingPieChart = () => {
   );
 };
 
-export default EscalationRatingPieChart;
+export default EscalationRatingDoughnutChart;
