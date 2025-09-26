@@ -35,17 +35,27 @@ const TeamLeadManagement = () => {
 
   // Fetch all team leads
   const fetchTeamLeads = async () => {
-    try {
-      setFetchLoading(true);
-      const response = await teamleadApi.getTeamLeadsApi();
-      setTeamLeads(response.data || response);
-    } catch (error) {
-      console.error("Error fetching team leads:", error);
-      toast.error("Failed to fetch team leads", toastConfig);
-    } finally {
-      setFetchLoading(false);
+  try {
+    setFetchLoading(true);
+    const response = await teamleadApi.getTeamLeadsApi();
+    
+    // Check the actual response structure
+    if (response.data && Array.isArray(response.data)) {
+      setTeamLeads(response.data);
+    } else if (Array.isArray(response)) {
+      setTeamLeads(response);
+    } else {
+      setTeamLeads([]);
+      console.error("Unexpected API response structure:", response);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching team leads:", error);
+    toast.error("Failed to fetch team leads", toastConfig);
+    setTeamLeads([]); // Set empty array on error
+  } finally {
+    setFetchLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchTeamLeads();
