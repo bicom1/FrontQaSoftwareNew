@@ -64,8 +64,6 @@ const AgentDashboard = () => {
         const [evalRes, escRes] = await Promise.all([
           axios.get(`http://localhost:3001/api/evaluations/agent/${decoded.name}`),
           axios.get(`http://localhost:3001/api/escalations`)
-          // axios.get(`https://backendqasoftware-1jfe.onrender.com/api/evaluations/agent/${decoded.name}`),
-          // axios.get(`https://backendqasoftware-1jfe.onrender.com/api/escalations`)
         ]);
 
         let evaluationsCount = 0;
