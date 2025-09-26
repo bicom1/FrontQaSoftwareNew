@@ -7,9 +7,11 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+
   ResponsiveContainer,
 } from "recharts";
 import { getDailyEscalations } from "../features/escalationsApi";
+
 
 
 const DailyEscalationLineChart = () => {
@@ -18,9 +20,28 @@ const DailyEscalationLineChart = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+
       const data = await getDailyEscalations();
       setChartData(data);
       setLoading(false);
+
+      try {
+        const res = await axios.get(
+        //   "http://localhost:3001/api/escalations/dailyescalationformsubmit"
+          "https://backendqasoftware-1jfe.onrender.com/api/escalations/dailyescalationformsubmit"
+        );
+        if (res.data.success) {
+          const data = res.data.data.map(item => ({
+            date: item.date,
+            count: item.count
+          }));
+          setChartData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching daily escalation data:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -63,6 +84,7 @@ const DailyEscalationLineChart = () => {
                   border: "1px solid #ddd",
                   borderRadius: "8px",
                   boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
+
                 }}
               />
               <Legend wrapperStyle={{ fontWeight: "bold" }} />
@@ -78,6 +100,7 @@ const DailyEscalationLineChart = () => {
           </ResponsiveContainer>
         ) : (
           <p className="text-center text-muted my-3">No data available</p>
+
         )}
       </div>
     </div>

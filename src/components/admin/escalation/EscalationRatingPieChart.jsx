@@ -64,6 +64,7 @@ const EscalationRatingDoughnutChart = () => {
       <h5 className="text-dark mb-4">Escalation Ratings Overview</h5>
       {chartData ? (
         <div className="d-flex justify-content-center  align-items-center" style={{ minHeight: "350px" }}>
+
           <div style={{ width: "100%", maxWidth: "450px", height: "350px" }}>
             <Doughnut
               data={chartData}

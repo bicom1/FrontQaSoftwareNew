@@ -12,6 +12,7 @@ import {
 import { getDailyEvaluations } from "../features/evaluationApi";
 
 
+
 const EvaluationsBarChart = () => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,27 @@ const EvaluationsBarChart = () => {
       const data = await getDailyEvaluations();
       setChartData(data);
       setLoading(false);
+      try {
+        // const res = await axios.get("http://localhost:3001/api/evaluations/dailyEvaluationFormSubmit");
+        const res = await axios.get("https://backendqasoftware-1jfe.onrender.com/api/evaluations/dailyEvaluationFormSubmit");
+
+        
+        // Sort data by date in ascending order and take last 5 entries
+        const sortedData = res.data.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const lastFiveDays = sortedData.slice(-5);
+
+        // Convert to chart format
+        const formattedData = lastFiveDays.map(item => ({
+          date: item.date,
+          count: item.count
+        }));
+
+        setChartData(formattedData);
+      } catch (error) {
+        console.error("Error fetching chart data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -48,6 +70,7 @@ const EvaluationsBarChart = () => {
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
+
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
               <XAxis
                 dataKey="date"
@@ -71,6 +94,7 @@ const EvaluationsBarChart = () => {
           </ResponsiveContainer>
         ) : (
           <p className="text-center text-muted my-3">No data available</p>
+
         )}
       </div>
     </div>
@@ -78,3 +102,4 @@ const EvaluationsBarChart = () => {
 };
 
 export default EvaluationsBarChart;
+

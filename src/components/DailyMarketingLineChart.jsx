@@ -21,6 +21,23 @@ const DailyMarketingLineChart = () => {
       const data = await getDailyMarketingSubmissions();
       setChartData(data);
       setLoading(false);
+      try {
+        const res = await axios.get(
+          "http://localhost:3001/api/marketing/dailyMarketingFormSubmit"
+        );
+
+        if (res.data.success) {
+          const data = res.data.data.map(item => ({
+            date: item.date,
+            count: item.count
+          }));
+          setChartData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching daily marketing data:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -39,7 +56,6 @@ const DailyMarketingLineChart = () => {
         className="card-header text-white p-3"
         style={{
           background: "linear-gradient(90deg, #4CAF50, #2196F3)",
-          borderRadius: "0.5rem 0.5rem 0 0"
         }}
       >
         <h5 className="mb-0">Daily Marketing Form Submissions</h5>
@@ -81,6 +97,7 @@ const DailyMarketingLineChart = () => {
           </ResponsiveContainer>
         ) : (
           <p className="text-muted text-center">No data available</p>
+
         )}
       </div>
     </div>
