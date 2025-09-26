@@ -88,7 +88,7 @@ function Login({ onLoginSuccess }) {
       background: "linear-gradient(-45deg, #6a11cb, #2575fc, #ff6b6b, #4ecdc4)",
       backgroundSize: "400% 400%",
       padding: "20px",
-      animation: "gradientShift 8s ease infinite",
+      animation: "gradientShift 5s ease infinite",
       position: "relative",
       overflow: "hidden",
     },
