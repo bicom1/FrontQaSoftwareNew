@@ -1,6 +1,27 @@
 import axios from "axios";
 import { baseUrl, getToken } from "../features/config";
 
+export const getDailyEvaluations = async () => {
+  try {
+    const res = await axios.get(`${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`, {
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+      },
+    });
+    // Sort by date ascending and get last 5
+    const sortedData = res.data.sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    );
+    return sortedData.slice(-5).map((item) => ({
+      date: item.date,
+      count: item.count,
+    }));
+  } catch (error) {
+    console.error("Error fetching daily evaluations:", error);
+    return [];
+  }
+};
+
 
 export const getEvaluationOnwerApi = async (ownerId) => {
   const token = getToken();

@@ -35,39 +35,36 @@ function Login({ onLoginSuccess }) {
   };
 
   const handleLogin = async (e) => {
-  e.preventDefault();
-  if (!validateForm()) return;
-  setIsSubmitting(true);
-  try {
-    const res = await LoginApi(formData);
-    if (res.data.success) {
-      // Save token
-      localStorage.setItem("token", res.data.token);
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsSubmitting(true);
+    try {
+      const res = await LoginApi(formData);
+      if (res.data.success) {
+        // Save token
+        localStorage.setItem("token", res.data.token);
 
-      // Save full user object
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+        // Save full user object
+        localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      // Save role separately if you need
-      localStorage.setItem("userRole", res.data.user.role);
+        // Save role separately if you need
+        localStorage.setItem("userRole", res.data.user.role);
 
-      toast.success("Login successful!");
-      setTimeout(() => {
-        onLoginSuccess?.(); 
-        const role = res.data.user.role?.toLowerCase();
-        navigate(role === "agent" ? "/agent" : "/dashboard");
-      }, 1000);
-    } else {
-      toast.error(res.data.message || "Invalid credentials");
+        toast.success("Login successful!");
+        setTimeout(() => {
+          onLoginSuccess?.(); 
+          const role = res.data.user.role?.toLowerCase();
+          navigate(role === "agent" ? "/agent" : "/dashboard");
+        }, 1000);
+      } else {
+        toast.error(res.data.message || "Invalid credentials");
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Login failed");
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (err) {
-    toast.error(err?.response?.data?.message || "Login failed");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-  
-  
+  };
 
   const handleForgotPassword = async () => {
     if (!formData.email) {
@@ -88,20 +85,34 @@ function Login({ onLoginSuccess }) {
       minHeight: "100vh",
       justifyContent: "center",
       alignItems: "center",
-      background: "linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)",
+      background: "linear-gradient(-45deg, #6a11cb, #2575fc, #ff6b6b, #4ecdc4)",
+      backgroundSize: "400% 400%",
       padding: "20px",
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      animation: "gradientShift 8s ease infinite",
+      position: "relative",
+      overflow: "hidden",
+    },
+    // Add a subtle overlay for better text readability
+    overlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: "rgba(0, 0, 0, 0.1)",
+      zIndex: 1,
     },
     card: {
       width: "100%",
       maxWidth: "440px",
       borderRadius: "16px",
-      boxShadow: "0 12px 28px rgba(0, 0, 0, 0.2)",
+      boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
       background: "#ffffff",
       padding: "40px",
       transition: "all 0.3s ease",
       position: "relative",
       overflow: "hidden",
+      zIndex: 2,
     },
     header: {
       textAlign: "center",
@@ -230,140 +241,159 @@ function Login({ onLoginSuccess }) {
     },
   };
 
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.header}>
-        BICOMM.
-          <span style={styles.headerUnderline}></span>
-        </h2>
-        <form onSubmit={handleLogin} noValidate>
-          <div style={styles.formGroup}>
-            <label style={styles.label} htmlFor="email">
-              Email Address
-            </label>
-            <div
-              style={{
-                ...styles.inputGroup,
-                ...(focusedField === "email" ? styles.inputGroupFocus : {}),
-              }}
-            >
-              <FaEnvelope
-                style={{
-                  ...styles.icon,
-                  ...styles.leftIcon,
-                  ...(focusedField === "email" ? styles.iconFocus : {}),
-                }}
-              />
-              <input
-                id="email"
-                type="email"
-                name="email"
-                placeholder="Enter your email"
-                autoComplete="email"
-                value={formData.email}
-                onChange={handleChange}
-                onFocus={() => setFocusedField("email")}
-                onBlur={() => setFocusedField(null)}
-                style={{
-                  ...styles.input,
-                  ...(focusedField === "email" ? styles.inputFocus : {}),
-                  ...(formErrors.email ? styles.inputError : {}),
-                }}
-              />
-            </div>
-            {formErrors.email && (
-              <div style={styles.errorText}>{formErrors.email}</div>
-            )}
-          </div>
+  // Add CSS for the animation
+  const gradientAnimationCSS = `
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+  `;
 
-          <div style={styles.formGroup}>
-            <label style={styles.label} htmlFor="password">
-              Password
-            </label>
-            <div
-              style={{
-                ...styles.inputGroup,
-                ...(focusedField === "password" ? styles.inputGroupFocus : {}),
-              }}
-            >
-              <FaLock
-                style={{
-                  ...styles.icon,
-                  ...styles.leftIcon,
-                  ...(focusedField === "password" ? styles.iconFocus : {}),
-                }}
-              />
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange}
-                onFocus={() => setFocusedField("password")}
-                onBlur={() => setFocusedField(null)}
-                style={{
-                  ...styles.input,
-                  ...(focusedField === "password" ? styles.inputFocus : {}),
-                  ...(formErrors.password ? styles.inputError : {}),
-                }}
-              />
+  return (
+    <>
+      <style>{gradientAnimationCSS}</style>
+      <div style={styles.container}>
+        <div style={styles.overlay}></div>
+        <div style={styles.card}>
+          <h2 style={styles.header}>
+            BICOMM.
+            <span style={styles.headerUnderline}></span>
+          </h2>
+          <form onSubmit={handleLogin} noValidate>
+            <div style={styles.formGroup}>
+              <label style={styles.label} htmlFor="email">
+                Email Address
+              </label>
               <div
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ ...styles.icon, ...styles.rightIcon }}
-                role="button"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") setShowPassword(!showPassword);
+                style={{
+                  ...styles.inputGroup,
+                  ...(focusedField === "email" ? styles.inputGroupFocus : {}),
                 }}
               >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                <FaEnvelope
+                  style={{
+                    ...styles.icon,
+                    ...styles.leftIcon,
+                    ...(focusedField === "email" ? styles.iconFocus : {}),
+                  }}
+                />
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField("email")}
+                  onBlur={() => setFocusedField(null)}
+                  style={{
+                    ...styles.input,
+                    ...(focusedField === "email" ? styles.inputFocus : {}),
+                    ...(formErrors.email ? styles.inputError : {}),
+                  }}
+                />
               </div>
+              {formErrors.email && (
+                <div style={styles.errorText}>{formErrors.email}</div>
+              )}
             </div>
-            {formErrors.password && (
-              <div style={styles.errorText}>{formErrors.password}</div>
-            )}
-          </div>
 
-          <button
-            type="submit"
-            style={{
-              ...styles.button,
-              ...(isButtonHovered ? styles.buttonHover : {}),
-              ...(isSubmitting ? { opacity: 0.6, cursor: "not-allowed" } : {}),
-            }}
-            disabled={isSubmitting}
-            onMouseEnter={() => setIsButtonHovered(true)}
-            onMouseLeave={() => setIsButtonHovered(false)}
-          >
-            {isSubmitting ? "Logging in..." : "Login"}
-          </button>
+            <div style={styles.formGroup}>
+              <label style={styles.label} htmlFor="password">
+                Password
+              </label>
+              <div
+                style={{
+                  ...styles.inputGroup,
+                  ...(focusedField === "password" ? styles.inputGroupFocus : {}),
+                }}
+              >
+                <FaLock
+                  style={{
+                    ...styles.icon,
+                    ...styles.leftIcon,
+                    ...(focusedField === "password" ? styles.iconFocus : {}),
+                  }}
+                />
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => setFocusedField(null)}
+                  style={{
+                    ...styles.input,
+                    ...(focusedField === "password" ? styles.inputFocus : {}),
+                    ...(formErrors.password ? styles.inputError : {}),
+                  }}
+                />
+                <div
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ ...styles.icon, ...styles.rightIcon }}
+                  role="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") setShowPassword(!showPassword);
+                  }}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </div>
+              </div>
+              {formErrors.password && (
+                <div style={styles.errorText}>{formErrors.password}</div>
+              )}
+            </div>
 
-          <div style={styles.forgotPassword}>
-            <span
-              onClick={handleForgotPassword}
+            <button
+              type="submit"
               style={{
-                ...styles.forgotPasswordLink,
-                ...(isForgotPasswordHovered ? styles.forgotPasswordLinkHover : {}),
+                ...styles.button,
+                ...(isButtonHovered ? styles.buttonHover : {}),
+                ...(isSubmitting ? { opacity: 0.6, cursor: "not-allowed" } : {}),
               }}
-              onMouseEnter={() => setIsForgotPasswordHovered(true)}
-              onMouseLeave={() => setIsForgotPasswordHovered(false)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") handleForgotPassword();
-              }}
+              disabled={isSubmitting}
+              onMouseEnter={() => setIsButtonHovered(true)}
+              onMouseLeave={() => setIsButtonHovered(false)}
             >
-              Forgot Password?
-            </span>
-          </div>
-        </form>
+              {isSubmitting ? "Logging in..." : "Login"}
+            </button>
+
+            <div style={styles.forgotPassword}>
+              <span
+                onClick={handleForgotPassword}
+                style={{
+                  ...styles.forgotPasswordLink,
+                  ...(isForgotPasswordHovered ? styles.forgotPasswordLinkHover : {}),
+                }}
+                onMouseEnter={() => setIsForgotPasswordHovered(true)}
+                onMouseLeave={() => setIsForgotPasswordHovered(false)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") handleForgotPassword();
+                }}
+              >
+                Forgot Password?
+              </span>
+            </div>
+          </form>
+        </div>
+        <ToastContainer position="top-right" autoClose={3000} theme="colored" />
       </div>
-      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
-    </div>
+    </>
   );
 }
 

@@ -9,6 +9,9 @@ import EscalationForm from "./components/EscalationForm";
 import AgentForm from "./components/AgentForm";
 import PpcForm from "./components/PpcForm";
 import Layout from "./components/admin/escalation/Layout";
+import './index.css'; 
+import './components/ContentOverview.css'
+
 
 function RequireAuth({ children, allowedRoles }) {
 
@@ -81,6 +84,8 @@ function App() {
   
 
       {/* New separate routes with Layout */}
+
+      
       <Route
         path="/escalation"
         element={

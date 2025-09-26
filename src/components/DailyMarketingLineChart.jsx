@@ -9,7 +9,8 @@ import {
   Legend,
   ResponsiveContainer
 } from "recharts";
-import axios from "axios";
+import { getDailyMarketingSubmissions } from "../features/marketingApi";
+
 
 const DailyMarketingLineChart = () => {
   const [chartData, setChartData] = useState([]);
@@ -17,6 +18,9 @@ const DailyMarketingLineChart = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      const data = await getDailyMarketingSubmissions();
+      setChartData(data);
+      setLoading(false);
       try {
         const res = await axios.get(
           "http://localhost:3001/api/marketing/dailyMarketingFormSubmit"
@@ -39,15 +43,19 @@ const DailyMarketingLineChart = () => {
     fetchData();
   }, []);
 
-  if (loading) return <p>Loading Daily Marketing Chart...</p>;
+  if (loading)
+    return (
+      <div className="d-flex justify-content-center align-items-center py-5">
+        <span className="text-muted">Loading Daily Marketing Chart...</span>
+      </div>
+    );
 
   return (
     <div className="card border-0 shadow-sm mb-4">
       <div
         className="card-header text-white p-3"
         style={{
-          background: "linear-gradient(90deg, #ff9800, #f44336)",
-          borderRadius: "0.5rem 0.5rem 0 0"
+          background: "linear-gradient(90deg, #4CAF50, #2196F3)",
         }}
       >
         <h5 className="mb-0">Daily Marketing Form Submissions</h5>
@@ -88,7 +96,8 @@ const DailyMarketingLineChart = () => {
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-muted">No data available</p>
+          <p className="text-muted text-center">No data available</p>
+
         )}
       </div>
     </div>
