@@ -45,19 +45,6 @@
     }
   };
 
-  export const getEscalationsByAgentNameApi = async (agentName) => {
-    const token = getToken();
-    try {
-      const res = await axios.get(`${baseUrl}/api/escalations/agent/${agentName}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // Always return an array
-      return res.data?.data || [];
-    } catch (err) {
-      console.error("Escalation API error:", err);
-      return [];
-    }
-  };
 
   export const createReportEscalationsApi = async ({ startDate, endDate, agentName,teamleader }) => {
     const token = getToken(); 
@@ -81,26 +68,33 @@
 
 
   export const createEscalationApi = async (escalation, otherReason = "") => {
-    const formData = new FormData();
+    // Create a clean object instead of FormData
+    const submissionData = {
+      ...escalation
+    };
 
-    Object.entries(escalation).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== "") {
-        if (key !== "audio") formData.append(key, value);
-      }
-    });
-
-    if (escalation.audio) formData.append("audio", escalation.audio);
-
+    // Handle "Other" reason
     if (escalation.escAction === "Other" && otherReason.trim()) {
-      formData.set("escAction", otherReason.trim());
+      submissionData.escAction = otherReason.trim();
     }
 
-    formData.set("owner", escalation.owner);
+    // Remove audio from the main data if it's a file (we'll handle it separately if needed)
+    if (submissionData.audio && submissionData.audio instanceof File) {
+      // If you need to handle file upload, you'll need to use FormData
+      // Otherwise, remove it for JSON submission
+      delete submissionData.audio;
+    }
 
-    const response = await fetch(`${baseUrl}/api/escalations`, {
+    // Ensure owner is set
+    submissionData.owner = escalation.owner;
+
+    const response = await fetch(`${baseUrl}/api/escalations/escalations/frontend`, {
       method: "POST",
-      body: formData,
-      headers: authHeader(),
+      body: JSON.stringify(submissionData),
+      headers: {
+        ...authHeader(),
+        'Content-Type': 'application/json'
+      },
     });
 
     if (!response.ok) {
@@ -121,6 +115,19 @@
       throw new Error(errorData.message || "fetch Failed")
     }
   }
+
+// features/escalationsApi.js
+export const getEscalationsPublishedApi = async (agentName) => {
+  const response = await fetch(`${baseUrl}/api/escalations/escalations/published?agentName=${agentName}`);
+  const data = await response.json();
+  return data.data || data; // Adjust based on your API response structure
+};
+
+export const getEscalationsByAgentNameApi = async (agentName) => {
+  const response = await fetch(`${baseUrl}/api/escalations/escalations/drafts?agentName=${agentName}`);
+  const data = await response.json();
+  return data.data || data; // Adjust based on your API response structure
+};
 
   export const getEscalationByIdApi = async (id) => {
     const response = await fetch(`${baseUrl}/api/escalations/${id}`, {
@@ -233,6 +240,29 @@
     const res = await axios.get(`/api/analytics/evaluations?range=${range}`);
     return res.data;
   };
+
+  export const publishEscalationApi = async (escalationId) => {
+  try {
+    const response = await fetch(`${baseUrl}/api/escalations/escalations/${escalationId}/publish`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to publish escalation: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data || data;
+  } catch (error) {
+    console.error("Error publishing escalation:", error);
+    throw error;
+  }
+};
 
 
 

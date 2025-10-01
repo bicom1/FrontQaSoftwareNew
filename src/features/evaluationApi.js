@@ -1,6 +1,13 @@
 import axios from "axios";
 import { baseUrl, getToken } from "../features/config";
 
+const authHeader = () => ({
+  headers: {
+    Authorization: `Bearer ${getToken()}`,
+    "Content-Type": "application/json",
+  },
+});
+
 export const getDailyEvaluations = async () => {
   try {
     const res = await axios.get(`${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`, {
@@ -59,28 +66,47 @@ export const getEvaluationOnwerApi = async (ownerId) => {
   }
 };
 
-// Axios config with auth
-const authHeader = () => ({
-  headers: {
-    Authorization: `Bearer ${getToken()}`,
-    "Content-Type": "application/json",
-  },
-});
 
-// ✅ CREATE Evaluation
-export const createEvaluationsApi = async (data) => {
-  const token = getToken(); // should return JWT stored in localStorage/cookies
 
-  const res = await axios.post(`${baseUrl}/api/evaluations`, data, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export const createEvaluationApi = async (evaluation, otherReason = "") => {
+    // Create a clean object instead of FormData
+    const submissionData = {
+      ...evaluation
+    };
 
-  return res.data;
-};
+    // Handle "Other" reason
+    if (evaluation.escAction === "Other" && otherReason.trim()) {
+      submissionData.escAction = otherReason.trim();
+    }
 
-// ✅ READ All Evaluations
+    // Remove audio from the main data if it's a file (we'll handle it separately if needed)
+    if (submissionData.audio && submissionData.audio instanceof File) {
+      // If you need to handle file upload, you'll need to use FormData
+      // Otherwise, remove it for JSON submission
+      delete submissionData.audio;
+    }
+
+    // Ensure owner is set
+    submissionData.owner = evaluation.owner;
+
+    const response = await fetch(`${baseUrl}/api/evaluations/evaluations/frontend`, {
+      method: "POST",
+      body: JSON.stringify(submissionData),
+      headers: {
+        ...authHeader(),
+        'Content-Type': 'application/json'
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to submit escalation");
+    }
+
+    return await response.json();
+  };
+
+
 export const getEvaluationsApi = async () => {
   try {
     const response = await axios.get(`${baseUrl}/api/evaluations/getevaluations`, authHeader());
@@ -160,26 +186,52 @@ export const deleteEvaluationApi = async (id) => {
     }
   };
 
+// export const getEvaluationsByAgentNameApi = async (agentName) => {
+//   const token = getToken();
+//   try {
+//     const res = await axios.get(`${baseUrl}/api/evaluations/agent/${agentName}`, {
+//       headers: { Authorization: `Bearer ${token}` },
+//     });
+//     // Always return an array
+//     return res.data?.data || [];
+//   } catch (err) {
+//     console.error("Evaluation API error:", err);
+//     return [];
+//   }
+// };
+
 export const getEvaluationsByAgentNameApi = async (agentName) => {
-  const token = getToken();
-  try {
-    const res = await axios.get(`${baseUrl}/api/evaluations/agent/${agentName}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    // Always return an array
-    return res.data?.data || [];
-  } catch (err) {
-    console.error("Evaluation API error:", err);
-    return [];
-  }
+  const response = await fetch(`${baseUrl}/api/evaluations/evaluations/drafts?agentName=${agentName}`);
+  const data = await response.json();
+  return data.data || data; // Adjust based on your API response structure
 };
 
-// export const getEvaluationOnwerApi = async (ownerId ) => {
-//   const token = getToken();
-//   return await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId }`, {
-//     headers: {
-//       Authorization: `Bearer ${token}`,
-//     },
-//   });
-// };
+export const getEvaluationsPublishedApi = async (agentName) => {
+  const response = await fetch(`${baseUrl}/api/evaluations/evaluations/published?agentName=${agentName}`);
+  const data = await response.json();
+  return data.data || data; // Adjust based on your API response structure
+};
+
+export const publishEvaluationApi = async (evaluationId) => {
+  try {
+    const response = await fetch(`${baseUrl}/api/evaluations/evaluations/${evaluationId}/publish`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to publish escalation: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data || data;
+  } catch (error) {
+    console.error("Error publishing escalation:", error);
+    throw error;
+  }
+};
 
