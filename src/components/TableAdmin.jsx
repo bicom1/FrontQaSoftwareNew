@@ -1,8 +1,8 @@
 // TableAdmin.jsx
 import { SquarePen, Trash, Loader, FileWarning, CheckCircle, Edit } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { getEvaluationsByAgentNameApi, getEvaluationsPublishedApi, publishEvaluationApi } from "../features/evaluationApi";
-import { getEscalationsByAgentNameApi, getEscalationsPublishedApi, publishEscalationApi } from "../features/escalationsApi";
+import { getEvaluationsByUserEmailApi, getEvaluationsUseremailPublishedApi, publishEvaluationApi } from "../features/evaluationApi";
+import { getEscalationsByUserEmailApi, getEscalationsUseremailPublishedApi, publishEscalationApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
 const CACHE_TTL = 1000; // 1 second cache time
@@ -22,25 +22,25 @@ const TableAdmin = () => {
   const [itemsPerPage] = useState(10);
   const [hoveredRow, setHoveredRow] = useState(null);
 
-  const getCurrentUserAgentName = () => {
+  const getCurrentUserEmail = () => {
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
-      return user.agentName || user.name || 'Unknown';
+      return user.email || user.useremail || 'Unknown';
     }
-   
+    
     if (agentName) {
       return agentName;
     }
     
-    return 'Unknown Agent';
+    return 'Unknown';
   };
 
-  const currentUserAgentName = getCurrentUserAgentName();
+  const currentUserEmail = getCurrentUserEmail();
 
   // Filter evaluations for current user only
   const userEvaluations = evaluations.filter(ev => 
-    ev.agentName === currentUserAgentName
+    ev.useremail === currentUserEmail || ev.agentName === currentUserEmail
   );
 
   // Filter evaluations based on status from API
@@ -53,7 +53,7 @@ const TableAdmin = () => {
 
   // Filter escalations for current user only
   const userEscalations = escalations.filter(esc => 
-    esc.agentName === currentUserAgentName
+    esc.useremail === currentUserEmail || esc.agentName === currentUserEmail
   );
 
   // Filter escalations based on status from API
@@ -87,40 +87,40 @@ const TableAdmin = () => {
       try {
         if (activeTab === "evaluations") {
           if (activeEvaluationTab === "published") {
-            const cacheKey = `published_evaluations_${currentUserAgentName}`;
+            const cacheKey = `published_evaluations_${currentUserEmail}`;
             const cached = loadFromCache(cacheKey);
             if (cached) setEvaluations(cached);
             else {
-              const evals = await getEvaluationsPublishedApi(currentUserAgentName);
+              const evals = await getEvaluationsUseremailPublishedApi(currentUserEmail);
               setEvaluations(evals);
               saveToCache(cacheKey, evals);
             }
           } else {
-            const cacheKey = `draft_evaluations_${currentUserAgentName}`;
+            const cacheKey = `draft_evaluations_${currentUserEmail}`;
             const cached = loadFromCache(cacheKey);
             if (cached) setEvaluations(cached);
             else {
-              const evals = await getEvaluationsByAgentNameApi(currentUserAgentName);
+              const evals = await getEvaluationsByUserEmailApi(currentUserEmail);
               setEvaluations(evals);
               saveToCache(cacheKey, evals);
             }
           }
         } else if (activeTab === "escalations") {
           if (activeEscalationTab === "published") {
-            const cacheKey = `published_escalations_${currentUserAgentName}`;
+            const cacheKey = `published_escalations_${currentUserEmail}`;
             const cached = loadFromCache(cacheKey);
             if (cached) setEscalations(cached);
             else {
-              const escs = await getEscalationsPublishedApi(currentUserAgentName);
+              const escs = await getEscalationsUseremailPublishedApi(currentUserEmail);
               setEscalations(escs);
               saveToCache(cacheKey, escs);
             }
           } else {
-            const cacheKey = `draft_escalations_${currentUserAgentName}`;
+            const cacheKey = `draft_escalations_${currentUserEmail}`;
             const cached = loadFromCache(cacheKey);
             if (cached) setEscalations(cached);
             else {
-              const escs = await getEscalationsByAgentNameApi(currentUserAgentName);
+              const escs = await getEscalationsByUserEmailApi(currentUserEmail);
               setEscalations(escs);
               saveToCache(cacheKey, escs);
             }
@@ -134,7 +134,7 @@ const TableAdmin = () => {
       }
     };
     fetchData();
-  }, [activeTab, activeEscalationTab, activeEvaluationTab, currentUserAgentName]);
+  }, [activeTab, activeEscalationTab, activeEvaluationTab, currentUserEmail]);
 
   const getCurrentEvaluations = () => {
     const currentData = activeEvaluationTab === "published" ? publishedEvaluations : draftEvaluations;
@@ -199,10 +199,10 @@ const TableAdmin = () => {
       await publishEscalationApi(id);
       
       if (activeEscalationTab === "published") {
-        const escs = await getEscalationsPublishedApi(currentUserAgentName);
+        const escs = await getEscalationsUseremailPublishedApi(currentUserEmail);
         setEscalations(escs);
       } else {
-        const escs = await getEscalationsByAgentNameApi(currentUserAgentName);
+        const escs = await getEscalationsByUserEmailApi(currentUserEmail);
         setEscalations(escs);
       }
       
@@ -223,10 +223,10 @@ const TableAdmin = () => {
       await publishEvaluationApi(id);
       
       if (activeEvaluationTab === "published") {
-        const evals = await getEvaluationsPublishedApi(currentUserAgentName);
+        const evals = await getEvaluationsUseremailPublishedApi(currentUserEmail);
         setEvaluations(evals);
       } else {
-        const evals = await getEvaluationsByAgentNameApi(currentUserAgentName);
+        const evals = await getEvaluationsByUserEmailApi(currentUserEmail);
         setEvaluations(evals);
       }
       
@@ -563,7 +563,7 @@ const TableAdmin = () => {
                   <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
-                      <th style={headerCellStyle}>Status & Source</th>
+                      <th style={headerCellStyle}>Source</th>
                       <th style={headerCellStyle}>Publish</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
@@ -599,10 +599,7 @@ const TableAdmin = () => {
                           >
                             <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
                             <td style={cellStyle}>
-                              <span style={getStatusBadgeStyle(status)}>
-                                {status === 'published' ? '✓ Published' : '⚠ Draft'}
-                              </span>
-                              <br />
+                              
                               <span style={getSourceBadgeStyle(source)}>
                                 {source === 'frontend' ? 'Frontend' : 'Bitrix'}
                               </span>
@@ -810,7 +807,7 @@ const TableAdmin = () => {
                   <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
-                      <th style={headerCellStyle}>Status & Source</th>
+                      <th style={headerCellStyle}>Source</th>
                       <th style={headerCellStyle}>Publish</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
@@ -845,10 +842,7 @@ const TableAdmin = () => {
                           >
                             <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
                             <td style={cellStyle}>
-                              <span style={getStatusBadgeStyle(status)}>
-                                {status === 'published' ? '✓ Published' : '⚠ Draft'}
-                              </span>
-                              <br />
+                              
                               <span style={getSourceBadgeStyle(source)}>
                                 {source === 'frontend' ? 'Frontend' : 'Bitrix'}
                               </span>
@@ -875,6 +869,7 @@ const TableAdmin = () => {
                             <td style={cellStyle}>{row.useremail || '-'}</td>
                             <td style={cellStyle}>{row.leadID || '-'}</td>
                             <td style={cellStyle}>{row.agentName || '-'}</td>
+                            
                             <td style={cellStyle}>{row.mod || '-'}</td>
                             <td style={cellStyle}>{row.teamleader || '-'}</td>
                             <td style={cellStyle}>{row.greetings || '-'}</td>

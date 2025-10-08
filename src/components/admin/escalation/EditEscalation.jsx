@@ -156,6 +156,7 @@ const EditEscalation = () => {
               onChange={handleInputChange}
               style={inputStyle}
               required
+              
             />
           </div>
 

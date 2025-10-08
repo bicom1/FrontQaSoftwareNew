@@ -19,10 +19,11 @@ const ProtectedAgent = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const currentUser = decoded.name; // 👈 adjust if token has email/username instead
+  // 👇 Email se compare karein
+  const currentUserEmail = decoded.email || decoded.userEmail; // Adjust according to your token structure
 
-  if (agentName !== currentUser) {
-    return <Navigate to={`/dashboard/qc-team/${currentUser}`} replace />;
+  if (agentName !== currentUserEmail) {
+    return <Navigate to={`/dashboard/qc-team/${currentUserEmail}`} replace />;
   }
 
   return <TableAdmin />;
