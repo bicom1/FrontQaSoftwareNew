@@ -1,8 +1,8 @@
-//TableAdmin.jsx
+// TableAdmin.jsx
 import { SquarePen, Trash, Loader, FileWarning, CheckCircle, Edit } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import {  getEvaluationsByAgentNameApi } from "../features/evaluationApi";
-import { getEscalationsByAgentNameApi } from "../features/escalationsApi";
+import { getEvaluationsByUserEmailApi, getEvaluationsUseremailPublishedApi, publishEvaluationApi } from "../features/evaluationApi";
+import { getEscalationsByUserEmailApi, getEscalationsUseremailPublishedApi, publishEscalationApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
 const CACHE_TTL = 1000; // 1 second cache time
@@ -22,45 +22,46 @@ const TableAdmin = () => {
   const [itemsPerPage] = useState(10);
   const [hoveredRow, setHoveredRow] = useState(null);
 
-  const isEvaluationComplete = (evaluation) => {
-  const requiredFields = [
-    'useremail', 'leadID', 'agentName', 'mod', 'teamleader',
-    'greetings', 'accuracy', 'building', 'presenting', 'closing',
-    'bonus', 'evaluationSummary'
-  ];
-  return requiredFields.every(field =>
-    evaluation[field] && evaluation[field].toString().trim() !== ''
-  );
-};
-
-const publishedEvaluations = evaluations.filter(ev =>
-  ev.status === 'published' || isEvaluationComplete(ev)
-);
-const draftEvaluations = evaluations.filter(ev =>
-  ev.status === 'draft' || !isEvaluationComplete(ev)
-);
-
-
-
-  // Function to check if escalation is complete
-  const isEscalationComplete = (escalation) => {
-    const requiredFields = [
-      'useremail', 'leadID', 'evaluatedby', 'agentName', 'teamleader',
-      'leadsource', 'leadStatus', 'escSeverity', 'issueIden', 'escAction',
-      'documentation', 'successmaration', 'userrating'
-    ];
+  const getCurrentUserEmail = () => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      return user.email || user.useremail || 'Unknown';
+    }
     
-    return requiredFields.every(field => 
-      escalation[field] && escalation[field].toString().trim() !== ''
-    );
+    if (agentName) {
+      return agentName;
+    }
+    
+    return 'Unknown';
   };
 
-  // Filter escalations based on completion status
-  const publishedEscalations = escalations.filter(esc => 
-    esc.status === 'published' || isEscalationComplete(esc)
+  const currentUserEmail = getCurrentUserEmail();
+
+  // Filter evaluations for current user only
+  const userEvaluations = evaluations.filter(ev => 
+    ev.useremail === currentUserEmail || ev.agentName === currentUserEmail
   );
-  const draftEscalations = escalations.filter(esc => 
-    esc.status === 'draft' || !isEscalationComplete(esc)
+
+  // Filter evaluations based on status from API
+  const publishedEvaluations = userEvaluations.filter(ev => 
+    ev.status === 'published' || ev.submissionSource === 'frontend'
+  );
+  const draftEvaluations = userEvaluations.filter(ev => 
+    ev.status === 'draft' || ev.submissionSource === 'bitrix'
+  );
+
+  // Filter escalations for current user only
+  const userEscalations = escalations.filter(esc => 
+    esc.useremail === currentUserEmail || esc.agentName === currentUserEmail
+  );
+
+  // Filter escalations based on status from API
+  const publishedEscalations = userEscalations.filter(esc => 
+    esc.status === 'published' || esc.submissionSource === 'frontend'
+  );
+  const draftEscalations = userEscalations.filter(esc => 
+    esc.status === 'draft' || esc.submissionSource === 'bitrix'
   );
 
   // Cache handling
@@ -85,22 +86,44 @@ const draftEvaluations = evaluations.filter(ev =>
       setError("");
       try {
         if (activeTab === "evaluations") {
-          const cacheKey = `evaluations_${agentName}`;
-          const cached = loadFromCache(cacheKey);
-          if (cached) setEvaluations(cached);
-          else {
-            const evals = await getEvaluationsByAgentNameApi(agentName);
-            setEvaluations(evals);
-            saveToCache(cacheKey, evals);
+          if (activeEvaluationTab === "published") {
+            const cacheKey = `published_evaluations_${currentUserEmail}`;
+            const cached = loadFromCache(cacheKey);
+            if (cached) setEvaluations(cached);
+            else {
+              const evals = await getEvaluationsUseremailPublishedApi(currentUserEmail);
+              setEvaluations(evals);
+              saveToCache(cacheKey, evals);
+            }
+          } else {
+            const cacheKey = `draft_evaluations_${currentUserEmail}`;
+            const cached = loadFromCache(cacheKey);
+            if (cached) setEvaluations(cached);
+            else {
+              const evals = await getEvaluationsByUserEmailApi(currentUserEmail);
+              setEvaluations(evals);
+              saveToCache(cacheKey, evals);
+            }
           }
         } else if (activeTab === "escalations") {
-          const cacheKey = `escalations_${agentName}`;
-          const cached = loadFromCache(cacheKey);
-          if (cached) setEscalations(cached);
-          else {
-            const escs = await getEscalationsByAgentNameApi(agentName);
-            setEscalations(escs);
-            saveToCache(cacheKey, escs);
+          if (activeEscalationTab === "published") {
+            const cacheKey = `published_escalations_${currentUserEmail}`;
+            const cached = loadFromCache(cacheKey);
+            if (cached) setEscalations(cached);
+            else {
+              const escs = await getEscalationsUseremailPublishedApi(currentUserEmail);
+              setEscalations(escs);
+              saveToCache(cacheKey, escs);
+            }
+          } else {
+            const cacheKey = `draft_escalations_${currentUserEmail}`;
+            const cached = loadFromCache(cacheKey);
+            if (cached) setEscalations(cached);
+            else {
+              const escs = await getEscalationsByUserEmailApi(currentUserEmail);
+              setEscalations(escs);
+              saveToCache(cacheKey, escs);
+            }
           }
         }
       } catch (err) {
@@ -111,17 +134,15 @@ const draftEvaluations = evaluations.filter(ev =>
       }
     };
     fetchData();
-  }, [activeTab, agentName]);
+  }, [activeTab, activeEscalationTab, activeEvaluationTab, currentUserEmail]);
 
   const getCurrentEvaluations = () => {
-  const currentData = activeEvaluationTab === "published" ? publishedEvaluations : draftEvaluations;
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  return currentData.slice(indexOfFirstItem, indexOfLastItem);
-};
+    const currentData = activeEvaluationTab === "published" ? publishedEvaluations : draftEvaluations;
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    return currentData.slice(indexOfFirstItem, indexOfLastItem);
+  };
 
-
-  // Get current escalations based on active sub-tab
   const getCurrentEscalations = () => {
     const currentData = activeEscalationTab === "published" ? publishedEscalations : draftEscalations;
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -129,7 +150,6 @@ const draftEvaluations = evaluations.filter(ev =>
     return currentData.slice(indexOfFirstItem, indexOfLastItem);
   };
 
-  // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentEvaluations = getCurrentEvaluations();
@@ -137,10 +157,9 @@ const draftEvaluations = evaluations.filter(ev =>
   
   const getTotalPages = () => {
     if (activeTab === "evaluations") {
-      const dataLengths = activeEvaluationTab == "published"? publishedEvaluations.length : draftEvaluations.length;
-      return Math.ceil(dataLengths / itemsPerPage);
+      const dataLength = activeEvaluationTab === "published" ? publishedEvaluations.length : draftEvaluations.length;
+      return Math.ceil(dataLength / itemsPerPage);
     } 
-    
     
     if (activeTab === "escalations") {
       const dataLength = activeEscalationTab === "published" ? publishedEscalations.length : draftEscalations.length;
@@ -155,13 +174,88 @@ const draftEvaluations = evaluations.filter(ev =>
 
   const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleString() : "-");
 
-  const handleEdit = (id, rowData) => {
+  // Navigation handlers
+  const handleEditEscalation = (id, rowData) => {
     navigate(`/dashboard/qc-team/editescalation/${id}`, { state: { row: rowData } });
   };
-   const handleEdits = (id, rowData) => {
+
+  const handleEditEvaluation = (id, rowData) => {
     navigate(`/dashboard/qc-team/editevaluation/${id}`, { state: { row: rowData } });
   };
-  
+
+  // Double click handlers
+  const handleRowDoubleClick = (row, type) => {
+    if (type === 'escalation') {
+      handleEditEscalation(row._id, row);
+    } else if (type === 'evaluation') {
+      handleEditEvaluation(row._id, row);
+    }
+  };
+
+  // Publish handlers
+  const handlePublishEscalation = async (id) => {
+    try {
+      setLoading(true);
+      await publishEscalationApi(id);
+      
+      if (activeEscalationTab === "published") {
+        const escs = await getEscalationsUseremailPublishedApi(currentUserEmail);
+        setEscalations(escs);
+      } else {
+        const escs = await getEscalationsByUserEmailApi(currentUserEmail);
+        setEscalations(escs);
+      }
+      
+      setActiveEscalationTab("published");
+      setCurrentPage(1);
+      
+    } catch (error) {
+      console.error("Failed to publish escalation:", error);
+      alert("Failed to publish escalation. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePublishEvaluation = async (id) => {
+    try {
+      setLoading(true);
+      await publishEvaluationApi(id);
+      
+      if (activeEvaluationTab === "published") {
+        const evals = await getEvaluationsUseremailPublishedApi(currentUserEmail);
+        setEvaluations(evals);
+      } else {
+        const evals = await getEvaluationsByUserEmailApi(currentUserEmail);
+        setEvaluations(evals);
+      }
+      
+      setActiveEvaluationTab("published");
+      setCurrentPage(1);
+      
+    } catch (error) {
+      console.error("Failed to publish evaluation:", error);
+      alert("Failed to publish evaluation. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add source badge style
+  const getSourceBadgeStyle = (source) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    paddingLeft: '6px',
+    paddingRight: '6px',
+    paddingTop: '1px',
+    paddingBottom: '1px',
+    borderRadius: '8px',
+    fontSize: '10px',
+    fontWeight: '500',
+    backgroundColor: source === 'frontend' ? '#dbeafe' : '#f3e8ff',
+    color: source === 'frontend' ? '#1e40af' : '#7e22ce',
+    marginTop: '4px'
+  });
 
   const containerStyle = {
     backgroundColor: '#ffffff',
@@ -251,7 +345,6 @@ const draftEvaluations = evaluations.filter(ev =>
     color: status === 'published' ? '#166534' : '#92400e'
   });
 
-  // Scrollable container style
   const scrollableContainerStyle = {
     overflowX: 'scroll',
     borderRadius: '8px',
@@ -289,7 +382,8 @@ const draftEvaluations = evaluations.filter(ev =>
   const getRowStyle = (isHovered) => ({
     backgroundColor: isHovered ? '#f9fafb' : '#ffffff',
     transition: 'background-color 0.2s ease',
-    borderBottom: '1px solid #e5e7eb'
+    borderBottom: '1px solid #e5e7eb',
+    cursor: 'pointer'
   });
 
   const cellStyle = {
@@ -393,9 +487,9 @@ const draftEvaluations = evaluations.filter(ev =>
             <span style={{ textTransform: 'capitalize' }}>{tab}</span>
             <span style={getBadgeStyle(activeTab === tab)}>
               {tab === "evaluations"
-                ? evaluations.length
+                ? userEvaluations.length
                 : tab === "escalations"
-                ? escalations.length
+                ? userEscalations.length
                 : marketing.length}
             </span>
           </button>
@@ -418,7 +512,7 @@ const draftEvaluations = evaluations.filter(ev =>
         </div>
       )}
 
-      {/* Escalations Tab with Sub-tabs */}
+      {/* Escalations Tab */}
       {activeTab === "escalations" && (
         <div>
           <div style={subTabContainerStyle}>
@@ -466,10 +560,11 @@ const draftEvaluations = evaluations.filter(ev =>
             <>
               <div style={scrollableContainerStyle}>
                 <table style={tableStyle}>
-                  <thead   style={headerStyle }>
+                  <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
-                      <th style={headerCellStyle}>Status</th>
+                      <th style={headerCellStyle}>Source</th>
+                      <th style={headerCellStyle}>Publish</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
                       <th style={headerCellStyle}>Evaluated By</th>
@@ -491,20 +586,42 @@ const draftEvaluations = evaluations.filter(ev =>
                   <tbody>
                     {currentEscalations.length > 0 ? (
                       currentEscalations.map((row, index) => {
-                        const isComplete = isEscalationComplete(row);
-                        const status = row.status || (isComplete ? 'published' : 'draft');
+                        const status = row.status || 'draft';
+                        const source = row.submissionSource || 'bitrix';
                         return (
                           <tr
                             key={row._id || index}
                             style={getRowStyle(hoveredRow === index)}
                             onMouseEnter={() => setHoveredRow(index)}
                             onMouseLeave={() => setHoveredRow(null)}
+                            onDoubleClick={() => handleRowDoubleClick(row, 'escalation')}
+                            title="Double-click to edit"
                           >
                             <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
                             <td style={cellStyle}>
-                              <span style={getStatusBadgeStyle(status)}>
-                                {status === 'published' ? '✓ Published' : '⚠ Draft'}
+                              
+                              <span style={getSourceBadgeStyle(source)}>
+                                {source === 'frontend' ? 'Frontend' : 'Bitrix'}
                               </span>
+                            </td>
+                            <td style={cellStyle}>
+                              {status === 'draft' ? (
+                                <button
+                                  onClick={() => handlePublishEscalation(row._id)}
+                                  style={{ 
+                                    border: 'none', 
+                                    background: 'none', 
+                                    cursor: 'pointer',
+                                    color: '#10b981'
+                                  }}
+                                  title="Publish this escalation"
+                                  disabled={loading}
+                                >
+                                  <CheckCircle size={18} />
+                                </button>
+                              ) : (
+                                <span style={{ color: '#6b7280', fontSize: '12px' }}>Published</span>
+                              )}
                             </td>
                             <td style={cellStyle}>{row.useremail || '-'}</td>
                             <td style={cellStyle}>{row.leadID || '-'}</td>
@@ -566,14 +683,14 @@ const draftEvaluations = evaluations.filter(ev =>
                             <td style={cellStyle}>{formatDate(row.createdAt)}</td>
                             <td style={cellStyle}>
                               <button
-                                onClick={() => handleEdit(row._id, row)}
+                                onClick={() => handleEditEscalation(row._id, row)}
                                 style={{ 
                                   border: 'none', 
                                   background: 'none', 
                                   cursor: 'pointer',
-                                  color: status === 'draft' ? '#f59e0b' : '#6b7280'
+                                  color: '#6b7280'
                                 }}
-                                title={status === 'draft' ? 'Complete and publish' : 'Edit'}
+                                title="Edit escalation"
                               >
                                 <SquarePen size={18} />
                               </button>
@@ -593,10 +710,10 @@ const draftEvaluations = evaluations.filter(ev =>
                       })
                     ) : (
                       <tr>
-                        <td colSpan="18" style={{ ...cellStyle, textAlign: 'center' }}>
+                        <td colSpan="19" style={{ ...cellStyle, textAlign: 'center' }}>
                           {activeEscalationTab === "published" 
-                            ? "No published escalations found"
-                            : "No draft escalations found"
+                            ? "No published escalations found for your account"
+                            : "No draft escalations found for your account"
                           }
                         </td>
                       </tr>
@@ -604,7 +721,6 @@ const draftEvaluations = evaluations.filter(ev =>
                   </tbody>
                 </table>
               </div>
-              {/* Pagination */}
               {((activeEscalationTab === "published" && publishedEscalations.length > itemsPerPage) ||
                 (activeEscalationTab === "draft" && draftEscalations.length > itemsPerPage)) && (
                 <div style={paginationContainerStyle}>
@@ -639,47 +755,47 @@ const draftEvaluations = evaluations.filter(ev =>
           )}
         </div>
       )}
-      
 
       {/* Evaluations Tab */}
       {activeTab === "evaluations" && (
         <div>
-    <div style={subTabContainerStyle}>
-      <button
-        onClick={() => {
-          setActiveEvaluationTab("published"); // ✅ Correct
-          setCurrentPage(1);
-        }}
-        style={getSubTabStyle(activeEvaluationTab === "published")} // ✅ Correct
-      >
-        <CheckCircle size={16} />
-        Published
-        <span style={{
-          ...getBadgeStyle(activeEvaluationTab === "published"),
-          backgroundColor: activeEvaluationTab === "published" ? '#10b981' : '#e5e7eb',
-          color: activeEvaluationTab === "published" ? '#ffffff' : '#374151'
-        }}>
-          {publishedEvaluations.length}  // ✅ Correct data
-        </span>
-      </button>
-      <button
-        onClick={() => {
-          setActiveEvaluationTab("draft"); // ✅ Correct
-          setCurrentPage(1);
-        }}
-        style={getSubTabStyle(activeEvaluationTab === "draft")} // ✅ Correct
-      >
-        <Edit size={16} />
-        Drafts
-        <span style={{
-          ...getBadgeStyle(activeEvaluationTab === "draft"),
-          backgroundColor: activeEvaluationTab === "draft" ? '#f59e0b' : '#e5e7eb',
-          color: activeEvaluationTab === "draft" ? '#ffffff' : '#374151'
-        }}>
-          {draftEvaluations.length}  // ✅ Correct data
-        </span>
-      </button>
-    </div>
+          <div style={subTabContainerStyle}>
+            <button
+              onClick={() => {
+                setActiveEvaluationTab("published");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEvaluationTab === "published")}
+            >
+              <CheckCircle size={16} />
+              Published
+              <span style={{
+                ...getBadgeStyle(activeEvaluationTab === "published"),
+                backgroundColor: activeEvaluationTab === "published" ? '#10b981' : '#e5e7eb',
+                color: activeEvaluationTab === "published" ? '#ffffff' : '#374151'
+              }}>
+                {publishedEvaluations.length}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveEvaluationTab("draft");
+                setCurrentPage(1);
+              }}
+              style={getSubTabStyle(activeEvaluationTab === "draft")}
+            >
+              <Edit size={16} />
+              Drafts
+              <span style={{
+                ...getBadgeStyle(activeEvaluationTab === "draft"),
+                backgroundColor: activeEvaluationTab === "draft" ? '#f59e0b' : '#e5e7eb',
+                color: activeEvaluationTab === "draft" ? '#ffffff' : '#374151'
+              }}>
+                {draftEvaluations.length}
+              </span>
+            </button>
+          </div>
+
           {loading ? (
             <div style={loadingStyle}>
               <Loader size={32} className="animate-spin" />
@@ -691,7 +807,8 @@ const draftEvaluations = evaluations.filter(ev =>
                   <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
-                      <th style={headerCellStyle}>Status</th>
+                      <th style={headerCellStyle}>Source</th>
+                      <th style={headerCellStyle}>Publish</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
                       <th style={headerCellStyle}>Agent Name</th>
@@ -711,56 +828,100 @@ const draftEvaluations = evaluations.filter(ev =>
                   </thead>
                   <tbody>
                     {currentEvaluations.length > 0 ? (
-                      currentEvaluations.map((row, index) => (
-                        <tr
-                          key={row._id || index}
-                          style={getRowStyle(hoveredRow === index)}
-                          onMouseEnter={() => setHoveredRow(index)}
-                          onMouseLeave={() => setHoveredRow(null)}
-                        >
-                          <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
-                          <td style={cellStyle}>
-                              <span style={getStatusBadgeStyle(status)}>
-                                {status === 'published' ? '✓ Published' : '⚠ Draft'}
+                      currentEvaluations.map((row, index) => {
+                        const status = row.status || 'draft';
+                        const source = row.submissionSource || 'bitrix';
+                        return (
+                          <tr
+                            key={row._id || index}
+                            style={getRowStyle(hoveredRow === index)}
+                            onMouseEnter={() => setHoveredRow(index)}
+                            onMouseLeave={() => setHoveredRow(null)}
+                            onDoubleClick={() => handleRowDoubleClick(row, 'evaluation')}
+                            title="Double-click to edit"
+                          >
+                            <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
+                            <td style={cellStyle}>
+                              
+                              <span style={getSourceBadgeStyle(source)}>
+                                {source === 'frontend' ? 'Frontend' : 'Bitrix'}
                               </span>
                             </td>
-                          <td style={cellStyle}>{row.useremail || '-'}</td>
-                          <td style={cellStyle}>{row.leadID || '-'}</td>
-                          <td style={cellStyle}>{row.agentName || '-'}</td>
-                          <td style={cellStyle}>{row.mod || '-'}</td>
-                          <td style={cellStyle}>{row.teamleader || '-'}</td>
-                          <td style={cellStyle}>{row.greetings || '-'}</td>
-                          <td style={cellStyle}>{row.accuracy || '-'}</td>
-                          <td style={cellStyle}>{row.building || '-'}</td>
-                          <td style={cellStyle}>{row.presenting || '-'}</td>
-                          <td style={cellStyle}>{row.closing || '-'}</td>
-                          <td style={cellStyle}>{row.bonus || '-'}</td>
-                          <td style={cellStyle}>{row.evaluationsummary || '-'}</td>
-                          <td style={cellStyle}>{formatDate(row.createdAt)}</td>
-                          <td style={cellStyle}>
-                            <button style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
-                              <SquarePen onClick={() => handleEdits(row._id, row)} size={18} />
-                            </button>
-                          </td>
-                          <td style={lastCellStyle}>
-                            <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}>
-                              <Trash size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                            <td style={cellStyle}>
+                              {status === 'draft' ? (
+                                <button
+                                  onClick={() => handlePublishEvaluation(row._id)}
+                                  style={{ 
+                                    border: 'none', 
+                                    background: 'none', 
+                                    cursor: 'pointer',
+                                    color: '#10b981'
+                                  }}
+                                  title="Publish this evaluation"
+                                  disabled={loading}
+                                >
+                                  <CheckCircle size={18} />
+                                </button>
+                              ) : (
+                                <span style={{ color: '#6b7280', fontSize: '12px' }}>Published</span>
+                              )}
+                            </td>
+                            <td style={cellStyle}>{row.useremail || '-'}</td>
+                            <td style={cellStyle}>{row.leadID || '-'}</td>
+                            <td style={cellStyle}>{row.agentName || '-'}</td>
+                            
+                            <td style={cellStyle}>{row.mod || '-'}</td>
+                            <td style={cellStyle}>{row.teamleader || '-'}</td>
+                            <td style={cellStyle}>{row.greetings || '-'}</td>
+                            <td style={cellStyle}>{row.accuracy || '-'}</td>
+                            <td style={cellStyle}>{row.building || '-'}</td>
+                            <td style={cellStyle}>{row.presenting || '-'}</td>
+                            <td style={cellStyle}>{row.closing || '-'}</td>
+                            <td style={cellStyle}>{row.bonus || '-'}</td>
+                            <td style={cellStyle}>{row.evaluationsummary || '-'}</td>
+                            <td style={cellStyle}>{formatDate(row.createdAt)}</td>
+                            <td style={cellStyle}>
+                              <button
+                                onClick={() => handleEditEvaluation(row._id, row)}
+                                style={{ 
+                                  border: 'none', 
+                                  background: 'none', 
+                                  cursor: 'pointer',
+                                  color: '#6b7280'
+                                }}
+                                title="Edit evaluation"
+                              >
+                                <SquarePen size={18} />
+                              </button>
+                            </td>
+                            <td style={lastCellStyle}>
+                              <button style={{ 
+                                border: 'none', 
+                                background: 'none', 
+                                cursor: 'pointer', 
+                                color: '#ef4444' 
+                              }}>
+                                <Trash size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan="17" style={{ ...cellStyle, textAlign: 'center' }}>
-                          No evaluations found
+                        <td colSpan="18" style={{ ...cellStyle, textAlign: 'center' }}>
+                          {activeEvaluationTab === "published" 
+                            ? "No published evaluations found for your account"
+                            : "No draft evaluations found for your account"
+                          }
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              {/* Pagination */}
-              {evaluations.length > itemsPerPage && (
+              {((activeEvaluationTab === "published" && publishedEvaluations.length > itemsPerPage) ||
+                (activeEvaluationTab === "draft" && draftEvaluations.length > itemsPerPage)) && (
                 <div style={paginationContainerStyle}>
                   <div style={paginationStyle}>
                     <button

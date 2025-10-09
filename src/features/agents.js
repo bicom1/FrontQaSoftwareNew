@@ -9,7 +9,7 @@ export const getLowRatingCallApi = async () => {
       });
       return res.data;
     } catch (err) {
-      console.error("Error fetching low rating calls:", err);
+      console.error("Error fetching low rating call:", err);
       return [];
     }
   };

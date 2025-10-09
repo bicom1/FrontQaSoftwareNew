@@ -13,7 +13,7 @@ import {
   Clock,
   Calendar,
 } from "lucide-react";
-import { createEvaluationsApi } from "../features/evaluationApi";
+import { createEvaluationApi } from "../features/evaluationApi";
 import { getTeamLeadsApi } from "../features/teamleadApi";
 
 const AgentForm = () => {
@@ -144,7 +144,7 @@ useEffect(() => {
 
       console.log("Submitting payload:", payload);
 
-      const res = await createEvaluationsApi(payload);
+      const res = await createEvaluationApi(payload);
 
       alert("Evaluation saved successfully!");
       console.log("Saved evaluation:", res);
