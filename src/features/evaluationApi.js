@@ -1,20 +1,16 @@
 import axios from "axios";
 import { baseUrl, getToken } from "../features/config";
 
-const authHeader = () => ({
-  headers: {
-    Authorization: `Bearer ${getToken()}`,
-    "Content-Type": "application/json",
-  },
-});
-
 export const getDailyEvaluations = async () => {
   try {
     const res = await axios.get(
       `${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`,
-      authHeader()
+      {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
+      }
     );
-    
     // Sort by date ascending and get last 5
     const sortedData = res.data.sort(
       (a, b) => new Date(a.date) - new Date(b.date)
@@ -30,11 +26,11 @@ export const getDailyEvaluations = async () => {
 };
 
 export const getEvaluationOnwerApi = async (ownerId) => {
+  const token = getToken();
   try {
-    const res = await axios.get(
-      `${baseUrl}/api/evaluations/owner/${ownerId}`,
-      authHeader()
-    );
+    const res = await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     // Always return an array
     return res.data?.evaluations || [];
   } catch (err) {
@@ -43,56 +39,106 @@ export const getEvaluationOnwerApi = async (ownerId) => {
   }
 };
 
-export const createReportEvaluationsApi = async ({ 
-  startDate, 
-  endDate, 
-  agentName, 
-  teamleader 
+export const createReportEvaluationsApi = async ({
+  startDate,
+  endDate,
+  agentName,
+  teamleader,
 }) => {
+  const token = getToken();
   try {
     const res = await axios.get(
       `${baseUrl}/api/evaluations/datefilterevaluation?startDate=${startDate}&endDate=${endDate}&agentName=${agentName}&teamleader=${teamleader}`,
-      authHeader()
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
-    return res.data;
+    return res;
   } catch (error) {
-    console.error("Create Report Evaluations Error:", error.response?.data || error.message);
+    if (error.response) {
+      return error.response;
+    }
     throw error;
   }
 };
 
-export const createEvaluationApi = async (evaluation, otherReason = "") => {
+// Axios config with auth
+const authHeader = () => ({
+  headers: {
+    Authorization: `Bearer ${getToken()}`,
+    "Content-Type": "application/json",
+  },
+});
+
+// ✅ CREATE Evaluation
+export const createEvaluationsApi = async (data) => {
+  const token = getToken(); // should return JWT stored in localStorage/cookies
+
+  // Try primary endpoint first; if not found, fall back to legacy paths
   try {
-    // Create a clean object instead of FormData
-    const submissionData = {
-      ...evaluation
-    };
-
-    // Handle "Other" reason
-    if (evaluation.escAction === "Other" && otherReason.trim()) {
-      submissionData.escAction = otherReason.trim();
+    const res = await axios.post(`${baseUrl}/api/evaluations`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data;
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      // Fallback 1: legacy frontend route
+      try {
+        const resFallbackFrontend = await axios.post(
+          `${baseUrl}/api/evaluations/frontend`,
+          data,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        return resFallbackFrontend.data;
+      } catch (err2) {
+        if (err2?.response?.status === 404) {
+          // Fallback 2: possible create route
+          const resFallbackCreate = await axios.post(
+            `${baseUrl}/api/evaluations/create`,
+            data,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          return resFallbackCreate.data;
+        }
+        throw err2;
+      }
     }
-
-    // Remove audio from the main data if it's a file
-    if (submissionData.audio && submissionData.audio instanceof File) {
-      delete submissionData.audio;
-    }
-
-    // Ensure owner is set
-    submissionData.owner = evaluation.owner;
-
-    const response = await axios.post(
-      `${baseUrl}/api/evaluations/frontend`,
-      submissionData,
-      authHeader()
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Create Evaluation Error:", error.response?.data || error.message);
-    throw error;
+    throw err;
   }
 };
 
+// Backward-compatible alias for components importing createEvaluationApi
+export const createEvaluationApi = async (evaluation, otherReason = "") => {
+  // Preserve passed evaluation object without mutating caller state
+  const submissionData = { ...evaluation };
+
+  // Map any optional fields if present (kept for compatibility)
+  if (submissionData.escAction === "Other" && otherReason?.trim()) {
+    submissionData.escAction = otherReason.trim();
+  }
+
+  // Ensure owner is set from evaluation if available
+  if (evaluation?.owner && !submissionData.owner) {
+    submissionData.owner = evaluation.owner;
+  }
+
+  // Delegate to the resilient creator
+  return await createEvaluationsApi(submissionData);
+};
+
+// ✅ READ All Evaluations
 export const getEvaluationsApi = async () => {
   try {
     const response = await axios.get(
@@ -101,11 +147,15 @@ export const getEvaluationsApi = async () => {
     );
     return response.data;
   } catch (error) {
-    console.error("Get Evaluations Error:", error.response?.data || error.message);
+    console.error(
+      "Get Evaluations Error:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 };
 
+// ✅ READ Single Evaluation by ID
 export const getEvaluationByIdApi = async (id) => {
   try {
     const response = await axios.get(
@@ -114,11 +164,15 @@ export const getEvaluationByIdApi = async (id) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Get Evaluation By ID Error:", error.response?.data || error.message);
+    console.error(
+      "Get Evaluation By ID Error:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 };
 
+// ✅ UPDATE Evaluation
 export const updateEvaluationApi = async (id, payload) => {
   try {
     const response = await axios.put(
@@ -128,11 +182,15 @@ export const updateEvaluationApi = async (id, payload) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Update Evaluation Error:", error.response?.data || error.message);
+    console.error(
+      "Update Evaluation Error:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 };
 
+// ✅ DELETE Evaluation
 export const deleteEvaluationApi = async (id) => {
   try {
     const response = await axios.delete(
@@ -141,22 +199,39 @@ export const deleteEvaluationApi = async (id) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Delete Evaluation Error:", error.response?.data || error.message);
+    console.error(
+      "Delete Evaluation Error:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 };
 
+// export const totalEvaluationCountsApi = async () => {
+//   const token = getToken();
+//   const res = await axios.get(`${baseUrl}/api/evaluations/totalevaluationcounts`, {
+//     withCredentials: true,
+//     headers: {
+//       Authorization: token ? `Bearer ${token}` : "",
+//     },
+//   });
+//   return res.data.count;
+// };
+
 export const totalEvaluationCountsApi = async () => {
-  try {
-    const response = await axios.get(
-      `${baseUrl}/api/evaluations/totalevaluationcounts`,
-      authHeader()
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Total Evaluation Counts Error:", error.response?.data || error.message);
-    throw error;
+  const response = await fetch(
+    `${baseUrl}/api/evaluations/totalevaluationcounts`,
+    {
+      headers: authHeader(),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch Evaluation count");
   }
+
+  return await response.json();
 };
 
 export const getEvaluationAnalyticsApi = async () => {
@@ -167,73 +242,53 @@ export const getEvaluationAnalyticsApi = async () => {
     );
     return response.data;
   } catch (error) {
-    console.error("Fetch Evaluation Analytics Error:", error.response?.data || error.message);
+    console.error(
+      "Fetch Escalation Analytics Error:",
+      error.response?.data || error.message
+    );
     throw error;
-  }
-};
-
-export const getEvaluationsByUserEmailApi = async (userEmail) => {
-  try {
-    const response = await axios.get(
-      `${baseUrl}/api/evaluations/useremail/${userEmail}`,
-      authHeader()
-    );
-    return response.data?.data || response.data;
-  } catch (error) {
-    console.error("Get Evaluations by User Email Error:", error.response?.data || error.message);
-    return [];
-  }
-};
-
-export const getEvaluationsUseremailPublishedApi = async (userEmail) => {
-  try {
-    const response = await axios.get(
-      `${baseUrl}/api/evaluations/useremail/${userEmail}/published`,
-      authHeader()
-    );
-    return response.data?.data || response.data;
-  } catch (error) {
-    console.error("Get Published Evaluations by User Email Error:", error.response?.data || error.message);
-    return [];
   }
 };
 
 export const getEvaluationsByAgentNameApi = async (agentName) => {
+  const token = getToken();
   try {
-    const response = await axios.get(
-      `${baseUrl}/api/evaluations/evaluations/drafts?agentName=${agentName}`,
-      authHeader()
+    const res = await axios.get(
+      `${baseUrl}/api/evaluations/agent/${agentName}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
-    return response.data?.data || response.data;
-  } catch (error) {
-    console.error("Get Evaluations by Agent Name Error:", error.response?.data || error.message);
+    // Always return an array
+    return res.data?.data || [];
+  } catch (err) {
+    console.error("Evaluation API error:", err);
     return [];
   }
 };
 
-export const getEvaluationsPublishedApi = async (agentName) => {
+// Optional helper used by some screens: fetch by user email
+export const getEvaluationsByUserEmailApi = async (userEmail) => {
+  const token = getToken();
   try {
-    const response = await axios.get(
-      `${baseUrl}/api/evaluations/evaluations/published?agentName=${agentName}`,
-      authHeader()
+    const res = await axios.get(
+      `${baseUrl}/api/evaluations/useremail/${encodeURIComponent(userEmail)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
-    return response.data?.data || response.data;
-  } catch (error) {
-    console.error("Get Published Evaluations Error:", error.response?.data || error.message);
+    return res.data?.data || res.data || [];
+  } catch (err) {
+    console.error("Evaluation API error:", err);
     return [];
   }
 };
 
-export const publishEvaluationApi = async (evaluationId) => {
-  try {
-    const response = await axios.patch(
-      `${baseUrl}/api/evaluations/evaluations/${evaluationId}/publish`,
-      {},
-      authHeader()
-    );
-    return response.data?.data || response.data;
-  } catch (error) {
-    console.error("Publish Evaluation Error:", error.response?.data || error.message);
-    throw error;
-  }
-};
+// export const getEvaluationOnwerApi = async (ownerId ) => {
+//   const token = getToken();
+//   return await axios.get(`${baseUrl}/api/evaluations/owner/${ownerId }`, {
+//     headers: {
+//       Authorization: `Bearer ${token}`,
+//     },
+//   });
+// };

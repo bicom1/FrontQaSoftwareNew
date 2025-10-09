@@ -1,8 +1,15 @@
-// TableAdmin.jsx
-import { SquarePen, Trash, Loader, FileWarning, CheckCircle, Edit } from "lucide-react";
+//TableAdmin.jsx
+import {
+  SquarePen,
+  Trash,
+  Loader,
+  FileWarning,
+  CheckCircle,
+  Edit,
+} from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { getEvaluationsByUserEmailApi, getEvaluationsUseremailPublishedApi, publishEvaluationApi } from "../features/evaluationApi";
-import { getEscalationsByUserEmailApi, getEscalationsUseremailPublishedApi, publishEscalationApi } from "../features/escalationsApi";
+import { getEvaluationsByAgentNameApi } from "../features/evaluationApi";
+import { getEscalationsByAgentNameApi } from "../features/escalationsApi";
 import { useNavigate, useParams } from "react-router-dom";
 
 const CACHE_TTL = 1000; // 1 second cache time
@@ -22,46 +29,62 @@ const TableAdmin = () => {
   const [itemsPerPage] = useState(10);
   const [hoveredRow, setHoveredRow] = useState(null);
 
-  const getCurrentUserEmail = () => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const user = JSON.parse(userData);
-      return user.email || user.useremail || 'Unknown';
-    }
-    
-    if (agentName) {
-      return agentName;
-    }
-    
-    return 'Unknown';
+  const isEvaluationComplete = (evaluation) => {
+    const requiredFields = [
+      "useremail",
+      "leadID",
+      "agentName",
+      "mod",
+      "teamleader",
+      "greetings",
+      "accuracy",
+      "building",
+      "presenting",
+      "closing",
+      "bonus",
+      "evaluationSummary",
+    ];
+    return requiredFields.every(
+      (field) => evaluation[field] && evaluation[field].toString().trim() !== ""
+    );
   };
 
-  const currentUserEmail = getCurrentUserEmail();
-
-  // Filter evaluations for current user only
-  const userEvaluations = evaluations.filter(ev => 
-    ev.useremail === currentUserEmail || ev.agentName === currentUserEmail
+  const publishedEvaluations = evaluations.filter(
+    (ev) => ev.status === "published" || isEvaluationComplete(ev)
+  );
+  const draftEvaluations = evaluations.filter(
+    (ev) => ev.status === "draft" || !isEvaluationComplete(ev)
   );
 
-  // Filter evaluations based on status from API
-  const publishedEvaluations = userEvaluations.filter(ev => 
-    ev.status === 'published' || ev.submissionSource === 'frontend'
-  );
-  const draftEvaluations = userEvaluations.filter(ev => 
-    ev.status === 'draft' || ev.submissionSource === 'bitrix'
-  );
+  // Function to check if escalation is complete
+  const isEscalationComplete = (escalation) => {
+    const requiredFields = [
+      "useremail",
+      "leadID",
+      "evaluatedby",
+      "agentName",
+      "teamleader",
+      "leadsource",
+      "leadStatus",
+      "escSeverity",
+      "issueIden",
+      "escAction",
+      "documentation",
+      "successmaration",
+      "userrating",
+    ];
 
-  // Filter escalations for current user only
-  const userEscalations = escalations.filter(esc => 
-    esc.useremail === currentUserEmail || esc.agentName === currentUserEmail
-  );
+    return requiredFields.every(
+      (field) => escalation[field] && escalation[field].toString().trim() !== ""
+    );
+  };
 
-  // Filter escalations based on status from API
-  const publishedEscalations = userEscalations.filter(esc => 
-    esc.status === 'published' || esc.submissionSource === 'frontend'
+  // Filter escalations based on completion status
+  const publishedEscalations = escalations.filter(
+    (esc) => esc.status === "published" || isEscalationComplete(esc)
   );
-  const draftEscalations = userEscalations.filter(esc => 
-    esc.status === 'draft' || esc.submissionSource === 'bitrix'
+  const draftEscalations = escalations.filter(
+    (esc) => esc.status === "draft" || !isEscalationComplete(esc)
   );
 
   // Cache handling
@@ -86,44 +109,22 @@ const TableAdmin = () => {
       setError("");
       try {
         if (activeTab === "evaluations") {
-          if (activeEvaluationTab === "published") {
-            const cacheKey = `published_evaluations_${currentUserEmail}`;
-            const cached = loadFromCache(cacheKey);
-            if (cached) setEvaluations(cached);
-            else {
-              const evals = await getEvaluationsUseremailPublishedApi(currentUserEmail);
-              setEvaluations(evals);
-              saveToCache(cacheKey, evals);
-            }
-          } else {
-            const cacheKey = `draft_evaluations_${currentUserEmail}`;
-            const cached = loadFromCache(cacheKey);
-            if (cached) setEvaluations(cached);
-            else {
-              const evals = await getEvaluationsByUserEmailApi(currentUserEmail);
-              setEvaluations(evals);
-              saveToCache(cacheKey, evals);
-            }
+          const cacheKey = `evaluations_${agentName}`;
+          const cached = loadFromCache(cacheKey);
+          if (cached) setEvaluations(cached);
+          else {
+            const evals = await getEvaluationsByAgentNameApi(agentName);
+            setEvaluations(evals);
+            saveToCache(cacheKey, evals);
           }
         } else if (activeTab === "escalations") {
-          if (activeEscalationTab === "published") {
-            const cacheKey = `published_escalations_${currentUserEmail}`;
-            const cached = loadFromCache(cacheKey);
-            if (cached) setEscalations(cached);
-            else {
-              const escs = await getEscalationsUseremailPublishedApi(currentUserEmail);
-              setEscalations(escs);
-              saveToCache(cacheKey, escs);
-            }
-          } else {
-            const cacheKey = `draft_escalations_${currentUserEmail}`;
-            const cached = loadFromCache(cacheKey);
-            if (cached) setEscalations(cached);
-            else {
-              const escs = await getEscalationsByUserEmailApi(currentUserEmail);
-              setEscalations(escs);
-              saveToCache(cacheKey, escs);
-            }
+          const cacheKey = `escalations_${agentName}`;
+          const cached = loadFromCache(cacheKey);
+          if (cached) setEscalations(cached);
+          else {
+            const escs = await getEscalationsByAgentNameApi(agentName);
+            setEscalations(escs);
+            saveToCache(cacheKey, escs);
           }
         }
       } catch (err) {
@@ -134,332 +135,277 @@ const TableAdmin = () => {
       }
     };
     fetchData();
-  }, [activeTab, activeEscalationTab, activeEvaluationTab, currentUserEmail]);
+  }, [activeTab, agentName]);
 
   const getCurrentEvaluations = () => {
-    const currentData = activeEvaluationTab === "published" ? publishedEvaluations : draftEvaluations;
+    const currentData =
+      activeEvaluationTab === "published"
+        ? publishedEvaluations
+        : draftEvaluations;
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     return currentData.slice(indexOfFirstItem, indexOfLastItem);
   };
 
+  // Get current escalations based on active sub-tab
   const getCurrentEscalations = () => {
-    const currentData = activeEscalationTab === "published" ? publishedEscalations : draftEscalations;
+    const currentData =
+      activeEscalationTab === "published"
+        ? publishedEscalations
+        : draftEscalations;
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     return currentData.slice(indexOfFirstItem, indexOfLastItem);
   };
 
+  // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentEvaluations = getCurrentEvaluations();
   const currentEscalations = getCurrentEscalations();
-  
+
   const getTotalPages = () => {
     if (activeTab === "evaluations") {
-      const dataLength = activeEvaluationTab === "published" ? publishedEvaluations.length : draftEvaluations.length;
-      return Math.ceil(dataLength / itemsPerPage);
-    } 
-    
+      const dataLengths =
+        activeEvaluationTab == "published"
+          ? publishedEvaluations.length
+          : draftEvaluations.length;
+      return Math.ceil(dataLengths / itemsPerPage);
+    }
+
     if (activeTab === "escalations") {
-      const dataLength = activeEscalationTab === "published" ? publishedEscalations.length : draftEscalations.length;
+      const dataLength =
+        activeEscalationTab === "published"
+          ? publishedEscalations.length
+          : draftEscalations.length;
       return Math.ceil(dataLength / itemsPerPage);
     }
     return Math.ceil(marketing.length / itemsPerPage);
   };
-  
+
   const totalPages = getTotalPages();
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleString() : "-");
+  const formatDate = (dateString) =>
+    dateString ? new Date(dateString).toLocaleString() : "-";
 
-  // Navigation handlers
-  const handleEditEscalation = (id, rowData) => {
-    navigate(`/dashboard/qc-team/editescalation/${id}`, { state: { row: rowData } });
+  const handleEdit = (id, rowData) => {
+    navigate(`/dashboard/qc-team/editescalation/${id}`, {
+      state: { row: rowData },
+    });
   };
-
-  const handleEditEvaluation = (id, rowData) => {
-    navigate(`/dashboard/qc-team/editevaluation/${id}`, { state: { row: rowData } });
+  const handleEdits = (id, rowData) => {
+    navigate(`/dashboard/qc-team/editevaluation/${id}`, {
+      state: { row: rowData },
+    });
   };
-
-  // Double click handlers
-  const handleRowDoubleClick = (row, type) => {
-    if (type === 'escalation') {
-      handleEditEscalation(row._id, row);
-    } else if (type === 'evaluation') {
-      handleEditEvaluation(row._id, row);
-    }
-  };
-
-  // Publish handlers
-  const handlePublishEscalation = async (id) => {
-    try {
-      setLoading(true);
-      await publishEscalationApi(id);
-      
-      if (activeEscalationTab === "published") {
-        const escs = await getEscalationsUseremailPublishedApi(currentUserEmail);
-        setEscalations(escs);
-      } else {
-        const escs = await getEscalationsByUserEmailApi(currentUserEmail);
-        setEscalations(escs);
-      }
-      
-      setActiveEscalationTab("published");
-      setCurrentPage(1);
-      
-    } catch (error) {
-      console.error("Failed to publish escalation:", error);
-      alert("Failed to publish escalation. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePublishEvaluation = async (id) => {
-    try {
-      setLoading(true);
-      await publishEvaluationApi(id);
-      
-      if (activeEvaluationTab === "published") {
-        const evals = await getEvaluationsUseremailPublishedApi(currentUserEmail);
-        setEvaluations(evals);
-      } else {
-        const evals = await getEvaluationsByUserEmailApi(currentUserEmail);
-        setEvaluations(evals);
-      }
-      
-      setActiveEvaluationTab("published");
-      setCurrentPage(1);
-      
-    } catch (error) {
-      console.error("Failed to publish evaluation:", error);
-      alert("Failed to publish evaluation. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Add source badge style
-  const getSourceBadgeStyle = (source) => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    paddingLeft: '6px',
-    paddingRight: '6px',
-    paddingTop: '1px',
-    paddingBottom: '1px',
-    borderRadius: '8px',
-    fontSize: '10px',
-    fontWeight: '500',
-    backgroundColor: source === 'frontend' ? '#dbeafe' : '#f3e8ff',
-    color: source === 'frontend' ? '#1e40af' : '#7e22ce',
-    marginTop: '4px'
-  });
 
   const containerStyle = {
-    backgroundColor: '#ffffff',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    borderRadius: '12px',
-    border: '1px solid #d1d5db',
-    padding: '32px',
-    maxWidth: '100%',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
+    backgroundColor: "#ffffff",
+    boxShadow:
+      "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    padding: "32px",
+    maxWidth: "100%",
+    fontFamily: "system-ui, -apple-system, sans-serif",
   };
 
   const tabContainerStyle = {
-    display: 'flex',
-    gap: '32px',
-    borderBottom: '2px solid #e5e7eb',
-    marginBottom: '24px',
-    paddingBottom: '8px'
+    display: "flex",
+    gap: "32px",
+    borderBottom: "2px solid #e5e7eb",
+    marginBottom: "24px",
+    paddingBottom: "8px",
   };
 
   const subTabContainerStyle = {
-    display: 'flex',
-    gap: '16px',
-    marginBottom: '24px',
-    backgroundColor: '#f9fafb',
-    padding: '8px',
-    borderRadius: '8px',
-    border: '1px solid #e5e7eb'
+    display: "flex",
+    gap: "16px",
+    marginBottom: "24px",
+    backgroundColor: "#f9fafb",
+    padding: "8px",
+    borderRadius: "8px",
+    border: "1px solid #e5e7eb",
   };
 
   const getTabStyle = (isActive) => ({
-    paddingBottom: '12px',
-    paddingLeft: '8px',
-    paddingRight: '8px',
-    fontSize: '16px',
-    fontWeight: '600',
-    borderBottom: isActive ? '3px solid #6b7280' : '3px solid transparent',
-    color: isActive ? '#374151' : '#6b7280',
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
+    paddingBottom: "12px",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    fontSize: "16px",
+    fontWeight: "600",
+    borderBottom: isActive ? "3px solid #6b7280" : "3px solid transparent",
+    color: isActive ? "#374151" : "#6b7280",
+    backgroundColor: "transparent",
+    border: "none",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   });
 
   const getSubTabStyle = (isActive) => ({
-    padding: '8px 16px',
-    fontSize: '14px',
-    fontWeight: '600',
-    borderRadius: '6px',
-    color: isActive ? '#ffffff' : '#374151',
-    backgroundColor: isActive ? '#6b7280' : 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
+    padding: "8px 16px",
+    fontSize: "14px",
+    fontWeight: "600",
+    borderRadius: "6px",
+    color: isActive ? "#ffffff" : "#374151",
+    backgroundColor: isActive ? "#6b7280" : "transparent",
+    border: "none",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   });
 
   const getBadgeStyle = (isActive) => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    paddingLeft: '8px',
-    paddingRight: '8px',
-    paddingTop: '4px',
-    paddingBottom: '4px',
-    borderRadius: '9999px',
-    fontSize: '12px',
-    fontWeight: '500',
-    backgroundColor: isActive ? '#6b7280' : '#e5e7eb',
-    color: isActive ? '#ffffff' : '#374151'
+    display: "inline-flex",
+    alignItems: "center",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    paddingTop: "4px",
+    paddingBottom: "4px",
+    borderRadius: "9999px",
+    fontSize: "12px",
+    fontWeight: "500",
+    backgroundColor: isActive ? "#6b7280" : "#e5e7eb",
+    color: isActive ? "#ffffff" : "#374151",
   });
 
   const getStatusBadgeStyle = (status) => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    paddingLeft: '8px',
-    paddingRight: '8px',
-    paddingTop: '2px',
-    paddingBottom: '2px',
-    borderRadius: '12px',
-    fontSize: '11px',
-    fontWeight: '600',
-    backgroundColor: status === 'published' ? '#dcfce7' : '#fef3c7',
-    color: status === 'published' ? '#166534' : '#92400e'
+    display: "inline-flex",
+    alignItems: "center",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    paddingTop: "2px",
+    paddingBottom: "2px",
+    borderRadius: "12px",
+    fontSize: "11px",
+    fontWeight: "600",
+    backgroundColor: status === "published" ? "#dcfce7" : "#fef3c7",
+    color: status === "published" ? "#166534" : "#92400e",
   });
 
+  // Scrollable container style
   const scrollableContainerStyle = {
-    overflowX: 'scroll',
-    borderRadius: '8px',
-    border: '1px solid #d1d5db',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    maxWidth: '100%'
+    overflowX: "scroll",
+    borderRadius: "8px",
+    border: "1px solid #d1d5db",
+    boxShadow:
+      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+    maxWidth: "100%",
   };
 
   const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    minWidth: '1000px'
+    width: "100%",
+    borderCollapse: "collapse",
+    minWidth: "1000px",
   };
 
   const headerStyle = {
-    backgroundColor: '#4b5563',
-    color: '#ffffff'
+    backgroundColor: "#4b5563",
+    color: "#ffffff",
   };
 
   const headerCellStyle = {
-    padding: '16px',
-    textAlign: 'left',
-    fontSize: '14px',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    borderRight: '1px solid #6b7280'
+    padding: "16px",
+    textAlign: "left",
+    fontSize: "14px",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    borderRight: "1px solid #6b7280",
   };
 
   const lastHeaderCellStyle = {
     ...headerCellStyle,
-    borderRight: 'none'
+    borderRight: "none",
   };
 
   const getRowStyle = (isHovered) => ({
-    backgroundColor: isHovered ? '#f9fafb' : '#ffffff',
-    transition: 'background-color 0.2s ease',
-    borderBottom: '1px solid #e5e7eb',
-    cursor: 'pointer'
+    backgroundColor: isHovered ? "#f9fafb" : "#ffffff",
+    transition: "background-color 0.2s ease",
+    borderBottom: "1px solid #e5e7eb",
   });
 
   const cellStyle = {
-    padding: '16px',
-    borderRight: '1px solid #e5e7eb',
-    fontSize: '14px',
-    color: '#374151'
+    padding: "16px",
+    borderRight: "1px solid #e5e7eb",
+    fontSize: "14px",
+    color: "#374151",
   };
 
   const lastCellStyle = {
     ...cellStyle,
-    borderRight: 'none'
+    borderRight: "none",
   };
 
   const paginationContainerStyle = {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: '24px'
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: "24px",
   };
 
   const paginationStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    overflow: 'hidden'
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    border: "1px solid #d1d5db",
+    borderRadius: "6px",
+    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+    overflow: "hidden",
   };
 
   const paginationButtonStyle = {
-    paddingLeft: '12px',
-    paddingRight: '12px',
-    paddingTop: '8px',
-    paddingBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#6b7280',
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease'
+    paddingLeft: "12px",
+    paddingRight: "12px",
+    paddingTop: "8px",
+    paddingBottom: "8px",
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#6b7280",
+    backgroundColor: "transparent",
+    border: "none",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
   };
 
   const activePaginationButtonStyle = {
-    paddingLeft: '16px',
-    paddingRight: '16px',
-    paddingTop: '8px',
-    paddingBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#ffffff',
-    backgroundColor: '#6b7280',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s ease'
+    paddingLeft: "16px",
+    paddingRight: "16px",
+    paddingTop: "8px",
+    paddingBottom: "8px",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#ffffff",
+    backgroundColor: "#6b7280",
+    border: "none",
+    cursor: "pointer",
+    transition: "background-color 0.2s ease",
   };
 
   const emptyStateStyle = {
-    textAlign: 'center',
-    paddingTop: '48px',
-    paddingBottom: '48px'
+    textAlign: "center",
+    paddingTop: "48px",
+    paddingBottom: "48px",
   };
 
   const emptyTextStyle = {
-    color: '#6b7280',
-    fontSize: '16px',
-    fontWeight: '500'
+    color: "#6b7280",
+    fontSize: "16px",
+    fontWeight: "500",
   };
 
   const loadingStyle = {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: '40px'
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "40px",
   };
 
   return (
@@ -475,21 +421,21 @@ const TableAdmin = () => {
             style={getTabStyle(activeTab === tab)}
             onMouseEnter={(e) => {
               if (activeTab !== tab) {
-                e.target.style.color = '#374151';
+                e.target.style.color = "#374151";
               }
             }}
             onMouseLeave={(e) => {
               if (activeTab !== tab) {
-                e.target.style.color = '#6b7280';
+                e.target.style.color = "#6b7280";
               }
             }}
           >
-            <span style={{ textTransform: 'capitalize' }}>{tab}</span>
+            <span style={{ textTransform: "capitalize" }}>{tab}</span>
             <span style={getBadgeStyle(activeTab === tab)}>
               {tab === "evaluations"
-                ? userEvaluations.length
+                ? evaluations.length
                 : tab === "escalations"
-                ? userEscalations.length
+                ? escalations.length
                 : marketing.length}
             </span>
           </button>
@@ -497,22 +443,24 @@ const TableAdmin = () => {
       </div>
 
       {error && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#fee2e2',
-          color: '#b91c1c',
-          borderRadius: '6px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
+        <div
+          style={{
+            padding: "12px",
+            backgroundColor: "#fee2e2",
+            color: "#b91c1c",
+            borderRadius: "6px",
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <FileWarning size={16} />
           {error}
         </div>
       )}
 
-      {/* Escalations Tab */}
+      {/* Escalations Tab with Sub-tabs */}
       {activeTab === "escalations" && (
         <div>
           <div style={subTabContainerStyle}>
@@ -525,11 +473,15 @@ const TableAdmin = () => {
             >
               <CheckCircle size={16} />
               Published
-              <span style={{
-                ...getBadgeStyle(activeEscalationTab === "published"),
-                backgroundColor: activeEscalationTab === "published" ? '#10b981' : '#e5e7eb',
-                color: activeEscalationTab === "published" ? '#ffffff' : '#374151'
-              }}>
+              <span
+                style={{
+                  ...getBadgeStyle(activeEscalationTab === "published"),
+                  backgroundColor:
+                    activeEscalationTab === "published" ? "#10b981" : "#e5e7eb",
+                  color:
+                    activeEscalationTab === "published" ? "#ffffff" : "#374151",
+                }}
+              >
                 {publishedEscalations.length}
               </span>
             </button>
@@ -542,11 +494,15 @@ const TableAdmin = () => {
             >
               <Edit size={16} />
               Drafts
-              <span style={{
-                ...getBadgeStyle(activeEscalationTab === "draft"),
-                backgroundColor: activeEscalationTab === "draft" ? '#f59e0b' : '#e5e7eb',
-                color: activeEscalationTab === "draft" ? '#ffffff' : '#374151'
-              }}>
+              <span
+                style={{
+                  ...getBadgeStyle(activeEscalationTab === "draft"),
+                  backgroundColor:
+                    activeEscalationTab === "draft" ? "#f59e0b" : "#e5e7eb",
+                  color:
+                    activeEscalationTab === "draft" ? "#ffffff" : "#374151",
+                }}
+              >
                 {draftEscalations.length}
               </span>
             </button>
@@ -563,8 +519,7 @@ const TableAdmin = () => {
                   <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
-                      <th style={headerCellStyle}>Source</th>
-                      <th style={headerCellStyle}>Publish</th>
+                      <th style={headerCellStyle}>Status</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
                       <th style={headerCellStyle}>Evaluated By</th>
@@ -586,122 +541,134 @@ const TableAdmin = () => {
                   <tbody>
                     {currentEscalations.length > 0 ? (
                       currentEscalations.map((row, index) => {
-                        const status = row.status || 'draft';
-                        const source = row.submissionSource || 'bitrix';
+                        const isComplete = isEscalationComplete(row);
+                        const status =
+                          row.status || (isComplete ? "published" : "draft");
                         return (
                           <tr
                             key={row._id || index}
                             style={getRowStyle(hoveredRow === index)}
                             onMouseEnter={() => setHoveredRow(index)}
                             onMouseLeave={() => setHoveredRow(null)}
-                            onDoubleClick={() => handleRowDoubleClick(row, 'escalation')}
-                            title="Double-click to edit"
                           >
-                            <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
                             <td style={cellStyle}>
-                              
-                              <span style={getSourceBadgeStyle(source)}>
-                                {source === 'frontend' ? 'Frontend' : 'Bitrix'}
+                              {indexOfFirstItem + index + 1}
+                            </td>
+                            <td style={cellStyle}>
+                              <span style={getStatusBadgeStyle(status)}>
+                                {status === "published"
+                                  ? "✓ Published"
+                                  : "⚠ Draft"}
                               </span>
                             </td>
-                            <td style={cellStyle}>
-                              {status === 'draft' ? (
-                                <button
-                                  onClick={() => handlePublishEscalation(row._id)}
-                                  style={{ 
-                                    border: 'none', 
-                                    background: 'none', 
-                                    cursor: 'pointer',
-                                    color: '#10b981'
-                                  }}
-                                  title="Publish this escalation"
-                                  disabled={loading}
-                                >
-                                  <CheckCircle size={18} />
-                                </button>
-                              ) : (
-                                <span style={{ color: '#6b7280', fontSize: '12px' }}>Published</span>
-                              )}
-                            </td>
-                            <td style={cellStyle}>{row.useremail || '-'}</td>
-                            <td style={cellStyle}>{row.leadID || '-'}</td>
-                            <td style={cellStyle}>{row.evaluatedby || '-'}</td>
-                            <td style={cellStyle}>{row.agentName || '-'}</td>
-                            <td style={cellStyle}>{row.teamleader || '-'}</td>
-                            <td style={cellStyle}>{row.leadsource || '-'}</td>
-                            <td style={cellStyle}>{row.leadStatus || '-'}</td>
-                            <td style={cellStyle}>{row.escSeverity || '-'}</td>
+                            <td style={cellStyle}>{row.useremail || "-"}</td>
+                            <td style={cellStyle}>{row.leadID || "-"}</td>
+                            <td style={cellStyle}>{row.evaluatedby || "-"}</td>
+                            <td style={cellStyle}>{row.agentName || "-"}</td>
+                            <td style={cellStyle}>{row.teamleader || "-"}</td>
+                            <td style={cellStyle}>{row.leadsource || "-"}</td>
+                            <td style={cellStyle}>{row.leadStatus || "-"}</td>
+                            <td style={cellStyle}>{row.escSeverity || "-"}</td>
                             <td style={cellStyle}>
                               {row.issueIden ? (
-                                <div style={{
-                                  maxWidth: '150px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }} title={row.issueIden}>
+                                <div
+                                  style={{
+                                    maxWidth: "150px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={row.issueIden}
+                                >
                                   {row.issueIden}
                                 </div>
-                              ) : '-'}
+                              ) : (
+                                "-"
+                              )}
                             </td>
                             <td style={cellStyle}>
                               {row.escAction ? (
-                                <div style={{
-                                  maxWidth: '150px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }} title={row.escAction}>
+                                <div
+                                  style={{
+                                    maxWidth: "150px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={row.escAction}
+                                >
                                   {row.escAction}
                                 </div>
-                              ) : '-'}
+                              ) : (
+                                "-"
+                              )}
                             </td>
                             <td style={cellStyle}>
                               {row.documentation ? (
-                                <div style={{
-                                  maxWidth: '150px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }} title={row.documentation}>
+                                <div
+                                  style={{
+                                    maxWidth: "150px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={row.documentation}
+                                >
                                   {row.documentation}
                                 </div>
-                              ) : '-'}
+                              ) : (
+                                "-"
+                              )}
                             </td>
                             <td style={cellStyle}>
                               {row.successmaration ? (
-                                <div style={{
-                                  maxWidth: '150px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }} title={row.successmaration}>
+                                <div
+                                  style={{
+                                    maxWidth: "150px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={row.successmaration}
+                                >
                                   {row.successmaration}
                                 </div>
-                              ) : '-'}
+                              ) : (
+                                "-"
+                              )}
                             </td>
-                            <td style={cellStyle}>{row.userrating || '-'}</td>
-                            <td style={cellStyle}>{formatDate(row.createdAt)}</td>
+                            <td style={cellStyle}>{row.userrating || "-"}</td>
+                            <td style={cellStyle}>
+                              {formatDate(row.createdAt)}
+                            </td>
                             <td style={cellStyle}>
                               <button
-                                onClick={() => handleEditEscalation(row._id, row)}
-                                style={{ 
-                                  border: 'none', 
-                                  background: 'none', 
-                                  cursor: 'pointer',
-                                  color: '#6b7280'
+                                onClick={() => handleEdit(row._id, row)}
+                                style={{
+                                  border: "none",
+                                  background: "none",
+                                  cursor: "pointer",
+                                  color:
+                                    status === "draft" ? "#f59e0b" : "#6b7280",
                                 }}
-                                title="Edit escalation"
+                                title={
+                                  status === "draft"
+                                    ? "Complete and publish"
+                                    : "Edit"
+                                }
                               >
                                 <SquarePen size={18} />
                               </button>
                             </td>
                             <td style={lastCellStyle}>
-                              <button style={{ 
-                                border: 'none', 
-                                background: 'none', 
-                                cursor: 'pointer', 
-                                color: '#ef4444' 
-                              }}>
+                              <button
+                                style={{
+                                  border: "none",
+                                  background: "none",
+                                  cursor: "pointer",
+                                  color: "#ef4444",
+                                }}
+                              >
                                 <Trash size={18} />
                               </button>
                             </td>
@@ -710,19 +677,24 @@ const TableAdmin = () => {
                       })
                     ) : (
                       <tr>
-                        <td colSpan="19" style={{ ...cellStyle, textAlign: 'center' }}>
-                          {activeEscalationTab === "published" 
-                            ? "No published escalations found for your account"
-                            : "No draft escalations found for your account"
-                          }
+                        <td
+                          colSpan="18"
+                          style={{ ...cellStyle, textAlign: "center" }}
+                        >
+                          {activeEscalationTab === "published"
+                            ? "No published escalations found"
+                            : "No draft escalations found"}
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              {((activeEscalationTab === "published" && publishedEscalations.length > itemsPerPage) ||
-                (activeEscalationTab === "draft" && draftEscalations.length > itemsPerPage)) && (
+              {/* Pagination */}
+              {((activeEscalationTab === "published" &&
+                publishedEscalations.length > itemsPerPage) ||
+                (activeEscalationTab === "draft" &&
+                  draftEscalations.length > itemsPerPage)) && (
                 <div style={paginationContainerStyle}>
                   <div style={paginationStyle}>
                     <button
@@ -732,18 +704,26 @@ const TableAdmin = () => {
                     >
                       ‹
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <button
-                        key={page}
-                        style={page === currentPage ? activePaginationButtonStyle : paginationButtonStyle}
-                        onClick={() => paginate(page)}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          style={
+                            page === currentPage
+                              ? activePaginationButtonStyle
+                              : paginationButtonStyle
+                          }
+                          onClick={() => paginate(page)}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
                     <button
                       style={paginationButtonStyle}
-                      onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+                      onClick={() =>
+                        paginate(Math.min(totalPages, currentPage + 1))
+                      }
                       disabled={currentPage === totalPages}
                     >
                       ›
@@ -762,40 +742,47 @@ const TableAdmin = () => {
           <div style={subTabContainerStyle}>
             <button
               onClick={() => {
-                setActiveEvaluationTab("published");
+                setActiveEvaluationTab("published"); // ✅ Correct
                 setCurrentPage(1);
               }}
-              style={getSubTabStyle(activeEvaluationTab === "published")}
+              style={getSubTabStyle(activeEvaluationTab === "published")} // ✅ Correct
             >
               <CheckCircle size={16} />
               Published
-              <span style={{
-                ...getBadgeStyle(activeEvaluationTab === "published"),
-                backgroundColor: activeEvaluationTab === "published" ? '#10b981' : '#e5e7eb',
-                color: activeEvaluationTab === "published" ? '#ffffff' : '#374151'
-              }}>
-                {publishedEvaluations.length}
+              <span
+                style={{
+                  ...getBadgeStyle(activeEvaluationTab === "published"),
+                  backgroundColor:
+                    activeEvaluationTab === "published" ? "#10b981" : "#e5e7eb",
+                  color:
+                    activeEvaluationTab === "published" ? "#ffffff" : "#374151",
+                }}
+              >
+                {publishedEvaluations.length} // ✅ Correct data
               </span>
             </button>
             <button
               onClick={() => {
-                setActiveEvaluationTab("draft");
+                setActiveEvaluationTab("draft"); // ✅ Correct
                 setCurrentPage(1);
               }}
-              style={getSubTabStyle(activeEvaluationTab === "draft")}
+              style={getSubTabStyle(activeEvaluationTab === "draft")} // ✅ Correct
             >
               <Edit size={16} />
               Drafts
-              <span style={{
-                ...getBadgeStyle(activeEvaluationTab === "draft"),
-                backgroundColor: activeEvaluationTab === "draft" ? '#f59e0b' : '#e5e7eb',
-                color: activeEvaluationTab === "draft" ? '#ffffff' : '#374151'
-              }}>
-                {draftEvaluations.length}
+              <span
+                style={{
+                  ...getBadgeStyle(activeEvaluationTab === "draft"),
+                  backgroundColor:
+                    activeEvaluationTab === "draft" ? "#f59e0b" : "#e5e7eb",
+                  color:
+                    activeEvaluationTab === "draft" ? "#ffffff" : "#374151",
+                }}
+              >
+                {draftEvaluations.length} // ✅ Correct data
               </span>
             </button>
           </div>
-
           {loading ? (
             <div style={loadingStyle}>
               <Loader size={32} className="animate-spin" />
@@ -807,8 +794,7 @@ const TableAdmin = () => {
                   <thead style={headerStyle}>
                     <tr>
                       <th style={headerCellStyle}>#</th>
-                      <th style={headerCellStyle}>Source</th>
-                      <th style={headerCellStyle}>Publish</th>
+                      <th style={headerCellStyle}>Status</th>
                       <th style={headerCellStyle}>Email</th>
                       <th style={headerCellStyle}>Lead ID</th>
                       <th style={headerCellStyle}>Agent Name</th>
@@ -829,78 +815,67 @@ const TableAdmin = () => {
                   <tbody>
                     {currentEvaluations.length > 0 ? (
                       currentEvaluations.map((row, index) => {
-                        const status = row.status || 'draft';
-                        const source = row.submissionSource || 'bitrix';
+                        const isCompleteEval = isEvaluationComplete(row);
+                        const status =
+                          row.status ||
+                          (isCompleteEval ? "published" : "draft");
                         return (
                           <tr
                             key={row._id || index}
                             style={getRowStyle(hoveredRow === index)}
                             onMouseEnter={() => setHoveredRow(index)}
                             onMouseLeave={() => setHoveredRow(null)}
-                            onDoubleClick={() => handleRowDoubleClick(row, 'evaluation')}
-                            title="Double-click to edit"
                           >
-                            <td style={cellStyle}>{indexOfFirstItem + index + 1}</td>
                             <td style={cellStyle}>
-                              
-                              <span style={getSourceBadgeStyle(source)}>
-                                {source === 'frontend' ? 'Frontend' : 'Bitrix'}
+                              {indexOfFirstItem + index + 1}
+                            </td>
+                            <td style={cellStyle}>
+                              <span style={getStatusBadgeStyle(status)}>
+                                {status === "published"
+                                  ? "✓ Published"
+                                  : "⚠ Draft"}
                               </span>
                             </td>
+                            <td style={cellStyle}>{row.useremail || "-"}</td>
+                            <td style={cellStyle}>{row.leadID || "-"}</td>
+                            <td style={cellStyle}>{row.agentName || "-"}</td>
+                            <td style={cellStyle}>{row.mod || "-"}</td>
+                            <td style={cellStyle}>{row.teamleader || "-"}</td>
+                            <td style={cellStyle}>{row.greetings || "-"}</td>
+                            <td style={cellStyle}>{row.accuracy || "-"}</td>
+                            <td style={cellStyle}>{row.building || "-"}</td>
+                            <td style={cellStyle}>{row.presenting || "-"}</td>
+                            <td style={cellStyle}>{row.closing || "-"}</td>
+                            <td style={cellStyle}>{row.bonus || "-"}</td>
                             <td style={cellStyle}>
-                              {status === 'draft' ? (
-                                <button
-                                  onClick={() => handlePublishEvaluation(row._id)}
-                                  style={{ 
-                                    border: 'none', 
-                                    background: 'none', 
-                                    cursor: 'pointer',
-                                    color: '#10b981'
-                                  }}
-                                  title="Publish this evaluation"
-                                  disabled={loading}
-                                >
-                                  <CheckCircle size={18} />
-                                </button>
-                              ) : (
-                                <span style={{ color: '#6b7280', fontSize: '12px' }}>Published</span>
-                              )}
+                              {row.evaluationsummary || "-"}
                             </td>
-                            <td style={cellStyle}>{row.useremail || '-'}</td>
-                            <td style={cellStyle}>{row.leadID || '-'}</td>
-                            <td style={cellStyle}>{row.agentName || '-'}</td>
-                            
-                            <td style={cellStyle}>{row.mod || '-'}</td>
-                            <td style={cellStyle}>{row.teamleader || '-'}</td>
-                            <td style={cellStyle}>{row.greetings || '-'}</td>
-                            <td style={cellStyle}>{row.accuracy || '-'}</td>
-                            <td style={cellStyle}>{row.building || '-'}</td>
-                            <td style={cellStyle}>{row.presenting || '-'}</td>
-                            <td style={cellStyle}>{row.closing || '-'}</td>
-                            <td style={cellStyle}>{row.bonus || '-'}</td>
-                            <td style={cellStyle}>{row.evaluationsummary || '-'}</td>
-                            <td style={cellStyle}>{formatDate(row.createdAt)}</td>
+                            <td style={cellStyle}>
+                              {formatDate(row.createdAt)}
+                            </td>
                             <td style={cellStyle}>
                               <button
-                                onClick={() => handleEditEvaluation(row._id, row)}
-                                style={{ 
-                                  border: 'none', 
-                                  background: 'none', 
-                                  cursor: 'pointer',
-                                  color: '#6b7280'
+                                style={{
+                                  border: "none",
+                                  background: "none",
+                                  cursor: "pointer",
                                 }}
-                                title="Edit evaluation"
                               >
-                                <SquarePen size={18} />
+                                <SquarePen
+                                  onClick={() => handleEdits(row._id, row)}
+                                  size={18}
+                                />
                               </button>
                             </td>
                             <td style={lastCellStyle}>
-                              <button style={{ 
-                                border: 'none', 
-                                background: 'none', 
-                                cursor: 'pointer', 
-                                color: '#ef4444' 
-                              }}>
+                              <button
+                                style={{
+                                  border: "none",
+                                  background: "none",
+                                  cursor: "pointer",
+                                  color: "#ef4444",
+                                }}
+                              >
                                 <Trash size={18} />
                               </button>
                             </td>
@@ -909,19 +884,19 @@ const TableAdmin = () => {
                       })
                     ) : (
                       <tr>
-                        <td colSpan="18" style={{ ...cellStyle, textAlign: 'center' }}>
-                          {activeEvaluationTab === "published" 
-                            ? "No published evaluations found for your account"
-                            : "No draft evaluations found for your account"
-                          }
+                        <td
+                          colSpan="17"
+                          style={{ ...cellStyle, textAlign: "center" }}
+                        >
+                          No evaluations found
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              {((activeEvaluationTab === "published" && publishedEvaluations.length > itemsPerPage) ||
-                (activeEvaluationTab === "draft" && draftEvaluations.length > itemsPerPage)) && (
+              {/* Pagination */}
+              {evaluations.length > itemsPerPage && (
                 <div style={paginationContainerStyle}>
                   <div style={paginationStyle}>
                     <button
@@ -931,18 +906,26 @@ const TableAdmin = () => {
                     >
                       ‹
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <button
-                        key={page}
-                        style={page === currentPage ? activePaginationButtonStyle : paginationButtonStyle}
-                        onClick={() => paginate(page)}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          style={
+                            page === currentPage
+                              ? activePaginationButtonStyle
+                              : paginationButtonStyle
+                          }
+                          onClick={() => paginate(page)}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
                     <button
                       style={paginationButtonStyle}
-                      onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+                      onClick={() =>
+                        paginate(Math.min(totalPages, currentPage + 1))
+                      }
                       disabled={currentPage === totalPages}
                     >
                       ›
@@ -959,7 +942,9 @@ const TableAdmin = () => {
       {activeTab === "marketing" && (
         <div>
           {marketing.length > 0 ? (
-            <p style={{ color: '#374151', fontSize: '16px' }}>Marketing records go here.</p>
+            <p style={{ color: "#374151", fontSize: "16px" }}>
+              Marketing records go here.
+            </p>
           ) : (
             <div style={emptyStateStyle}>
               <p style={emptyTextStyle}>No marketing records available.</p>

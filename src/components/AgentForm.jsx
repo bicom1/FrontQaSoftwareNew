@@ -13,15 +13,16 @@ import {
   Clock,
   Calendar,
 } from "lucide-react";
-import { createEvaluationApi } from "../features/evaluationApi";
+import { createEvaluationsApi } from "../features/evaluationApi";
 import { getTeamLeadsApi } from "../features/teamleadApi";
 
 const AgentForm = () => {
   const [evaluation, setEvaluation] = useState({
-    useremail: "", 
+    useremail: "",
     leadID: "",
     agentName: "",
     mod: "",
+    responsetime: "",
     teamleader: "",
     greetings: "",
     accuracy: "",
@@ -45,54 +46,55 @@ const AgentForm = () => {
   const [teamLeaders, setTeamLeaders] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  
-// Update the useEffect to extract the data array correctly
-useEffect(() => {
-  const fetchTeamLeaders = async () => {
-    try {
-      setLoading(true);
-      console.log("Fetching team leaders...");
-      
-      // Try to import the module dynamically
-      const teamLeadModule = await import('../features/teamleadApi');
-      console.log("Team lead module:", teamLeadModule);
-      
-      // Check different export patterns
-      let getTeamLeadsFunction;
-      
-      if (teamLeadModule.getTeamLeadsApi) {
-        getTeamLeadsFunction = teamLeadModule.getTeamLeadsApi;
-        console.log("Using getTeamLeadsApi export");
-      } else if (teamLeadModule.default && teamLeadModule.default.getTeamLeadsApi) {
-        getTeamLeadsFunction = teamLeadModule.default.getTeamLeadsApi;
-        console.log("Using default.getTeamLeadsApi export");
-      } else if (teamLeadModule.default) {
-        getTeamLeadsFunction = teamLeadModule.default;
-        console.log("Using default export");
-      } else {
-        throw new Error('Team leads API function not found');
+  // Update the useEffect to extract the data array correctly
+  useEffect(() => {
+    const fetchTeamLeaders = async () => {
+      try {
+        setLoading(true);
+        console.log("Fetching team leaders...");
+
+        // Try to import the module dynamically
+        const teamLeadModule = await import("../features/teamleadApi");
+        console.log("Team lead module:", teamLeadModule);
+
+        // Check different export patterns
+        let getTeamLeadsFunction;
+
+        if (teamLeadModule.getTeamLeadsApi) {
+          getTeamLeadsFunction = teamLeadModule.getTeamLeadsApi;
+          console.log("Using getTeamLeadsApi export");
+        } else if (
+          teamLeadModule.default &&
+          teamLeadModule.default.getTeamLeadsApi
+        ) {
+          getTeamLeadsFunction = teamLeadModule.default.getTeamLeadsApi;
+          console.log("Using default.getTeamLeadsApi export");
+        } else if (teamLeadModule.default) {
+          getTeamLeadsFunction = teamLeadModule.default;
+          console.log("Using default export");
+        } else {
+          throw new Error("Team leads API function not found");
+        }
+
+        const response = await getTeamLeadsFunction();
+        console.log("API response:", response);
+
+        // Extract the data array from the response
+        const teamLeadersData = response.data || [];
+        console.log("Team leaders data:", teamLeadersData);
+
+        setTeamLeaders(teamLeadersData);
+      } catch (error) {
+        console.error("Failed to fetch team leaders:", error);
+        // Fallback to empty array
+        setTeamLeaders([]);
+      } finally {
+        setLoading(false);
       }
-      
-      const response = await getTeamLeadsFunction();
-      console.log("API response:", response);
-      
-      // Extract the data array from the response
-      const teamLeadersData = response.data || [];
-      console.log("Team leaders data:", teamLeadersData);
-      
-      setTeamLeaders(teamLeadersData);
-    } catch (error) {
-      console.error("Failed to fetch team leaders:", error);
-      // Fallback to empty array
-      setTeamLeaders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchTeamLeaders();
-}, []);
-
+    fetchTeamLeaders();
+  }, []);
 
   const handleChange = (name, value) => {
     setEvaluation((prev) => ({
@@ -115,14 +117,18 @@ useEffect(() => {
         return;
       }
 
-      
       if (!user || !user._id || !user.email) {
         console.log("User data:", user);
-        alert("User is not authenticated or user data is incomplete. Please log in.");
+        alert(
+          "User is not authenticated or user data is incomplete. Please log in."
+        );
         return;
       }
 
-      const total = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
+      const total = Object.values(userRate).reduce(
+        (sum, cat) => sum + cat.rateVal,
+        0
+      );
 
       const payload = {
         owner: user._id,
@@ -131,6 +137,7 @@ useEffect(() => {
         leadID: evaluation.leadID,
         agentName: evaluation.agentName,
         mod: evaluation.mod,
+        responsetime: evaluation.responsetime,
         teamleader: evaluation.teamleader,
         greetings: evaluation.greetings,
         accuracy: evaluation.accuracy,
@@ -144,7 +151,7 @@ useEffect(() => {
 
       console.log("Submitting payload:", payload);
 
-      const res = await createEvaluationApi(payload);
+      const res = await createEvaluationsApi(payload);
 
       alert("Evaluation saved successfully!");
       console.log("Saved evaluation:", res);
@@ -156,6 +163,7 @@ useEffect(() => {
         agentName: "",
         teamleader: "",
         mod: "",
+        responsetime: " ",
         greetings: "",
         accuracy: "",
         building: "",
@@ -176,7 +184,10 @@ useEffect(() => {
       });
     } catch (err) {
       console.error("Failed to save evaluation:", err);
-      alert("Error saving evaluation: " + (err.response?.data?.message || err.message));
+      alert(
+        "Error saving evaluation: " +
+          (err.response?.data?.message || err.message)
+      );
     }
   };
 
@@ -190,15 +201,19 @@ useEffect(() => {
     }
   }, []);
 
-  const currentRating = Object.values(userRate).reduce((sum, cat) => sum + cat.rateVal, 0);
+  const currentRating = Object.values(userRate).reduce(
+    (sum, cat) => sum + cat.rateVal,
+    0
+  );
   const maxRating = 96;
   const ratingPercentage = (currentRating / maxRating) * 100;
 
   const evaluationCriteria = [
     {
       id: "greetings",
-      title: "Professional Greetings",
-      description: "Demonstrates enthusiasm and a positive tone throughout the call.",
+      title: " Greetings",
+      description:
+        "Demonstrates enthusiasm and a positive tone throughout the call.",
       icon: <MessageSquare size={18} />,
       color: "#6366f1",
       bgColor: "rgba(99, 102, 241, 0.1)",
@@ -277,12 +292,28 @@ useEffect(() => {
 
   const getPerformanceLevel = (percentage) => {
     if (percentage >= 80)
-      return { text: "Excellent", class: "text-success", bgClass: "bg-success-subtle" };
+      return {
+        text: "Excellent",
+        class: "text-success",
+        bgClass: "bg-success-subtle",
+      };
     if (percentage >= 60)
-      return { text: "Good", class: "text-primary", bgClass: "bg-primary-subtle" };
+      return {
+        text: "Good",
+        class: "text-primary",
+        bgClass: "bg-primary-subtle",
+      };
     if (percentage >= 40)
-      return { text: "Average", class: "text-warning", bgClass: "bg-warning-subtle" };
-    return { text: "Needs Improvement", class: "text-danger", bgClass: "bg-danger-subtle" };
+      return {
+        text: "Average",
+        class: "text-warning",
+        bgClass: "bg-warning-subtle",
+      };
+    return {
+      text: "Needs Improvement",
+      class: "text-danger",
+      bgClass: "bg-danger-subtle",
+    };
   };
 
   const performanceLevel = getPerformanceLevel(ratingPercentage);
@@ -291,7 +322,7 @@ useEffect(() => {
     month: "long",
     day: "numeric",
   });
-  
+
   return (
     <>
       <style>{`
@@ -474,9 +505,13 @@ useEffect(() => {
                   <div className="icon-badge me-3">
                     <User size={20} />
                   </div>
-                  <h1 className="h2 fw-bold text-dark mb-0">Agent Performance Evaluation</h1>
+                  <h1 className="h2 fw-bold text-dark mb-0">
+                    Agent Performance Evaluation
+                  </h1>
                 </div>
-                <p className="text-muted mb-0 ms-5">Comprehensive assessment and feedback system</p>
+                <p className="text-muted mb-0 ms-5">
+                  Comprehensive assessment and feedback system
+                </p>
               </div>
               <div className="col-auto text-end">
                 <div className="datetime-info d-flex align-items-center mb-1">
@@ -485,9 +520,9 @@ useEffect(() => {
                 </div>
                 <div className="datetime-info d-flex align-items-center">
                   <Clock size={16} className="me-1" />
-                  {new Date().toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                  {new Date().toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                 </div>
               </div>
@@ -500,34 +535,47 @@ useEffect(() => {
             <div className="col-12 col-xl-10">
               {/* Progress Card */}
               <div className="custom-card mb-4">
-                <div style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="progress-header text-white p-4">
-                  <div  className="d-flex align-items-center justify-content-between">
-                    <div  className="d-flex align-items-center">
+                <div
+                  style={{
+                    background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+                  }}
+                  className="progress-header text-white p-4"
+                >
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div className="d-flex align-items-center">
                       <TrendingUp size={20} className="me-2" />
-                      <span  className="fw-semibold">Evaluation Progress</span>
+                      <span className="fw-semibold">Evaluation Progress</span>
                     </div>
                     <div className="text-end">
                       <div className="h3 fw-bold mb-0">{currentRating}</div>
-                      <small style={{ color: 'rgba(255,255,255,0.8)' }}>out of {maxRating} points</small>
+                      <small style={{ color: "rgba(255,255,255,0.8)" }}>
+                        out of {maxRating} points
+                      </small>
                     </div>
                   </div>
                 </div>
                 <div className="p-4">
                   <div className="d-flex align-items-center justify-content-between mb-3">
-                    <span className="fw-medium text-dark">Completion Status</span>
-                    <span className={`badge ${performanceLevel.bgClass} ${performanceLevel.class}`}>
+                    <span className="fw-medium text-dark">
+                      Completion Status
+                    </span>
+                    <span
+                      className={`badge ${performanceLevel.bgClass} ${performanceLevel.class}`}
+                    >
                       {performanceLevel.text}
                     </span>
                   </div>
                   <div className="progress-custom">
-                    <div 
+                    <div
                       className="progress-bar-custom h-100"
                       style={{ width: `${ratingPercentage}%` }}
                     ></div>
                   </div>
                   <div className="d-flex justify-content-between mt-2">
                     <small className="text-muted">0%</small>
-                    <small className="text-muted">{Math.round(ratingPercentage)}%</small>
+                    <small className="text-muted">
+                      {Math.round(ratingPercentage)}%
+                    </small>
                     <small className="text-muted">100%</small>
                   </div>
                 </div>
@@ -583,59 +631,127 @@ useEffect(() => {
                         className="form-control form-control-modern"
                         placeholder="Enter Agent Name"
                         value={evaluation.agentName}
-                        onChange={(e) => handleChange("agentName", e.target.value)}
+                        onChange={(e) =>
+                          handleChange("agentName", e.target.value)
+                        }
                       />
                     </div>
-<div className="col-12">
-  <label className="form-label fw-medium d-flex align-items-center mb-3">
-    <Users size={16} className="me-2 text-primary" />
-    Team Leader
-    {loading && <div className="loading-spinner ms-2"></div>}
-  </label>
-  {teamLeaders.length > 0 ? (
-    <div className="row g-3">
-      {teamLeaders.map((leader) => (
-        <div key={leader._id} className="col-md-6">
-          <div className={`radio-card ${evaluation.teamleader === leader.name ? 'selected-primary' : ''}`}>
-            <label className="form-check-label d-flex align-items-center mb-0 w-100">
-              <input
-                type="radio"
-                name="teamleader"
-                value={leader.name}
-                checked={evaluation.teamleader === leader.name}
-                onChange={(e) => handleChange("teamleader", e.target.value)}
-                className="form-check-input me-3"
-              />
-              <span className="fw-medium">{leader.name}</span>
-            </label>
-          </div>
-        </div>
-      ))}
-    </div>
-  ) : (
-    !loading && <div className="text-muted">No team leaders available</div>
-  )}
-</div>
+                    <div className="col-12">
+                      <label className="form-label fw-medium d-flex align-items-center mb-3">
+                        <Users size={16} className="me-2 text-primary" />
+                        Team Leader
+                        {loading && (
+                          <div className="loading-spinner ms-2"></div>
+                        )}
+                      </label>
+                      {teamLeaders.length > 0 ? (
+                        <div className="row g-3">
+                          {teamLeaders.map((leader) => (
+                            <div key={leader._id} className="col-md-6">
+                              <div
+                                className={`radio-card ${
+                                  evaluation.teamleader === leader.name
+                                    ? "selected-primary"
+                                    : ""
+                                }`}
+                              >
+                                <label className="form-check-label d-flex align-items-center mb-0 w-100">
+                                  <input
+                                    type="radio"
+                                    name="teamleader"
+                                    value={leader.name}
+                                    checked={
+                                      evaluation.teamleader === leader.name
+                                    }
+                                    onChange={(e) =>
+                                      handleChange("teamleader", e.target.value)
+                                    }
+                                    className="form-check-input me-3"
+                                  />
+                                  <span className="fw-medium">
+                                    {leader.name}
+                                  </span>
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        !loading && (
+                          <div className="text-muted">
+                            No team leaders available
+                          </div>
+                        )
+                      )}
+                    </div>
 
                     {/* Mode of Communication */}
                     <div className="col-12">
                       <label className="form-label fw-medium d-flex align-items-center mb-3">
-                        <MessageSquare size={16} className="me-2 text-primary" />
+                        <MessageSquare
+                          size={16}
+                          className="me-2 text-primary"
+                        />
                         Mode of Communication
                       </label>
                       <div className="d-flex mode-selection">
-                        {['Chat', 'Call','Both'].map((mode) => (
-                          <div key={mode} className={`radio-card ${evaluation.mod === mode ? 'selected-primary' : ''}`}>
+                        {["Chat", "Call", "Both"].map((mode) => (
+                          <div
+                            key={mode}
+                            className={`radio-card ${
+                              evaluation.mod === mode ? "selected-primary" : ""
+                            }`}
+                          >
                             <label className="form-check-label d-flex align-items-center mb-0">
                               <input
                                 type="radio"
                                 name="communication"
                                 value={mode}
                                 checked={evaluation.mod === mode}
-                                onChange={(e) => handleChange("mod", e.target.value)}
+                                onChange={(e) =>
+                                  handleChange("mod", e.target.value)
+                                }
                                 className="form-check-input me-3"
                               />
                               <span className="fw-medium">{mode}</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Response time  */}
+                    <div className="col-12">
+                      <label className="form-label fw-medium d-flex align-items-center mb-3">
+                        Response Time *
+                      </label>
+                      <div className="d-flex mode-selection">
+                        {[
+                          "with in An Hour",
+                          "within A Day",
+                          "More Than One Day",
+                        ].map((responsetime) => (
+                          <div
+                            key={responsetime}
+                            className={`radio-card ${
+                              evaluation.responseTime === responsetime
+                                ? "selected-primary"
+                                : ""
+                            }`}
+                          >
+                            <label className="form-check-label d-flex align-items-center mb-0">
+                              <input
+                                type="radio"
+                                name="responseTime"
+                                value={responsetime}
+                                checked={
+                                  evaluation.responseTime === responsetime
+                                }
+                                onChange={(e) =>
+                                  handleChange("responseTime", e.target.value)
+                                }
+                                className="form-check-input me-3"
+                              />
+                              <span className="fw-medium">{responsetime}</span>
                             </label>
                           </div>
                         ))}
@@ -650,15 +766,22 @@ useEffect(() => {
                 <div key={criteria.id} className="custom-card mb-4">
                   <div className="section-header">
                     <div className="d-flex align-items-start">
-                      <div 
+                      <div
                         className="criteria-icon me-3"
-                        style={{ backgroundColor: criteria.bgColor, color: criteria.color }}
+                        style={{
+                          backgroundColor: criteria.bgColor,
+                          color: criteria.color,
+                        }}
                       >
                         {criteria.icon}
                       </div>
                       <div className="flex-fill">
-                        <h4 className="h5 fw-semibold text-dark mb-1">{criteria.title}</h4>
-                        <p className="text-muted small mb-0 lh-base">{criteria.description}</p>
+                        <h4 className="h5 fw-semibold text-dark mb-1">
+                          {criteria.title}
+                        </h4>
+                        <p className="text-muted small mb-0 lh-base">
+                          {criteria.description}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -666,38 +789,66 @@ useEffect(() => {
                     <div className="row g-3">
                       {/* Good Option */}
                       <div className="col-12">
-                        <div className={`radio-card ${evaluation[criteria.id] === criteria.goodOption.value ? 'selected-success' : ''}`}>
+                        <div
+                          className={`radio-card ${
+                            evaluation[criteria.id] ===
+                            criteria.goodOption.value
+                              ? "selected-success"
+                              : ""
+                          }`}
+                        >
+                          {/* 🌟 Professional Greeting Option */}
                           <label className="form-check-label d-flex align-items-start mb-0 w-100">
                             <input
                               type="radio"
                               name={criteria.id}
                               value={criteria.goodOption.value}
-                              checked={evaluation[criteria.id] === criteria.goodOption.value}
+                              checked={
+                                evaluation[criteria.id] ===
+                                criteria.goodOption.value
+                              }
                               onChange={(e) => {
                                 handleChange(criteria.id, e.target.value);
-                                setUserRate(pre => ({ ...pre, [criteria.id === 'greetings' ? 'greeting' : criteria.id]: { rateVal: criteria.goodOption.points } }));
+                                setUserRate((pre) => ({
+                                  ...pre,
+                                  [criteria.id === "greetings"
+                                    ? "greeting"
+                                    : criteria.id]: {
+                                    rateVal: criteria.goodOption.points,
+                                  },
+                                }));
                               }}
                               className="form-check-input me-3 mt-1"
                             />
                             <div className="flex-fill">
                               <div className="d-flex align-items-start mb-2">
-                                <CheckCircle2 size={20} className="text-success me-2 mt-0" style={{flexShrink: 0}} />
-                                <span className="fw-medium text-dark flex-fill">Meets Standards</span>
+                                <span className="fw-medium text-dark flex-fill">
+                                  Professional greeting
+                                </span>
                                 <span className="badge bg-success badge-points">
                                   +{criteria.goodOption.points} pts
                                 </span>
                               </div>
-                              <p className="text-muted small mb-0 lh-base" style={{paddingLeft: '28px'}}>
+                              <p
+                                className="text-muted small mb-0 lh-base"
+                                style={{ paddingLeft: "28px" }}
+                              >
                                 {criteria.goodOption.text}
                               </p>
                             </div>
                           </label>
                         </div>
                       </div>
-                      
+
                       {/* Poor Option */}
                       <div className="col-12">
-                        <div className={`radio-card ${evaluation[criteria.id] === "mark" ? 'selected-danger' : ''}`}>
+                        <div
+                          className={`radio-card ${
+                            evaluation[criteria.id] === "mark"
+                              ? "selected-danger"
+                              : ""
+                          }`}
+                        >
                           <label className="form-check-label d-flex align-items-start mb-0 w-100">
                             <input
                               type="radio"
@@ -706,30 +857,148 @@ useEffect(() => {
                               checked={evaluation[criteria.id] === "mark"}
                               onChange={(e) => {
                                 handleChange(criteria.id, e.target.value);
-                                setUserRate(pre => ({ ...pre, [criteria.id === 'greetings' ? 'greeting' : criteria.id]: { rateVal: 0 } }));
+                                setUserRate((pre) => ({
+                                  ...pre,
+                                  [criteria.id === "greetings"
+                                    ? "greeting"
+                                    : criteria.id]: {
+                                    rateVal: 0,
+                                  },
+                                }));
                               }}
                               className="form-check-input me-3 mt-1"
                             />
                             <div className="flex-fill">
                               <div className="d-flex align-items-start mb-2">
-                                <div 
-                                  className="me-2 mt-0" 
+                                <div
+                                  className="me-2 mt-0"
                                   style={{
-                                    width: '20px', 
-                                    height: '20px', 
-                                    border: '2px solid #ef4444', 
-                                    borderRadius: '50%',
-                                    flexShrink: 0
+                                    width: "20px",
+                                    height: "20px",
+                                    borderRadius: "50%",
+                                    // border: "2px solid #ef4444",
+                                    flexShrink: 0,
                                   }}
                                 ></div>
-                                <span className="fw-medium text-dark flex-fill">Below Standards</span>
+                                <span className="fw-medium text-dark flex-fill">
+                                  Not up to standards{" "}
+                                </span>
                                 <span className="badge bg-danger badge-points">
                                   0 pts
                                 </span>
                               </div>
-                              <p className="text-muted small mb-0 lh-base" style={{paddingLeft: '28px'}}>
-                                Performance does not meet the required standards for this criteria
+                              <p
+                                className="text-muted small mb-0 lh-base"
+                                style={{ paddingLeft: "28px" }}
+                              >
+                                Performance does not meet the required standards
+                                for this criteria
                               </p>
+
+                              {/* ✅ Only show "Select Reason" for greetings when selected */}
+                              {criteria.id === "greetings" &&
+                                evaluation[criteria.id] === "mark" && (
+                                  <div
+                                    className="p-3 rounded-3 mt-3 ms-4 shadow-sm"
+                                    style={{
+                                      backgroundColor: "#f9fafb",
+                                      border: "1px solid #e5e7eb",
+                                    }}
+                                  >
+                                    <h6
+                                      className="fw-semibold text-dark mb-3"
+                                      style={{ fontSize: "0.95rem" }}
+                                    >
+                                      Select Reason
+                                    </h6>
+
+                                    <div className="d-flex flex-column">
+                                      {[
+                                        "Irrelevant Response",
+                                        "No Booking Approach",
+                                        "Concern Handling",
+                                        "Other",
+                                      ].map((reason) => (
+                                        <div key={reason}>
+                                          <label
+                                            className="form-check-label d-flex align-items-center justify-content-between mb-2 p-2 rounded-2"
+                                            style={{
+                                              border: "1px solid #e5e7eb",
+                                              backgroundColor:
+                                                evaluation[
+                                                  `reason-${criteria.id}`
+                                                ] === reason
+                                                  ? "#ffeaea"
+                                                  : "#ffffff",
+                                              cursor: "pointer",
+                                              transition:
+                                                "background-color 0.2s ease, border-color 0.2s ease",
+                                            }}
+                                          >
+                                            <div className="d-flex align-items-center">
+                                              <input
+                                                type="radio"
+                                                name={`reason-${criteria.id}`}
+                                                value={reason}
+                                                checked={
+                                                  evaluation[
+                                                    `reason-${criteria.id}`
+                                                  ] === reason
+                                                }
+                                                onChange={(e) =>
+                                                  handleChange(
+                                                    `reason-${criteria.id}`,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="form-check-input me-3"
+                                              />
+                                              <span
+                                                className="fw-medium text-dark"
+                                                style={{ fontSize: "0.9rem" }}
+                                              >
+                                                {reason}
+                                              </span>
+                                            </div>
+                                          </label>
+
+                                          {/* ✅ Show comment box when "Other" is selected */}
+                                          {reason === "Other" &&
+                                            evaluation[
+                                              `reason-${criteria.id}`
+                                            ] === "Other" && (
+                                              <div className="ms-4 mt-2">
+                                                {" "}
+                                                Comment:
+                                                <textarea
+                                                  className="form-control shadow-sm"
+                                                  rows="3"
+                                                  placeholder="Please specify your reason..."
+                                                  value={
+                                                    evaluation[
+                                                      `otherReason-${criteria.id}`
+                                                    ] || ""
+                                                  }
+                                                  onChange={(e) =>
+                                                    handleChange(
+                                                      `otherReason-${criteria.id}`,
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  style={{
+                                                    fontSize: "0.9rem",
+                                                    borderColor: "#e5e7eb",
+                                                    backgroundColor: "#ffffff",
+                                                    resize: "none",
+                                                  }}
+                                                ></textarea>
+                                              </div>
+                                            )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                             </div>
                           </label>
                         </div>
@@ -756,8 +1025,10 @@ useEffect(() => {
                     placeholder="Please provide detailed feedback, observations, areas for improvement, and specific recommendations for the agent's professional development..."
                     rows="5"
                     value={evaluation.evaluationsummary}
-                    onChange={(e) => handleChange("evaluationsummary", e.target.value)}
-                    style={{ resize: 'none' }}
+                    onChange={(e) =>
+                      handleChange("evaluationsummary", e.target.value)
+                    }
+                    style={{ resize: "none" }}
                   />
                 </div>
               </div>
@@ -767,10 +1038,19 @@ useEffect(() => {
                 <div className="p-5 text-center">
                   <h2 className="h3 fw-bold mb-4">Final Evaluation Score</h2>
                   <div className="d-flex align-items-center justify-content-center mb-4">
-                    <div className="display-4 fw-bold me-2">{currentRating}</div>
-                    <div className="h4" style={{ color: 'rgba(255,255,255,0.8)' }}>/ {maxRating}</div>
+                    <div className="display-4 fw-bold me-2">
+                      {currentRating}
+                    </div>
+                    <div
+                      className="h4"
+                      style={{ color: "rgba(255,255,255,0.8)" }}
+                    >
+                      / {maxRating}
+                    </div>
                   </div>
-                  <div className={`badge ${performanceLevel.bgClass} ${performanceLevel.class} px-3 py-2`}>
+                  <div
+                    className={`badge ${performanceLevel.bgClass} ${performanceLevel.class} px-3 py-2`}
+                  >
                     Performance Level: {performanceLevel.text}
                   </div>
                 </div>
