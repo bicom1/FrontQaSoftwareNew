@@ -1,9 +1,8 @@
 //EditEvaluation.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
 import { updateEvaluationApi } from "../../../features/evaluationApi";
-
 
 const EditEvaluation = () => {
   const location = useLocation();
@@ -11,13 +10,42 @@ const EditEvaluation = () => {
   const row = location.state?.row;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
 
+  // Get current user email from localStorage or authentication context
+  useEffect(() => {
+    // Try to get user email from various possible storage locations
+    const userData = 
+      localStorage.getItem("user") ||
+      localStorage.getItem("userData") ||
+      sessionStorage.getItem("user") ||
+      sessionStorage.getItem("userData");
+    
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        const userEmail = parsedUser.email || parsedUser.userEmail || parsedUser.useremail;
+        if (userEmail) {
+          setCurrentUserEmail(userEmail);
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        // If parsing fails, try to use the raw string as email
+        if (typeof userData === 'string' && userData.includes('@')) {
+          setCurrentUserEmail(userData);
+        }
+      }
+    }
+    
+    // If you're using an authentication context, you can add it here:
+    // Example: const { user } = useAuth(); setCurrentUserEmail(user?.email);
+  }, []);
 
-  const [formData, setFormData] = useState(row || {
+  const [formData, setFormData] = useState({
     useremail: '',
     leadID: '',
     agentName: '',
-    mod:'',
+    mod: '',
     teamleader: '',
     greetings: '',
     accuracy: '',
@@ -28,7 +56,38 @@ const EditEvaluation = () => {
     evaluationsummary: '',
   });
 
+  // Initialize form data when row data is available
+  useEffect(() => {
+    if (row) {
+      // Use current user email if available, otherwise fall back to row data
+      const initialEmail = currentUserEmail || row.useremail || '';
+      
+      setFormData({
+        useremail: initialEmail,
+        leadID: row.leadID || '',
+        agentName: row.agentName || '',
+        mod: row.mod || '',
+        teamleader: row.teamleader || '',
+        greetings: row.greetings || '',
+        accuracy: row.accuracy || '',
+        building: row.building || '',
+        presenting: row.presenting || '',
+        closing: row.closing || '',
+        bonus: row.bonus || '',
+        evaluationsummary: row.evaluationsummary || '',
+      });
+    }
+  }, [row, currentUserEmail]);
 
+  // Update form data when currentUserEmail becomes available
+  useEffect(() => {
+    if (currentUserEmail && formData.useremail !== currentUserEmail) {
+      setFormData(prevState => ({
+        ...prevState,
+        useremail: currentUserEmail
+      }));
+    }
+  }, [currentUserEmail]);
 
   const isFormComplete = () => {
     const requiredFields = [
@@ -67,9 +126,11 @@ const EditEvaluation = () => {
        setIsSubmitting(false);
      }
    };
+   
   const handleCancel = () => {
     navigate(-1); 
   };
+  
   if (!row) {
     return (
       <div style={containerStyle}>
@@ -86,12 +147,11 @@ const EditEvaluation = () => {
     );
   }
 
-
   const completionPercentage = (() => {
     const requiredFields = [
       'useremail', 'leadID', 'agentName','mod', 'teamleader',
       'greetings', 'accuracy', 'building', 'presenting', 'closing',
-      'bonus', 'evaluationsummary', 'rating'
+      'bonus', 'evaluationsummary'
     ];
     const filledFields = requiredFields.filter(field => 
       formData[field] && formData[field].toString().trim() !== ''
@@ -141,7 +201,9 @@ const EditEvaluation = () => {
               onChange={handleInputChange}
               style={inputStyle}
               required
+              readOnly
             />
+
           </div>
 
           <div style={formGroupStyle}>
@@ -162,6 +224,17 @@ const EditEvaluation = () => {
               type="text"
               name="agentName"
               value={formData.agentName}
+              onChange={handleInputChange}
+              style={inputStyle}
+              required
+            />
+          </div>
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>Mod *</label>
+            <input
+              type="text"
+              name="mod"
+              value={formData.mod}
               onChange={handleInputChange}
               style={inputStyle}
               required
@@ -200,20 +273,28 @@ const EditEvaluation = () => {
               onChange={handleInputChange}
               style={inputStyle}
               required
-            >
-            </input>
+            />
+          </div>
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>Building *</label>
+            <input
+              name="building"
+              value={formData.building}
+              onChange={handleInputChange}
+              style={inputStyle}
+              required
+            />
           </div>
 
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Presnting *</label>
+            <label style={labelStyle}>Presenting *</label>
             <input
               name="presenting"
               value={formData.presenting}
               onChange={handleInputChange}
               style={inputStyle}
               required
-            >
-            </input>
+            />
           </div>
 
           <div style={formGroupStyle}>
@@ -281,7 +362,7 @@ const EditEvaluation = () => {
   );
 };
 
-// Additional styles for progress indicator
+// Styles remain the same...
 const progressContainerStyle = {
   display: 'flex',
   alignItems: 'center',
@@ -308,7 +389,6 @@ const progressTextStyle = {
   color: '#374151'
 };
 
-// Existing styles
 const errorStyle = {
   backgroundColor: '#fee',
   color: '#c33',
