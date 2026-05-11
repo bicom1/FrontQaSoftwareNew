@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Form, 
-  Button, 
-  Card, 
-  Spinner, 
-  Container, 
-  Row, 
-  Col, 
-  Table, 
-  Modal, 
+import {
+  Form,
+  Button,
+  Card,
+  Spinner,
+  Container,
+  Row,
+  Col,
+  Table,
+  Modal,
   InputGroup,
-  Alert
+  Alert,
 } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import teamleadApi from "../features/teamleadApi";
@@ -35,27 +35,27 @@ const TeamLeadManagement = () => {
 
   // Fetch all team leads
   const fetchTeamLeads = async () => {
-  try {
-    setFetchLoading(true);
-    const response = await teamleadApi.getTeamLeadsApi();
-    
-    // Check the actual response structure
-    if (response.data && Array.isArray(response.data)) {
-      setTeamLeads(response.data);
-    } else if (Array.isArray(response)) {
-      setTeamLeads(response);
-    } else {
-      setTeamLeads([]);
-      console.error("Unexpected API response structure:", response);
+    try {
+      setFetchLoading(true);
+      const response = await teamleadApi.getTeamLeadsApi();
+
+      // Check the actual response structure
+      if (response.data && Array.isArray(response.data)) {
+        setTeamLeads(response.data);
+      } else if (Array.isArray(response)) {
+        setTeamLeads(response);
+      } else {
+        setTeamLeads([]);
+        console.error("Unexpected API response structure:", response);
+      }
+    } catch (error) {
+      console.error("Error fetching team leads:", error);
+      toast.error("Failed to fetch team leads", toastConfig);
+      setTeamLeads([]); // Set empty array on error
+    } finally {
+      setFetchLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching team leads:", error);
-    toast.error("Failed to fetch team leads", toastConfig);
-    setTeamLeads([]); // Set empty array on error
-  } finally {
-    setFetchLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchTeamLeads();
@@ -107,7 +107,10 @@ const TeamLeadManagement = () => {
 
       const response = await teamleadApi.createTeamLeadApi(dataToSend);
 
-      toast.success(`Team lead "${formData.name}" created successfully!`, toastConfig);
+      toast.success(
+        `Team lead "${formData.name}" created successfully!`,
+        toastConfig
+      );
 
       setFormData({ name: "" });
       setShowAddModal(false);
@@ -137,7 +140,10 @@ const TeamLeadManagement = () => {
       setLoading(true);
       await teamleadApi.updateTeamLeadApi(selectedTeamLead._id, formData);
 
-      toast.success(`Team lead "${formData.name}" updated successfully!`, toastConfig);
+      toast.success(
+        `Team lead "${formData.name}" updated successfully!`,
+        toastConfig
+      );
 
       setFormData({ name: "" });
       setShowEditModal(false);
@@ -145,7 +151,8 @@ const TeamLeadManagement = () => {
       fetchTeamLeads();
     } catch (error) {
       console.error("API Error:", error);
-      const errorMessage = error.response?.data?.message || "Failed to update team lead";
+      const errorMessage =
+        error.response?.data?.message || "Failed to update team lead";
       toast.error(errorMessage, toastConfig);
     } finally {
       setLoading(false);
@@ -158,14 +165,18 @@ const TeamLeadManagement = () => {
       setLoading(true);
       await teamleadApi.deleteTeamLeadApi(selectedTeamLead._id);
 
-      toast.success(`Team lead "${selectedTeamLead.name}" deleted successfully!`, toastConfig);
+      toast.success(
+        `Team lead "${selectedTeamLead.name}" deleted successfully!`,
+        toastConfig
+      );
 
       setShowDeleteModal(false);
       setSelectedTeamLead(null);
       fetchTeamLeads();
     } catch (error) {
       console.error("API Error:", error);
-      const errorMessage = error.response?.data?.message || "Failed to delete team lead";
+      const errorMessage =
+        error.response?.data?.message || "Failed to delete team lead";
       toast.error(errorMessage, toastConfig);
     } finally {
       setLoading(false);
@@ -180,6 +191,9 @@ const TeamLeadManagement = () => {
   };
 
   const openEditModal = (teamLead) => {
+    // Show notification when edit button is clicked
+    toast.info(`Editing team lead: ${teamLead.name}`, toastConfig);
+
     setSelectedTeamLead(teamLead);
     setFormData({ name: teamLead.name });
     setFieldErrors({});
@@ -187,6 +201,15 @@ const TeamLeadManagement = () => {
   };
 
   const openDeleteModal = (teamLead) => {
+    // Show notification when delete button is clicked
+    toast.warning(`Preparing to delete team lead: ${teamLead.name}`, {
+      ...toastConfig,
+      style: {
+        background: "linear-gradient(90deg, #ff4444, #cc0000)",
+        color: "white",
+      },
+    });
+
     setSelectedTeamLead(teamLead);
     setShowDeleteModal(true);
   };
@@ -215,10 +238,12 @@ const TeamLeadManagement = () => {
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <h2 className="fw-bold mb-1">Team Lead Management</h2>
-              <p className="text-muted mb-0">Manage your team leads efficiently</p>
+              <p className="text-muted mb-0">
+                Manage your team leads efficiently
+              </p>
             </div>
             <Button
-              style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
+              style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
               onClick={openAddModal}
               className="rounded-3 fw-semibold px-4"
               size="lg"
@@ -247,7 +272,10 @@ const TeamLeadManagement = () => {
           </InputGroup>
         </Col>
         <Col md={4}>
-          <Card style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className=" text-white h-100">
+          <Card
+            style={{ background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
+            className=" text-white h-100"
+          >
             <Card.Body className="d-flex align-items-center justify-content-between">
               <div>
                 <small>{teamLeads.length} Total Team Leads</small>
@@ -276,7 +304,11 @@ const TeamLeadManagement = () => {
                   : "Get started by adding your first team lead"}
               </p>
               {!searchTerm && (
-                <Button variant="primary" onClick={openAddModal} className="rounded-3">
+                <Button
+                  variant="primary"
+                  onClick={openAddModal}
+                  className="rounded-3"
+                >
                   Add First Team Lead
                 </Button>
               )}
@@ -285,9 +317,15 @@ const TeamLeadManagement = () => {
             <Table responsive hover className="mb-0">
               <thead className="bg-light">
                 <tr>
-                  <th className="border-0 fw-semibold text-dark py-3 ps-4">Name</th>
-                  <th className="border-0 fw-semibold text-dark py-3">Created Date</th>
-                  <th className="border-0 fw-semibold text-dark py-3 text-center pe-4">Actions</th>
+                  <th className="border-0 fw-semibold text-dark py-3 ps-4">
+                    Name
+                  </th>
+                  <th className="border-0 fw-semibold text-dark py-3">
+                    Created Date
+                  </th>
+                  <th className="border-0 fw-semibold text-dark py-3 text-center pe-4">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -295,9 +333,15 @@ const TeamLeadManagement = () => {
                   <tr key={teamLead._id}>
                     <td className="py-3 ps-4">
                       <div className="d-flex align-items-center">
-                        <div 
+                        <div
                           className=" text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-                          style={{ width: "40px", height: "40px", fontSize: "16px", background: "linear-gradient(90deg, #4CAF50, #2196F3)" }}
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            fontSize: "16px",
+                            background:
+                              "linear-gradient(90deg, #4CAF50, #2196F3)",
+                          }}
                         >
                           {teamLead.name.charAt(0).toUpperCase()}
                         </div>
@@ -307,7 +351,9 @@ const TeamLeadManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 text-muted">{formatDate(teamLead.createdAt)}</td>
+                    <td className="py-3 text-muted">
+                      {formatDate(teamLead.createdAt)}
+                    </td>
                     <td className="py-3 text-center pe-4">
                       <Button
                         variant="outline-primary"
@@ -335,7 +381,12 @@ const TeamLeadManagement = () => {
       </Card>
 
       {/* Add Modal */}
-      <Modal show={showAddModal} onHide={() => setShowAddModal(false)} size="md" centered>
+      <Modal
+        show={showAddModal}
+        onHide={() => setShowAddModal(false)}
+        size="md"
+        centered
+      >
         <Modal.Header closeButton className="bg-light">
           <Modal.Title className="fw-bold text-primary">
             <i className="fas fa-user-plus me-2"></i>
@@ -364,7 +415,11 @@ const TeamLeadManagement = () => {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer className="border-0 px-4 pb-4">
-            <Button variant="light" onClick={() => setShowAddModal(false)} className="rounded-3 px-4">
+            <Button
+              variant="light"
+              onClick={() => setShowAddModal(false)}
+              className="rounded-3 px-4"
+            >
               Cancel
             </Button>
             <Button
@@ -390,7 +445,12 @@ const TeamLeadManagement = () => {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="md" centered>
+      <Modal
+        show={showEditModal}
+        onHide={() => setShowEditModal(false)}
+        size="md"
+        centered
+      >
         <Modal.Header closeButton className="bg-light">
           <Modal.Title className="fw-bold text-primary">
             <i className="fas fa-edit me-2"></i>
@@ -419,7 +479,11 @@ const TeamLeadManagement = () => {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer className="border-0 px-4 pb-4">
-            <Button variant="light" onClick={() => setShowEditModal(false)} className="rounded-3 px-4">
+            <Button
+              variant="light"
+              onClick={() => setShowEditModal(false)}
+              className="rounded-3 px-4"
+            >
               Cancel
             </Button>
             <Button
@@ -445,7 +509,12 @@ const TeamLeadManagement = () => {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} size="md" centered>
+      <Modal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        size="md"
+        centered
+      >
         <Modal.Header closeButton className="bg-light">
           <Modal.Title className="fw-bold text-danger">
             <i className="fas fa-exclamation-triangle me-2"></i>
@@ -459,15 +528,15 @@ const TeamLeadManagement = () => {
               Are you sure?
             </Alert.Heading>
             <p className="mb-0">
-              This action will permanently delete the team lead 
-              <strong> "{selectedTeamLead?.name}"</strong>. 
-              This action cannot be undone.
+              This action will permanently delete the team lead
+              <strong> "{selectedTeamLead?.name}"</strong>. This action cannot
+              be undone.
             </p>
           </Alert>
         </Modal.Body>
         <Modal.Footer className="border-0 px-4 pb-4">
-          <Button 
-            variant="light" 
+          <Button
+            variant="light"
             onClick={() => setShowDeleteModal(false)}
             className="rounded-3 px-4"
           >
@@ -485,9 +554,7 @@ const TeamLeadManagement = () => {
                 Deleting...
               </>
             ) : (
-              <>
-                🗑️ Delete Team Lead
-              </>
+              <>🗑️ Delete Team Lead</>
             )}
           </Button>
         </Modal.Footer>

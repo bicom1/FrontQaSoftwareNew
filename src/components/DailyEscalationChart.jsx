@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   LineChart,
   Line,
@@ -7,12 +8,9 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-
   ResponsiveContainer,
 } from "recharts";
 import { getDailyEscalations } from "../features/escalationsApi";
-
-
 
 const DailyEscalationLineChart = () => {
   const [chartData, setChartData] = useState([]);
@@ -20,23 +18,10 @@ const DailyEscalationLineChart = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-
-      const data = await getDailyEscalations();
-      setChartData(data);
-      setLoading(false);
-
       try {
-        const res = await axios.get(
-        //   "http://localhost:3001/api/escalations/dailyescalationformsubmit"
-          "https://backendqasoftware-1jfe.onrender.com/api/escalations/dailyescalationformsubmit"
-        );
-        if (res.data.success) {
-          const data = res.data.data.map(item => ({
-            date: item.date,
-            count: item.count
-          }));
-          setChartData(data);
-        }
+        // ✅ Use only one source of data (API)
+        const data = await getDailyEscalations();
+        setChartData(data);
       } catch (err) {
         console.error("Error fetching daily escalation data:", err);
       } finally {
@@ -50,7 +35,9 @@ const DailyEscalationLineChart = () => {
   if (loading)
     return (
       <div className="d-flex justify-content-center align-items-center py-5">
-        <span className="text-muted">Loading Daily Escalation Line Chart...</span>
+        <span className="text-muted">
+          Loading Daily Escalation Line Chart...
+        </span>
       </div>
     );
 
@@ -63,7 +50,9 @@ const DailyEscalationLineChart = () => {
           borderRadius: "0.5rem 0.5rem 0 0",
         }}
       >
-        <p style={{fontSize:"23px"}} className="mb-0">Daily Escalation Form Submissions</p>
+        <p style={{ fontSize: "23px" }} className="mb-0">
+          Daily Escalation Form Submissions
+        </p>
       </div>
       <div className="card-body p-2">
         {chartData.length > 0 ? (
@@ -84,7 +73,6 @@ const DailyEscalationLineChart = () => {
                   border: "1px solid #ddd",
                   borderRadius: "8px",
                   boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
-
                 }}
               />
               <Legend wrapperStyle={{ fontWeight: "bold" }} />
@@ -100,7 +88,6 @@ const DailyEscalationLineChart = () => {
           </ResponsiveContainer>
         ) : (
           <p className="text-center text-muted my-3">No data available</p>
-
         )}
       </div>
     </div>

@@ -1,19 +1,8 @@
 import React, { useEffect, useState } from "react";
-import {
-  BarChart2,
-  Activity,
-  Menu,
-  X,
-} from "lucide-react";
+import { BarChart2, Activity, Menu, X, FileText } from "lucide-react";
 import { getProfileApi } from "../../features/userApis";
 
-const AgentSidebar = ({
-  sidebarOpen,
-  setSidebarOpen,
-  activeTab,
-  onNav,
-  
-}) => {
+const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
@@ -31,7 +20,9 @@ const AgentSidebar = ({
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   const btnCls = (isActive) =>
-    `btn text-start mb-2 d-flex align-items-center ${isActive ? "btn-primary" : "btn-dark"}`;
+    `btn text-start mb-2 d-flex align-items-center ${
+      isActive ? "btn-primary" : "btn-dark"
+    }`;
 
   return (
     <aside
@@ -45,18 +36,35 @@ const AgentSidebar = ({
       {/* Brand + Toggle */}
       <div className="d-flex align-items-center mb-4 p-3">
         {sidebarOpen && <h4 className="mb-0 flex-grow-1">DashPro</h4>}
-        <button className="btn btn-dark p-1" onClick={toggleSidebar} aria-label="Toggle sidebar">
+        <button
+          className="btn btn-dark p-1"
+          onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
+        >
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
       {/* Nav */}
       <nav className="nav flex-column nav-pills px-2 flex-grow-1 overflow-auto">
-        <button className={btnCls(activeTab === "agent")} onClick={() => onNav("")}>
+        <button
+          className={btnCls(activeTab === "agent")}
+          onClick={() => onNav("")}
+        >
           <BarChart2 size={20} />
           {sidebarOpen && <span className="ms-2">Dashboard</span>}
         </button>
-        <button className={btnCls(activeTab === "feedback")} onClick={() => onNav("/feedback")}>
+        <button
+          className={btnCls(activeTab === "submissions")}
+          onClick={() => onNav("/submissions")}
+        >
+          <FileText size={20} />
+          {sidebarOpen && <span className="ms-2">My Forms</span>}
+        </button>
+        <button
+          className={btnCls(activeTab === "feedback")}
+          onClick={() => onNav("/feedback")}
+        >
           <Activity size={20} />
           {sidebarOpen && <span className="ms-2">Feedback</span>}
         </button>
@@ -75,8 +83,12 @@ const AgentSidebar = ({
               </span>
             </div>
             <div>
-              <div className="text-capitalize fw-bold">{profile?.name || "Loading..."}</div>
-              <div className="text-capitalize small">{profile?.role || "Loading..."}</div>
+              <div className="text-capitalize fw-bold">
+                {profile?.name || "Loading..."}
+              </div>
+              <div className="text-capitalize small">
+                {profile?.role || "Loading..."}
+              </div>
             </div>
           </div>
         ) : (

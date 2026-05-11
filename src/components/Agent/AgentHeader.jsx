@@ -78,7 +78,10 @@ const AgentHeader = ({
       </div>
 
       {/* Search */}
-      <div className="d-none d-md-block flex-grow-1 me-4" style={{ maxWidth: "400px" }}>
+      <div
+        className="d-none d-md-block flex-grow-1 me-4"
+        style={{ maxWidth: "400px" }}
+      >
         <div className="position-relative">
           <div
             className="input-group rounded-pill overflow-hidden shadow-sm border-0"
@@ -119,7 +122,8 @@ const AgentHeader = ({
                 className="position-absolute top-0 start-100 translate-middle badge rounded-pill d-flex align-items-center justify-content-center"
                 style={{
                   fontSize: "10px",
-                  background: "linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)",
+                  background:
+                    "linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)",
                   color: "white",
                   minWidth: "18px",
                   height: "18px",
@@ -150,7 +154,8 @@ const AgentHeader = ({
                 <div
                   className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-gradient"
                   style={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   }}
                 >
                   <h6 className="mb-0 text-white fw-semibold">Notifications</h6>
@@ -162,7 +167,10 @@ const AgentHeader = ({
                     Mark all as read
                   </button>
                 </div>
-                <div style={{ maxHeight: "350px", overflowY: "auto" }} className="custom-scrollbar">
+                <div
+                  style={{ maxHeight: "350px", overflowY: "auto" }}
+                  className="custom-scrollbar"
+                >
                   {notifications.length > 0 ? (
                     notifications.map((note) => (
                       <div
@@ -171,7 +179,9 @@ const AgentHeader = ({
                           !note.read ? "bg-light" : ""
                         }`}
                         style={{
-                          borderLeft: !note.read ? "3px solid #667eea" : "3px solid transparent",
+                          borderLeft: !note.read
+                            ? "3px solid #667eea"
+                            : "3px solid transparent",
                           transition: "all 0.2s ease",
                         }}
                       >
@@ -189,7 +199,9 @@ const AgentHeader = ({
                                 style={{
                                   width: "6px",
                                   height: "6px",
-                                  backgroundColor: !note.read ? "#667eea" : "#dee2e6",
+                                  backgroundColor: !note.read
+                                    ? "#667eea"
+                                    : "#dee2e6",
                                 }}
                               ></div>
                               {note.time}
@@ -272,7 +284,8 @@ const AgentHeader = ({
                 <div
                   className="px-4 py-3 border-bottom bg-gradient"
                   style={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   }}
                 >
                   <div className="d-flex align-items-center">
@@ -283,10 +296,16 @@ const AgentHeader = ({
                       <User size={20} className="text-primary" />
                     </div>
                     <div>
-                      <div className="text-capitalize fw-semibold" style={{ fontSize: "14px" }}>
+                      <div
+                        className="text-capitalize fw-semibold"
+                        style={{ fontSize: "14px" }}
+                      >
                         {profile?.name || "Loading..."}
                       </div>
-                      <div className="text-capitalize" style={{ fontSize: "12px" }}>
+                      <div
+                        className="text-capitalize"
+                        style={{ fontSize: "12px" }}
+                      >
                         {profile?.role || "Loading..."}
                       </div>
                     </div>

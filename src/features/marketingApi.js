@@ -53,6 +53,20 @@ export const getMarketingApi = async () => {
   }
 };
 
+// ✅ Admin/QC: READ All Marketing Entries (cross-user)
+export const getAllMarketingAdminApi = async () => {
+  try {
+    const res = await axios.get(`${baseUrl}/api/marketing/all`, authHeader());
+    return res.data;
+  } catch (error) {
+    console.error(
+      "Get All Marketing (Admin) Error:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+};
+
 // ✅ READ Single Marketing Entry by ID
 export const getMarketingByIdApi = async (id) => {
   try {
@@ -67,7 +81,11 @@ export const getMarketingByIdApi = async (id) => {
 // ✅ UPDATE Marketing Entry
 export const updateMarketingApi = async (id, payload) => {
   try {
-    const res = await axios.put(`${baseUrl}/api/marketing/getmarketing/${id}`, payload, authHeader());
+    const res = await axios.put(
+      `${baseUrl}/api/marketing/marketing/${id}`,
+      payload,
+      authHeader()
+    );
     return res.data;
   } catch (error) {
     console.error("Update Marketing Error:", error.response?.data || error.message);
@@ -78,7 +96,7 @@ export const updateMarketingApi = async (id, payload) => {
 // ✅ DELETE Marketing Entry
 export const deleteMarketingApi = async (id) => {
   try {
-    const res = await axios.delete(`${baseUrl}/api/marketing/marketing${id}`, authHeader());
+    const res = await axios.delete(`${baseUrl}/api/marketing/marketing/${id}`, authHeader());
     return res.data;
   } catch (error) {
     console.error("Delete Marketing Error:", error.response?.data || error.message);

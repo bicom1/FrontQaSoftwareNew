@@ -20,10 +20,8 @@ const AgentDashboard = () => {
       >
         <AgentHeader toggleSidebar={toggleSidebar} />
         <div className="p-6">
-          <h1 className="text-3xl font-bold mb-4">Agent Dashboard</h1>
-          <p className="text-gray-600">
-            Your dashboard content goes here...
-          </p>
+          {/* <h1 className="text-3xl font-bold mb-4">Agent Dashboard</h1>
+          <p className="text-gray-600">Your dashboard content goes here...</p> */}
         </div>
       </div>
     </div>

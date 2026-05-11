@@ -2,7 +2,23 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
-import { updateEvaluationApi } from "../../../features/evaluationApi";
+import {
+  publishEvaluationApi,
+  updateEvaluationApi,
+} from "../../../features/evaluationApi";
+
+/** Pull display text from DB criterion { value, points, ... } or legacy string */
+const criterionToFormString = (c) => {
+  if (c == null || c === "") return "";
+  if (typeof c === "string") return c;
+  if (typeof c === "object") {
+    if (c.value != null && String(c.value).trim() !== "")
+      return String(c.value).trim();
+    if (c.comment && String(c.comment).trim() !== "")
+      return String(c.comment).trim();
+  }
+  return "";
+};
 
 const EditEvaluation = () => {
   const location = useLocation();
@@ -15,66 +31,67 @@ const EditEvaluation = () => {
   // Get current user email from localStorage or authentication context
   useEffect(() => {
     // Try to get user email from various possible storage locations
-    const userData = 
+    const userData =
       localStorage.getItem("user") ||
       localStorage.getItem("userData") ||
       sessionStorage.getItem("user") ||
       sessionStorage.getItem("userData");
-    
+
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        const userEmail = parsedUser.email || parsedUser.userEmail || parsedUser.useremail;
+        const userEmail =
+          parsedUser.email || parsedUser.userEmail || parsedUser.useremail;
         if (userEmail) {
           setCurrentUserEmail(userEmail);
         }
       } catch (error) {
         console.error("Error parsing user data:", error);
         // If parsing fails, try to use the raw string as email
-        if (typeof userData === 'string' && userData.includes('@')) {
+        if (typeof userData === "string" && userData.includes("@")) {
           setCurrentUserEmail(userData);
         }
       }
     }
-    
+
     // If you're using an authentication context, you can add it here:
     // Example: const { user } = useAuth(); setCurrentUserEmail(user?.email);
   }, []);
 
   const [formData, setFormData] = useState({
-    useremail: '',
-    leadID: '',
-    agentName: '',
-    mod: '',
-    teamleader: '',
-    greetings: '',
-    accuracy: '',
-    building: '',
-    presenting: '',
-    closing: '',
-    bonus: '',
-    evaluationsummary: '',
+    useremail: "",
+    leadID: "",
+    agentName: "",
+    mod: "",
+    teamleader: "",
+    greetings: "",
+    accuracy: "",
+    building: "",
+    presenting: "",
+    closing: "",
+    bonus: "",
+    evaluationsummary: "",
   });
 
   // Initialize form data when row data is available
   useEffect(() => {
     if (row) {
       // Use current user email if available, otherwise fall back to row data
-      const initialEmail = currentUserEmail || row.useremail || '';
-      
+      const initialEmail = currentUserEmail || row.useremail || "";
+
       setFormData({
         useremail: initialEmail,
-        leadID: row.leadID || '',
-        agentName: row.agentName || '',
-        mod: row.mod || '',
-        teamleader: row.teamleader || '',
-        greetings: row.greetings || '',
-        accuracy: row.accuracy || '',
-        building: row.building || '',
-        presenting: row.presenting || '',
-        closing: row.closing || '',
-        bonus: row.bonus || '',
-        evaluationsummary: row.evaluationsummary || '',
+        leadID: row.leadID || "",
+        agentName: row.agentName || "",
+        mod: row.mod || "",
+        teamleader: row.teamleader || "",
+        greetings: criterionToFormString(row.greetings),
+        accuracy: criterionToFormString(row.accuracy),
+        building: criterionToFormString(row.building),
+        presenting: criterionToFormString(row.presenting),
+        closing: criterionToFormString(row.closing),
+        bonus: criterionToFormString(row.bonus),
+        evaluationsummary: row.evaluationsummary || "",
       });
     }
   }, [row, currentUserEmail]);
@@ -82,55 +99,84 @@ const EditEvaluation = () => {
   // Update form data when currentUserEmail becomes available
   useEffect(() => {
     if (currentUserEmail && formData.useremail !== currentUserEmail) {
-      setFormData(prevState => ({
+      setFormData((prevState) => ({
         ...prevState,
-        useremail: currentUserEmail
+        useremail: currentUserEmail,
       }));
     }
   }, [currentUserEmail]);
 
   const isFormComplete = () => {
     const requiredFields = [
-      'useremail', 'leadID', 'agentName','mod', 'teamleader',
-      'greetings', 'accuracy', 'building', 'presenting', 'closing',
-      'bonus', 'evaluationsummary'
+      "useremail",
+      "leadID",
+      "agentName",
+      "mod",
+      "teamleader",
+      "greetings",
+      "accuracy",
+      "building",
+      "presenting",
+      "closing",
+      "bonus",
+      "evaluationsummary",
     ];
-    
-    return requiredFields.every(field => 
-      formData[field] && formData[field].toString().trim() !== ''
-    );
+
+    return requiredFields.every((field) => {
+      const v = formData[field];
+      if (v == null) return false;
+      if (typeof v === "object") return Object.keys(v).length > 0;
+      return String(v).trim() !== "";
+    });
   };
 
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
+    setFormData((prevState) => ({
       ...prevState,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e) => {
-     e.preventDefault();
-     setIsSubmitting(true);
-     setError("");
-     try {
-       // Send the updated data to your API
-       await updateEvaluationApi(row._id, formData);
-       alert('Evaluation updated successfully!');
-       navigate(-1); // Go back to previous page
-     } catch (err) {
-       setError(err.message || "Failed to update Evaluation");
-       console.error('Update error:', err);
-     } finally {
-       setIsSubmitting(false);
-     }
-   };
-   
-  const handleCancel = () => {
-    navigate(-1); 
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError("");
+    try {
+      // Always save edits first
+      await updateEvaluationApi(row._id, formData);
+
+      const statusNorm = (row?.status || "").toLowerCase();
+      const isDraft = statusNorm !== "published";
+
+      // Publish only for drafts (already-published rows only need save)
+      if (isFormComplete() && isDraft) {
+        await publishEvaluationApi(row._id);
+        alert("Evaluation published successfully!");
+      } else if (isFormComplete() && !isDraft) {
+        alert("Evaluation saved.");
+      } else {
+        alert("Evaluation saved as draft!");
+      }
+      navigate(-1); // Go back to previous page
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Failed to update Evaluation";
+      setError(msg);
+      console.error("Update error:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-  
+
+  const handleCancel = () => {
+    navigate(-1);
+  };
+
   if (!row) {
     return (
       <div style={containerStyle}>
@@ -138,7 +184,10 @@ const EditEvaluation = () => {
           <h2>Edit Evaluation</h2>
         </div>
         <div style={noDataStyle}>
-          <p>No Evaluation data found. Please go back and select an Evaluation to edit.</p>
+          <p>
+            No Evaluation data found. Please go back and select an Evaluation to
+            edit.
+          </p>
           <button style={buttonStyle} onClick={handleCancel}>
             Go Back
           </button>
@@ -149,12 +198,21 @@ const EditEvaluation = () => {
 
   const completionPercentage = (() => {
     const requiredFields = [
-      'useremail', 'leadID', 'agentName','mod', 'teamleader',
-      'greetings', 'accuracy', 'building', 'presenting', 'closing',
-      'bonus', 'evaluationsummary'
+      "useremail",
+      "leadID",
+      "agentName",
+      "mod",
+      "teamleader",
+      "greetings",
+      "accuracy",
+      "building",
+      "presenting",
+      "closing",
+      "bonus",
+      "evaluationsummary",
     ];
-    const filledFields = requiredFields.filter(field => 
-      formData[field] && formData[field].toString().trim() !== ''
+    const filledFields = requiredFields.filter(
+      (field) => formData[field] && formData[field].toString().trim() !== ""
     ).length;
     return Math.round((filledFields / requiredFields.length) * 100);
   })();
@@ -169,26 +227,24 @@ const EditEvaluation = () => {
           <h2>Edit Evaluation</h2>
           <div style={progressContainerStyle}>
             <div style={progressBarStyle}>
-              <div 
+              <div
                 style={{
                   ...progressFillStyle,
                   width: `${completionPercentage}%`,
-                  backgroundColor: completionPercentage === 100 ? '#10b981' : '#3b82f6'
+                  backgroundColor:
+                    completionPercentage === 100 ? "#10b981" : "#3b82f6",
                 }}
               ></div>
             </div>
             <span style={progressTextStyle}>
-              {completionPercentage}% Complete {completionPercentage === 100 && '✓'}
+              {completionPercentage}% Complete{" "}
+              {completionPercentage === 100 && "✓"}
             </span>
           </div>
         </div>
       </div>
 
-      {error && (
-        <div style={errorStyle}>
-          {error}
-        </div>
-      )}
+      {error && <div style={errorStyle}>{error}</div>}
 
       <form onSubmit={handleSubmit} style={formStyle}>
         <div style={formGridStyle}>
@@ -203,7 +259,6 @@ const EditEvaluation = () => {
               required
               readOnly
             />
-
           </div>
 
           <div style={formGroupStyle}>
@@ -303,7 +358,7 @@ const EditEvaluation = () => {
               name="closing"
               value={formData.closing}
               onChange={handleInputChange}
-              style={{...inputStyle, minHeight: '80px'}}
+              style={{ ...inputStyle, minHeight: "80px" }}
               required
             />
           </div>
@@ -314,7 +369,7 @@ const EditEvaluation = () => {
               name="bonus"
               value={formData.bonus}
               onChange={handleInputChange}
-              style={{...inputStyle, minHeight: '80px'}}
+              style={{ ...inputStyle, minHeight: "80px" }}
               required
             />
           </div>
@@ -325,36 +380,35 @@ const EditEvaluation = () => {
               name="evaluationsummary"
               value={formData.evaluationsummary}
               onChange={handleInputChange}
-              style={{...inputStyle, minHeight: '80px'}}
+              style={{ ...inputStyle, minHeight: "80px" }}
               required
             />
           </div>
         </div>
 
         <div style={buttonContainerStyle}>
-          <button 
-            type="button" 
-            style={cancelButtonStyle} 
+          <button
+            type="button"
+            style={cancelButtonStyle}
             onClick={handleCancel}
             disabled={isSubmitting}
           >
             Cancel
           </button>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             style={{
               ...submitButtonStyle,
-              backgroundColor: isFormComplete() ? '#10b981' : '#3b82f6'
+              backgroundColor: isFormComplete() ? "#10b981" : "#3b82f6",
             }}
             disabled={isSubmitting}
           >
-            <Save size={18} style={{ marginRight: '8px' }} />
-            {isSubmitting 
-              ? 'Saving...' 
-              : isFormComplete() 
-                ? 'Publish' 
-                : 'Save as Draft'
-            }
+            <Save size={18} style={{ marginRight: "8px" }} />
+            {isSubmitting
+              ? "Saving..."
+              : isFormComplete()
+              ? "Publish"
+              : "Save as Draft"}
           </button>
         </div>
       </form>
@@ -364,154 +418,156 @@ const EditEvaluation = () => {
 
 // Styles remain the same...
 const progressContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  marginTop: '8px'
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  marginTop: "8px",
 };
 
 const progressBarStyle = {
-  width: '200px',
-  height: '8px',
-  backgroundColor: '#e5e7eb',
-  borderRadius: '4px',
-  overflow: 'hidden'
+  width: "200px",
+  height: "8px",
+  backgroundColor: "#e5e7eb",
+  borderRadius: "4px",
+  overflow: "hidden",
 };
 
 const progressFillStyle = {
-  height: '100%',
-  transition: 'width 0.3s ease, background-color 0.3s ease'
+  height: "100%",
+  transition: "width 0.3s ease, background-color 0.3s ease",
 };
 
 const progressTextStyle = {
-  fontSize: '14px',
-  fontWeight: '600',
-  color: '#374151'
+  fontSize: "14px",
+  fontWeight: "600",
+  color: "#374151",
 };
 
 const errorStyle = {
-  backgroundColor: '#fee',
-  color: '#c33',
-  padding: '12px',
-  borderRadius: '4px',
-  marginBottom: '20px',
-  border: '1px solid #fcc'
+  backgroundColor: "#fee",
+  color: "#c33",
+  padding: "12px",
+  borderRadius: "4px",
+  marginBottom: "20px",
+  border: "1px solid #fcc",
 };
 
 const containerStyle = {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '24px',
-  fontFamily: 'system-ui, -apple-system, sans-serif'
+  maxWidth: "1200px",
+  margin: "0 auto",
+  padding: "24px",
+  fontFamily: "system-ui, -apple-system, sans-serif",
 };
 
 const headerStyle = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  marginBottom: '32px',
-  paddingBottom: '16px',
-  borderBottom: '2px solid #e5e7eb'
+  display: "flex",
+  alignItems: "flex-start",
+  marginBottom: "32px",
+  paddingBottom: "16px",
+  borderBottom: "2px solid #e5e7eb",
 };
 
 const backButtonStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginRight: '16px',
-  marginTop: '4px',
-  padding: '8px',
-  backgroundColor: '#f3f4f6',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
-  ':hover': {
-    backgroundColor: '#e5e7eb'
-  }
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: "16px",
+  marginTop: "4px",
+  padding: "8px",
+  backgroundColor: "#f3f4f6",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  transition: "background-color 0.2s ease",
+  ":hover": {
+    backgroundColor: "#e5e7eb",
+  },
 };
 
 const formStyle = {
-  backgroundColor: '#ffffff',
-  padding: '32px',
-  borderRadius: '12px',
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+  backgroundColor: "#ffffff",
+  padding: "32px",
+  borderRadius: "12px",
+  boxShadow:
+    "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
 };
 
 const formGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-  gap: '24px',
-  marginBottom: '32px'
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+  gap: "24px",
+  marginBottom: "32px",
 };
 
 const formGroupStyle = {
-  display: 'flex',
-  flexDirection: 'column'
+  display: "flex",
+  flexDirection: "column",
 };
 
 const labelStyle = {
-  marginBottom: '8px',
-  fontWeight: '600',
-  color: '#374151',
-  fontSize: '14px'
+  marginBottom: "8px",
+  fontWeight: "600",
+  color: "#374151",
+  fontSize: "14px",
 };
 
 const inputStyle = {
-  padding: '12px',
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
-  fontSize: '16px',
-  transition: 'border-color 0.2s ease',
-  ':focus': {
-    outline: 'none',
-    borderColor: '#3b82f6',
-    boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
-  }
+  padding: "12px",
+  border: "1px solid #d1d5db",
+  borderRadius: "6px",
+  fontSize: "16px",
+  transition: "border-color 0.2s ease",
+  ":focus": {
+    outline: "none",
+    borderColor: "#3b82f6",
+    boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+  },
 };
 
 const buttonContainerStyle = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '16px',
-  paddingTop: '24px',
-  borderTop: '1px solid #e5e7eb'
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "16px",
+  paddingTop: "24px",
+  borderTop: "1px solid #e5e7eb",
 };
 
 const buttonStyle = {
-  padding: '12px 24px',
-  backgroundColor: '#3b82f6',
-  color: 'white',
-  border: 'none',
-  borderRadius: '6px',
-  fontSize: '16px',
-  fontWeight: '600',
-  cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
-  ':hover': {
-    backgroundColor: '#2563eb'
-  }
+  padding: "12px 24px",
+  backgroundColor: "#3b82f6",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  fontSize: "16px",
+  fontWeight: "600",
+  cursor: "pointer",
+  transition: "background-color 0.2s ease",
+  ":hover": {
+    backgroundColor: "#2563eb",
+  },
 };
 
 const cancelButtonStyle = {
   ...buttonStyle,
-  backgroundColor: '#6b7280',
-  ':hover': {
-    backgroundColor: '#4b5563'
-  }
+  backgroundColor: "#6b7280",
+  ":hover": {
+    backgroundColor: "#4b5563",
+  },
 };
 
 const submitButtonStyle = {
   ...buttonStyle,
-  display: 'flex',
-  alignItems: 'center'
+  display: "flex",
+  alignItems: "center",
 };
 
 const noDataStyle = {
-  textAlign: 'center',
-  padding: '48px',
-  backgroundColor: '#ffffff',
-  borderRadius: '12px',
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+  textAlign: "center",
+  padding: "48px",
+  backgroundColor: "#ffffff",
+  borderRadius: "12px",
+  boxShadow:
+    "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
 };
 
 export default EditEvaluation;

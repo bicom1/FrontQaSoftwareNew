@@ -9,23 +9,25 @@ import EscalationForm from "./components/EscalationForm";
 import AgentForm from "./components/AgentForm";
 import PpcForm from "./components/PpcForm";
 import Layout from "./components/admin/escalation/Layout";
-import './index.css'; 
-import './components/ContentOverview.css'
 
-
+import "./index.css";
+import "./components/ContentOverview.css";
 function RequireAuth({ children, allowedRoles }) {
-
-  
   const token = localStorage.getItem("token");
-  const role = (localStorage.getItem("userRole") || "").toLowerCase();
+  const rawRole = (localStorage.getItem("userRole") || "").toString();
+  const normalize = (s) =>
+    s.toString().trim().toLowerCase().replace(/\s+/g, " ");
+  const role = normalize(rawRole);
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
   if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
-    const allowed = allowedRoles.map((r) => r.toLowerCase());
-    if (!allowed.includes(role)) {
+    const allowed = allowedRoles.map((r) => normalize(r));
+    const isPrivileged =
+      role === "admin" || role === "superadmin" || role === "super admin";
+    if (!isPrivileged && !allowed.includes(role)) {
       return <Navigate to="/unauthorized" replace />;
     }
   }
@@ -36,7 +38,7 @@ function RequireAuth({ children, allowedRoles }) {
 function App() {
   const getAuth = () => Boolean(localStorage.getItem("token"));
   const [isLoggedIn, setIsLoggedIn] = useState(getAuth);
-  const role = (localStorage.getItem("userRole") || "").toLowerCase();
+  const role = (localStorage.getItem("userRole") || "").trim().toLowerCase();
 
   useEffect(() => {
     const handleStorage = (e) => {
@@ -55,7 +57,13 @@ function App() {
         element={
           isLoggedIn ? (
             <Navigate
-              to={role === "agent" ? "/agent" : "/dashboard"}
+              to={
+                role === "agent user"
+                  ? "/agent"
+                  : role === "qc user"
+                  ? "/dashboard/qc-team"
+                  : "/dashboard/home"
+              }
               replace
             />
           ) : (
@@ -63,14 +71,11 @@ function App() {
           )
         }
       />
-
       <Route
         path="/"
         element={<Login onLoginSuccess={() => setIsLoggedIn(true)} />}
       />
-
       <Route path="/unauthorized" element={<Unauthorized />} />
-
       <Route
         path="/dashboard/*"
         element={
@@ -79,55 +84,51 @@ function App() {
           </RequireAuth>
         }
       />
-     
-      
-  
-
       {/* New separate routes with Layout */}
-
-      
       <Route
         path="/escalation"
         element={
-          <RequireAuth>
+          <RequireAuth
+            allowedRoles={["agent user", "qc user", "admin", "superadmin"]}
+          >
             <Layout setIsLoggedIn={setIsLoggedIn}>
               <EscalationForm />
             </Layout>
           </RequireAuth>
         }
       />
-      
       <Route
         path="/marketing"
         element={
-          <RequireAuth>
+          <RequireAuth
+            allowedRoles={["agent user", "qc user", "admin", "superadmin"]}
+          >
             <Layout setIsLoggedIn={setIsLoggedIn}>
               <PpcForm />
             </Layout>
           </RequireAuth>
         }
       />
-      
       <Route
         path="/evaluation"
         element={
-          <RequireAuth>
+          <RequireAuth
+            allowedRoles={["agent user", "qc user", "admin", "superadmin"]}
+          >
             <Layout setIsLoggedIn={setIsLoggedIn}>
               <AgentForm />
             </Layout>
           </RequireAuth>
         }
       />
-     
       <Route
         path="/agent/*"
         element={
-          <RequireAuth allowedRoles={["agent"]}>
+          <RequireAuth allowedRoles={["agent user", "admin", "superadmin"]}>
             <AgentRoutes setIsLoggedIn={setIsLoggedIn} />
           </RequireAuth>
         }
       />
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

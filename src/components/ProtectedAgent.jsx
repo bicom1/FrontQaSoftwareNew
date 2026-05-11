@@ -1,11 +1,12 @@
 // src/components/ProtectedAgent.js
 import React from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useLocation, useParams, Navigate } from "react-router-dom";
 import jwtDecode from "jwt-decode";
 import TableAdmin from "./TableAdmin";
 
 const ProtectedAgent = () => {
   const { agentName } = useParams();
+  const location = useLocation();
   const token = localStorage.getItem("token");
 
   if (!token) {
@@ -21,12 +22,29 @@ const ProtectedAgent = () => {
 
   // 👇 Email se compare karein
   const currentUserEmail = decoded.email || decoded.userEmail; // Adjust according to your token structure
+  const role = (decoded.role || decoded.userRole || "").toString().toLowerCase();
+  const isPrivileged =
+    role === "admin" || role === "superadmin" || role === "super admin";
 
-  if (agentName !== currentUserEmail) {
+  // Determine which email to show:
+  // 1) URL param (preferred): /dashboard/qc-team/:agentName where agentName is actually an email
+  // 2) Navigation state: navigate(..., { state: { email } })
+  // 3) Fallback: current user email
+  const stateEmail = location?.state?.email;
+  const paramMaybeEmail = (agentName || "").toString();
+  const targetEmail =
+    (paramMaybeEmail.includes("@") ? paramMaybeEmail : null) ||
+    (typeof stateEmail === "string" && stateEmail.includes("@")
+      ? stateEmail
+      : null) ||
+    currentUserEmail;
+
+  // Non-privileged users can only view their own records
+  if (!isPrivileged && targetEmail !== currentUserEmail) {
     return <Navigate to={`/dashboard/qc-team/${currentUserEmail}`} replace />;
   }
 
-  return <TableAdmin />;
+  return <TableAdmin adminEmail={targetEmail} />;
 };
 
 export default ProtectedAgent;

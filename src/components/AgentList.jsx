@@ -1,414 +1,187 @@
-// src/components/Analytics.jsx
 import React, { useEffect, useState } from "react";
-import { 
-  Activity, 
-  Search, 
-  Users, 
-  Loader2, 
-  XCircle, 
+import {
+  Search,
+  Loader2,
+  XCircle,
   Crown,
   Mail,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-  Shield,
-  TrendingUp,
-  BarChart3
+  BarChart3,
 } from "lucide-react";
-import BitrixLeadDetails from "./BitrixLeadDetails";
 import { getallusersApi } from "../features/userApis";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 
 const AgentList = () => {
-  const [leadId, setLeadId] = useState("");
-  const [inputId, setInputId] = useState("");
   const [agents, setAgents] = useState([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
-  const [expandedAdmin, setExpandedAdmin] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [stats, setStats] = useState({
-    totalLeads: 1247,
-    conversionRate: "68%",
-    avgResponse: "2.4m"
-  });
 
-  const navigate = useNavigate(); // Initialize navigate
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setLeadId(inputId.trim());
-  };
-
-  // Function to handle admin click
-  
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAdmins = async () => {
+    const fetchUsers = async () => {
       try {
         setLoadingAgents(true);
         const res = await getallusersApi();
-        if (Array.isArray(res?.data?.data)) {
-          setAgents(res.data.data.filter((u) => u.role === "agent"));
-        } else {
-          setAgents([]);
-        }
+        const users = res?.data?.data || [];
+
+        const normalizeRole = (role) =>
+          (role || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
+
+        // Sales/Agent users (support multiple role spellings)
+        setAgents(
+          users.filter((u) => {
+            const r = normalizeRole(u.role);
+            return (
+              r === "agent user" ||
+              r === "agent" ||
+              r === "sales agent" ||
+              r.includes("agent") ||
+              r.includes("sales")
+            );
+          })
+        );
       } catch (err) {
-        console.error("Error fetching admins", err);
+        console.error("Error fetching users", err);
         setAgents([]);
       } finally {
         setLoadingAgents(false);
       }
     };
-    fetchAdmins();
+
+    fetchUsers();
   }, []);
 
-  // Filter admins based on search term
-  const filteredAdmins = agents.filter(admin => 
-    admin.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    admin.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredAgents = agents.filter(
+    (a) =>
+      a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="container-fluid px-4 py-3 analytics-dashboard">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4 header-section">
+      <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 className="fw-bold d-flex align-items-center gap-2 mb-1">
-            <BarChart3 size={28} className="text-primary" /> Agent List 
+          <h1 className="fw-bold d-flex align-items-center gap-2">
+            <BarChart3 size={28} className="text-primary" /> Agent List
           </h1>
-          <p className="text-muted mb-0">Monitor performance and manage leads efficiently</p>
+          <p className="text-muted mb-0">
+            Monitor performance and manage agents efficiently
+          </p>
         </div>
-        <div className="d-flex align-items-center gap-2">
-          <div className="stat-card mini">
-            <div className="stat-value">{agents.length}</div>
-            <div className="stat-label">Agent</div>
-          </div>
+        <div className="stat-card mini">
+          <div className="stat-value">{agents.length}</div>
+          <div className="stat-label">Agents</div>
         </div>
       </div>
 
-      
-      {/* Admin List */}
-      <div className="row g-4 mb-4">
-        <div className="col-12">
-          <div className="card border-0 shadow-sm rounded-4 admin-section">
-            <div className="card-header bg-white d-flex justify-content-between align-items-center py-3">
-              <div>
-                <h5 className="mb-0 fw-bold d-flex align-items-center gap-2">
-                  <Crown size={20} className="text-warning" /> Agent Team
-                </h5>
-                <small className="text-muted">Manage your administrator accounts</small>
-              </div>
-              <span style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="badge  rounded-pill px-3 py-2">{agents.length} Agent</span>
+      {/* Agent List */}
+      <div className="card border-0 shadow-sm rounded-4">
+        <div className="card-header bg-white d-flex justify-content-between align-items-center py-3">
+          <h5 className="mb-0 fw-bold d-flex align-items-center gap-2">
+            <Crown size={20} className="text-warning" /> Agent Team
+          </h5>
+          <span 
+            style={{
+              background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+            }}
+            className="badge rounded-pill px-3 py-2 text-white"
+          >
+            {agents.length} Agents
+          </span>
+        </div>
+
+        <div className="card-body">
+          {/* Search */}
+          <div className="mb-4">
+            <div className="search-box position-relative">
+              <Search size={18} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
+              <input
+                className="form-control ps-5"
+                placeholder="Search agents by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+          </div>
 
-            <div className="card-body">
-              {/* Search Box */}
-              <div className="row mb-4">
-                <div className="col-md-6">
-                  <div className="search-box">
-                    <Search size={18} className="search-icon" />
-                    <input
-                      type="text"
-                      className="form-control search-input"
-                      placeholder="Search admins by name or email..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {loadingAgents ? (
-                <div className="d-flex justify-content-center align-items-center py-5">
-                  <Loader2 size={28} className="me-2 text-primary spin" />
-                  <span>Loading admin team...</span>
-                </div>
-              ) : filteredAdmins.length > 0 ? (
-                <div className="row g-3">
-                  {filteredAdmins.map((agent) => (
-                    <div key={agent._id} className="col-12">
-                      <div className={`admin-card card border-0 shadow-sm rounded-3 ${expandedAdmin === agent._id ? 'expanded' : ''}`}>
-                        <div 
-                          className="card-body py-3"
-                          style={{cursor: 'pointer'}}
-                        >
-                          <div className="d-flex align-items-center justify-content-between">
-                            <div 
-                              className="d-flex align-items-center gap-3"
-                            
-                            >
-                              <div style={{background: "linear-gradient(90deg, #4CAF50, #2196F3)" }} className="admin-avatar rounded-circle  text-white d-flex align-items-center justify-content-center fw-bold">
-                                {agent.name?.charAt(0).toUpperCase()}
-                                {agent.role === 'superadmin' && <span className="admin-badge"><Crown size={10} /></span>}
-                              </div>
-                              <div>
-                                <h6 className="fw-bold mb-0 d-flex align-items-center text-capitalize gap-2 admin-name-link">
-                                  {agent.name}
-                                  {agent.role === 'superadmin' && <span className="badge bg-warning rounded-pill py-1">Owner</span>}
-                                </h6>
-                                <small className="text-muted d-flex align-items-center gap-1">
-                                  <Mail size={14} />
-                                  {agent.email}
-                                </small>
-                              </div>
-                            </div>
-                            
-                          </div>
-                          
-                          {expandedAdmin === agent._id && (
-                            <div className="admin-details mt-3 pt-3 border-top">
-                              <h6 className="detail-title">Agent Details</h6>
-                              <div className="row">
-                                <div className="col-md-6">
-                                  <div className="detail-item">
-                                    <span className="detail-label">Role:</span>
-                                    <span className="text-capitalize">{agent.role}</span>
-                                  </div>
-                                  <div className="detail-item">
-                                    <span className="detail-label">Status:</span>
-                                    <span className="badge bg-success rounded-pill">Active</span>
-                                  </div>
-                                </div>
-                                <div className="col-md-6">
-                                  <div className="detail-item">
-                                    <span className="detail-label">Member Since:</span>
-                                    <span>{new Date(agent.createdAt).toLocaleDateString()}</span>
-                                  </div>
-                                  <div className="detail-item">
-                                    <span className="detail-label">Last Login:</span>
-                                    <span>{new Date().toLocaleDateString()}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="mt-3">
-                                <button 
-                                  className="btn btn-outline-primary btn-sm"
-                                  
-                                >
-                                  View Full Details
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+          {loadingAgents ? (
+            <div className="text-center py-5">
+              <Loader2 size={28} className="spin me-2 text-primary" /> 
+              <span>Loading agents...</span>
+            </div>
+          ) : filteredAgents.length > 0 ? (
+            <div className="row g-3">
+              {filteredAgents.map((agent) => (
+                <div key={agent._id} className="col-12">
+                  <div className="card border-0 shadow-sm">
+                    <div className="card-body d-flex align-items-center gap-3">
+                      <div 
+                        className="admin-avatar rounded-circle text-white d-flex align-items-center justify-content-center fw-bold"
+                        style={{
+                          background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+                          width: "50px",
+                          height: "50px",
+                          fontSize: "1.25rem"
+                        }}
+                      >
+                        {agent.name?.charAt(0).toUpperCase() || "A"}
+                      </div>
+                      <div className="flex-grow-1">
+                        <h6 className="mb-0 fw-bold text-capitalize">
+                          {agent.name}
+                        </h6>
+                        <small className="text-muted d-flex align-items-center gap-1">
+                          <Mail size={14} /> {agent.email}
+                        </small>
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center text-muted py-5">
-                  <XCircle size={32} className="mb-2 text-danger opacity-50" />
-                  <p className="mb-0">No admins found</p>
-                  <small>Try adjusting your search terms</small>
-                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-muted py-5">
+              <XCircle size={32} className="mb-2 text-danger opacity-50" />
+              <p className="mb-0">No agents found</p>
+              {searchTerm && (
+                <small>Try adjusting your search terms</small>
               )}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-
-      <style jsx>{`
+      {/* Styles */}
+      <style>{`
         .analytics-dashboard {
-          font-family: 'Inter', 'Segoe UI', sans-serif;
+          font-family: "Inter", "Segoe UI", sans-serif;
           background: #f8fafc;
           min-height: 100vh;
         }
-        
-        .header-section {
-          padding: 1rem 0;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .stat-card {
-          background: white;
-          border: none;
-          border-radius: 12px;
-          padding: 1.5rem;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .stat-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 15px rgba(0, 0, 0, 0.06);
-        }
-        
         .stat-card.mini {
+          background: white;
+          border-radius: 12px;
           padding: 0.75rem 1rem;
           text-align: center;
-          width: 120px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+          min-width: 120px;
         }
-        
-        .stat-card.mini .stat-value {
-          font-size: 1.5rem;
-          font-weight: 700;
-          margin-bottom: 0.25rem;
-        }
-        
-        .stat-card.mini .stat-label {
-          font-size: 0.75rem;
-          color: #64748b;
-        }
-        
-        .stat-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
         .stat-value {
           font-size: 1.75rem;
           font-weight: 700;
-          margin-bottom: 0.25rem;
           color: #1e293b;
         }
-        
         .stat-label {
           font-size: 0.875rem;
           color: #64748b;
-          margin-bottom: 0;
         }
-        
-        .stat-trend {
-          font-size: 0.75rem;
-          font-weight: 600;
-          margin-top: 0.5rem;
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-        }
-        
-        .stat-trend.positive {
-          color: #10b981;
-        }
-        
-        .stat-trend.negative {
-          color: #ef4444;
-        }
-        
-        .admin-section {
-          overflow: hidden;
-        }
-        
-        .search-box {
-          position: relative;
-        }
-        
-        .search-icon {
-          position: absolute;
-          left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-          z-index: 10;
-        }
-        
-        .search-input {
-          padding-left: 40px;
-          border-radius: 8px;
-          border: 1px solid #cbd5e1;
-        }
-        
-        .admin-card {
-          transition: all 0.3s ease;
-        }
-        
-        .admin-card:hover {
-          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
-        }
-        
-        .admin-card.expanded {
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-        
-        .admin-avatar {
-          width: 50px;
-          height: 50px;
-          font-size: 1.25rem;
-          position: relative;
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        }
-        
-        .admin-badge {
-          position: absolute;
-          bottom: -2px;
-          right: -2px;
-          background: #f59e0b;
-          color: white;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 2px solid white;
-        }
-        
-        .admin-details {
-          animation: fadeIn 0.3s ease;
-        }
-        
-        .detail-title {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #475569;
-          margin-bottom: 0.75rem;
-        }
-        
-        .detail-item {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 0.5rem;
-          font-size: 0.875rem;
-        }
-        
-        .detail-label {
-          color: #64748b;
-          font-weight: 500;
-        }
-        
-        .admin-name-link {
-          cursor: pointer;
-          transition: color 0.2s;
-        }
-        
-        .admin-name-link:hover {
-          color: #3b82f6;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        
         .spin {
           animation: spin 1s linear infinite;
         }
-        
-        .bg-primary-gradient {
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        }
-        
-        @media (max-width: 768px) {
-          .stat-value {
-            font-size: 1.5rem;
-          }
-          
-          .admin-avatar {
-            width: 40px;
-            height: 40px;
-            font-size: 1rem;
-          }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
       `}</style>
     </div>

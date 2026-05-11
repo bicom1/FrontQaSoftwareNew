@@ -37,24 +37,49 @@ function Login({ onLoginSuccess }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+
     setIsSubmitting(true);
+
     try {
       const res = await LoginApi(formData);
+
       if (res.data.success) {
-        // Save token
-        localStorage.setItem("token", res.data.token);
+        const user = res.data.user;
+        const token = res.data.token;
 
-        // Save full user object
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+        // ✅ Save auth data - UPDATED to include individual fields
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("userRole", user.role);
 
-        // Save role separately if you need
-        localStorage.setItem("userRole", res.data.user.role);
+        // ✅ NEW: Save individual user fields for dashboard
+        localStorage.setItem("userId", user._id);
+        localStorage.setItem("userName", user.name);
+        localStorage.setItem("userEmail", user.email);
 
         toast.success("Login successful!");
+
         setTimeout(() => {
-          onLoginSuccess?.(); 
-          const role = res.data.user.role?.toLowerCase();
-          navigate(role === "agent" ? "/agent" : "/dashboard");
+          onLoginSuccess?.();
+
+          const role = user.role; // Keep original case from backend
+
+          // ✅ Role-based navigation matching backend roles exactly
+          if (role === "Agent User") {
+            navigate("/agent");
+          } else if (role === "Qc User") {
+            navigate("/dashboard/qc-team");
+          } else if (
+            role === "Admin" ||
+            role === "admin" ||
+            role === "superadmin" ||
+            role === "Superadmin"
+          ) {
+            navigate("/dashboard/home");
+          } else {
+            // default fallback
+            navigate("/dashboard/home");
+          }
         }, 1000);
       } else {
         toast.error(res.data.message || "Invalid credentials");
@@ -92,7 +117,6 @@ function Login({ onLoginSuccess }) {
       position: "relative",
       overflow: "hidden",
     },
-    // Add a subtle overlay for better text readability
     overlay: {
       position: "absolute",
       top: 0,
@@ -241,7 +265,6 @@ function Login({ onLoginSuccess }) {
     },
   };
 
-  // Add CSS for the animation
   const gradientAnimationCSS = `
     @keyframes gradientShift {
       0% {
@@ -313,7 +336,9 @@ function Login({ onLoginSuccess }) {
               <div
                 style={{
                   ...styles.inputGroup,
-                  ...(focusedField === "password" ? styles.inputGroupFocus : {}),
+                  ...(focusedField === "password"
+                    ? styles.inputGroupFocus
+                    : {}),
                 }}
               >
                 <FaLock
@@ -346,7 +371,8 @@ function Login({ onLoginSuccess }) {
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") setShowPassword(!showPassword);
+                    if (e.key === "Enter" || e.key === " ")
+                      setShowPassword(!showPassword);
                   }}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
@@ -362,7 +388,9 @@ function Login({ onLoginSuccess }) {
               style={{
                 ...styles.button,
                 ...(isButtonHovered ? styles.buttonHover : {}),
-                ...(isSubmitting ? { opacity: 0.6, cursor: "not-allowed" } : {}),
+                ...(isSubmitting
+                  ? { opacity: 0.6, cursor: "not-allowed" }
+                  : {}),
               }}
               disabled={isSubmitting}
               onMouseEnter={() => setIsButtonHovered(true)}
@@ -376,14 +404,17 @@ function Login({ onLoginSuccess }) {
                 onClick={handleForgotPassword}
                 style={{
                   ...styles.forgotPasswordLink,
-                  ...(isForgotPasswordHovered ? styles.forgotPasswordLinkHover : {}),
+                  ...(isForgotPasswordHovered
+                    ? styles.forgotPasswordLinkHover
+                    : {}),
                 }}
                 onMouseEnter={() => setIsForgotPasswordHovered(true)}
                 onMouseLeave={() => setIsForgotPasswordHovered(false)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") handleForgotPassword();
+                  if (e.key === "Enter" || e.key === " ")
+                    handleForgotPassword();
                 }}
               >
                 Forgot Password?

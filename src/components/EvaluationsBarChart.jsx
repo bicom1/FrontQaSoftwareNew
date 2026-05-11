@@ -10,8 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getDailyEvaluations } from "../features/evaluationApi";
-
-
+import axios from "axios";
 
 const EvaluationsBarChart = () => {
   const [chartData, setChartData] = useState([]);
@@ -23,18 +22,23 @@ const EvaluationsBarChart = () => {
       setChartData(data);
       setLoading(false);
       try {
-        // const res = await axios.get("http://localhost:3001/api/evaluations/dailyEvaluationFormSubmit");
-        const res = await axios.get("https://backendqasoftware-1jfe.onrender.com/api/evaluations/dailyEvaluationFormSubmit");
+        const res = await axios.get(
+          "http://localhost:3001/api/evaluations/dailyEvaluationFormSubmit"
+        );
+        // const res = await axios.get(
+        //   // "https://backendqasoftware-1jfe.onrender.com/api/evaluations/dailyEvaluationFormSubmit"
+        // );
 
-        
         // Sort data by date in ascending order and take last 5 entries
-        const sortedData = res.data.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const sortedData = res.data.sort(
+          (a, b) => new Date(a.date) - new Date(b.date)
+        );
         const lastFiveDays = sortedData.slice(-5);
 
         // Convert to chart format
-        const formattedData = lastFiveDays.map(item => ({
+        const formattedData = lastFiveDays.map((item) => ({
           date: item.date,
-          count: item.count
+          count: item.count,
         }));
 
         setChartData(formattedData);
@@ -64,13 +68,14 @@ const EvaluationsBarChart = () => {
           borderRadius: "0.5rem 0.5rem 0 0",
         }}
       >
-        <p style={{fontSize:"23px"}} className="mb-0">Daily Evaluations (Last 5 Days)</p>
+        <p style={{ fontSize: "23px" }} className="mb-0">
+          Daily Evaluations (Last 5 Days)
+        </p>
       </div>
       <div className="card-body p-2">
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
-
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
               <XAxis
                 dataKey="date"
@@ -89,12 +94,16 @@ const EvaluationsBarChart = () => {
                 }}
               />
               <Legend wrapperStyle={{ fontWeight: "bold" }} />
-              <Bar dataKey="count" fill="#2196f3" radius={[4, 4, 0, 0]} barSize={30} />
+              <Bar
+                dataKey="count"
+                fill="#2196f3"
+                radius={[4, 4, 0, 0]}
+                barSize={30}
+              />
             </BarChart>
           </ResponsiveContainer>
         ) : (
           <p className="text-center text-muted my-3">No data available</p>
-
         )}
       </div>
     </div>
@@ -102,4 +111,3 @@ const EvaluationsBarChart = () => {
 };
 
 export default EvaluationsBarChart;
-
