@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { getallusersApi } from "../features/userApis";
 import { useNavigate } from "react-router-dom";
+import { isAgentRole } from "../utils/roles";
 
 const AgentList = () => {
   const [agents, setAgents] = useState([]);
@@ -24,22 +25,7 @@ const AgentList = () => {
         const res = await getallusersApi();
         const users = res?.data?.data || [];
 
-        const normalizeRole = (role) =>
-          (role || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
-
-        // Sales/Agent users (support multiple role spellings)
-        setAgents(
-          users.filter((u) => {
-            const r = normalizeRole(u.role);
-            return (
-              r === "agent user" ||
-              r === "agent" ||
-              r === "sales agent" ||
-              r.includes("agent") ||
-              r.includes("sales")
-            );
-          })
-        );
+        setAgents(users.filter((u) => isAgentRole(u.role)));
       } catch (err) {
         console.error("Error fetching users", err);
         setAgents([]);

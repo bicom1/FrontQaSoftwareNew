@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { BarChart2, Activity, Menu, X, FileText } from "lucide-react";
+import { BarChart2, Activity, Menu, X, FileText, Users } from "lucide-react";
 import { getProfileApi } from "../../features/userApis";
+import { isAgentAdmin } from "../../utils/roles";
 
 const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
   const [profile, setProfile] = useState(null);
@@ -18,6 +19,9 @@ const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
   }, []);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const showTeamUsers = isAgentAdmin(
+    profile?.role || localStorage.getItem("userRole")
+  );
 
   const btnCls = (isActive) =>
     `btn text-start mb-2 d-flex align-items-center ${
@@ -35,7 +39,7 @@ const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
     >
       {/* Brand + Toggle */}
       <div className="d-flex align-items-center mb-4 p-3">
-        {sidebarOpen && <h4 className="mb-0 flex-grow-1">DashPro</h4>}
+        {sidebarOpen && <h4 className="mb-0 flex-grow-1">Bicomm</h4>}
         <button
           className="btn btn-dark p-1"
           onClick={toggleSidebar}
@@ -68,6 +72,15 @@ const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
           <Activity size={20} />
           {sidebarOpen && <span className="ms-2">Feedback</span>}
         </button>
+        {showTeamUsers && (
+          <button
+            className={btnCls(activeTab === "team-users")}
+            onClick={() => onNav("/team-users")}
+          >
+            <Users size={20} />
+            {sidebarOpen && <span className="ms-2">Team Users</span>}
+          </button>
+        )}
       </nav>
 
       {/* Profile footer */}

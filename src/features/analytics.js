@@ -18,6 +18,16 @@ export const getContentOverviewApi = async () => {
     return response.data;
   } catch (error) {
     console.error("Error fetching content overview:", error);
-    return { success: false, draftCount: 0, publishedCount: 0, recentActivity: [] };
+    return { success: false, publishedCount: 0, recentActivity: [] };
+  }
+};
+
+export const getWeeklyStatsApi = async () => {
+  try {
+    const response = await axios.get(`${baseUrl}/api/analytics/weekly-stats`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching weekly stats:", error);
+    return { success: false, data: [] };
   }
 };

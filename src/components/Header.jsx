@@ -184,6 +184,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getProfileApi, logoutApi } from "../features/userApis";
+import { normalizeProfileResponse } from "../utils/profileUtils";
 
 const Header = ({
   sidebarOpen,
@@ -194,22 +195,26 @@ const Header = ({
   setShowNotifications,
   showUserMenu,
   setShowUserMenu,
+  userProfile,
 }) => {
   const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch profile once on mount
   useEffect(() => {
+    if (userProfile) {
+      setProfile(userProfile);
+      return;
+    }
     const fetchProfile = async () => {
       try {
         const res = await getProfileApi();
-        setProfile(res.data);
+        setProfile(normalizeProfileResponse(res.data));
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
       }
     };
     fetchProfile();
-  }, []);
+  }, [userProfile]);
 
   const markAllAsRead = () => {
     setNotifications(notifications.map((n) => ({ ...n, read: true })));
@@ -378,7 +383,14 @@ const Header = ({
                 </div>
 
                 <div className="py-2">
-                  <button className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light">
+                  <button
+                    type="button"
+                    className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate("/dashboard/profile");
+                    }}
+                  >
                     <UserCircle
                       size={16}
                       className="me-3 text-muted"
@@ -386,7 +398,14 @@ const Header = ({
                     />
                     <span style={{ fontSize: "14px" }}>Profile</span>
                   </button>
-                  <button className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light">
+                  <button
+                    type="button"
+                    className="dropdown-item d-flex align-items-center px-4 py-2 border-0 hover-bg-light"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate("/dashboard/settings");
+                    }}
+                  >
                     <Settings
                       size={16}
                       className="me-3 text-muted"

@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./components/Unauthorized";
 import AgentRoutes from "./Routes/AgentRoutes";
@@ -9,25 +11,22 @@ import EscalationForm from "./components/EscalationForm";
 import AgentForm from "./components/AgentForm";
 import PpcForm from "./components/PpcForm";
 import Layout from "./components/admin/escalation/Layout";
+import { normalizeRole, ROLES, getDashboardPath } from "./utils/roles";
 
 import "./index.css";
 import "./components/ContentOverview.css";
+
 function RequireAuth({ children, allowedRoles }) {
   const token = localStorage.getItem("token");
-  const rawRole = (localStorage.getItem("userRole") || "").toString();
-  const normalize = (s) =>
-    s.toString().trim().toLowerCase().replace(/\s+/g, " ");
-  const role = normalize(rawRole);
+  const role = normalizeRole(localStorage.getItem("userRole") || "");
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
   if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
-    const allowed = allowedRoles.map((r) => normalize(r));
-    const isPrivileged =
-      role === "admin" || role === "superadmin" || role === "super admin";
-    if (!isPrivileged && !allowed.includes(role)) {
+    const allowed = allowedRoles.map((r) => normalizeRole(r));
+    if (!allowed.includes(role)) {
       return <Navigate to="/unauthorized" replace />;
     }
   }
@@ -38,7 +37,7 @@ function RequireAuth({ children, allowedRoles }) {
 function App() {
   const getAuth = () => Boolean(localStorage.getItem("token"));
   const [isLoggedIn, setIsLoggedIn] = useState(getAuth);
-  const role = (localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const role = normalizeRole(localStorage.getItem("userRole") || "");
 
   useEffect(() => {
     const handleStorage = (e) => {
@@ -56,16 +55,7 @@ function App() {
         path="/login"
         element={
           isLoggedIn ? (
-            <Navigate
-              to={
-                role === "agent user"
-                  ? "/agent"
-                  : role === "qc user"
-                  ? "/dashboard/qc-team"
-                  : "/dashboard/home"
-              }
-              replace
-            />
+            <Navigate to={getDashboardPath(role)} replace />
           ) : (
             <Login onLoginSuccess={() => setIsLoggedIn(true)} />
           )
@@ -75,21 +65,69 @@ function App() {
         path="/"
         element={<Login onLoginSuccess={() => setIsLoggedIn(true)} />}
       />
-      <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
-        path="/dashboard/*"
+        path="/signup"
         element={
-          <RequireAuth>
+          isLoggedIn ? (
+            <Navigate to={getDashboardPath(role)} replace />
+          ) : (
+            <Signup />
+          )
+        }
+      />
+      <Route path="/unauthorized" element={<Unauthorized />} />
+
+      {/* Super Admin — full system */}
+      <Route
+        path="/admin/*"
+        element={
+          <RequireAuth allowedRoles={[ROLES.SUPER_ADMIN]}>
             <Dashboard onLogout={() => setIsLoggedIn(false)} />
           </RequireAuth>
         }
       />
-      {/* New separate routes with Layout */}
+
+      {/* QC module — QC roles + Super Admin oversight */}
+      <Route
+        path="/dashboard/*"
+        element={
+          <RequireAuth
+            allowedRoles={[
+              ROLES.SUPER_ADMIN,
+              ROLES.QC_ADMIN,
+              ROLES.QC_USER,
+            ]}
+          >
+            <Dashboard onLogout={() => setIsLoggedIn(false)} />
+          </RequireAuth>
+        }
+      />
+
+      {/* Agent module — Agent roles only */}
+      <Route
+        path="/agent/*"
+        element={
+          <RequireAuth
+            allowedRoles={[ROLES.AGENT_USER, ROLES.AGENT_ADMIN]}
+          >
+            <AgentRoutes setIsLoggedIn={setIsLoggedIn} />
+          </RequireAuth>
+        }
+      />
+
+      {/* Shared forms — role-gated per domain */}
       <Route
         path="/escalation"
         element={
           <RequireAuth
-            allowedRoles={["agent user", "qc user", "admin", "superadmin"]}
+            allowedRoles={[
+              ROLES.SUPER_ADMIN,
+              ROLES.AGENT_USER,
+              ROLES.AGENT_ADMIN,
+              ROLES.QC_USER,
+              ROLES.QC_ADMIN,
+            ]}
           >
             <Layout setIsLoggedIn={setIsLoggedIn}>
               <EscalationForm />
@@ -101,7 +139,13 @@ function App() {
         path="/marketing"
         element={
           <RequireAuth
-            allowedRoles={["agent user", "qc user", "admin", "superadmin"]}
+            allowedRoles={[
+              ROLES.SUPER_ADMIN,
+              ROLES.AGENT_USER,
+              ROLES.AGENT_ADMIN,
+              ROLES.QC_USER,
+              ROLES.QC_ADMIN,
+            ]}
           >
             <Layout setIsLoggedIn={setIsLoggedIn}>
               <PpcForm />
@@ -113,7 +157,13 @@ function App() {
         path="/evaluation"
         element={
           <RequireAuth
-            allowedRoles={["agent user", "qc user", "admin", "superadmin"]}
+            allowedRoles={[
+              ROLES.SUPER_ADMIN,
+              ROLES.AGENT_USER,
+              ROLES.AGENT_ADMIN,
+              ROLES.QC_USER,
+              ROLES.QC_ADMIN,
+            ]}
           >
             <Layout setIsLoggedIn={setIsLoggedIn}>
               <AgentForm />
@@ -121,14 +171,7 @@ function App() {
           </RequireAuth>
         }
       />
-      <Route
-        path="/agent/*"
-        element={
-          <RequireAuth allowedRoles={["agent user", "admin", "superadmin"]}>
-            <AgentRoutes setIsLoggedIn={setIsLoggedIn} />
-          </RequireAuth>
-        }
-      />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

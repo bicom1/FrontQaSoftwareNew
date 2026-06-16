@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
 import {
-  publishEvaluationApi,
   updateEvaluationApi,
 } from "../../../features/evaluationApi";
 
@@ -145,21 +144,12 @@ const EditEvaluation = () => {
     setError("");
     try {
       // Always save edits first
-      await updateEvaluationApi(row._id, formData);
-
-      const statusNorm = (row?.status || "").toLowerCase();
-      const isDraft = statusNorm !== "published";
-
-      // Publish only for drafts (already-published rows only need save)
-      if (isFormComplete() && isDraft) {
-        await publishEvaluationApi(row._id);
-        alert("Evaluation published successfully!");
-      } else if (isFormComplete() && !isDraft) {
-        alert("Evaluation saved.");
-      } else {
-        alert("Evaluation saved as draft!");
-      }
-      navigate(-1); // Go back to previous page
+      await updateEvaluationApi(row._id, {
+        ...formData,
+        status: "published",
+      });
+      alert("Evaluation saved successfully.");
+      navigate(-1);
     } catch (err) {
       const msg =
         err?.response?.data?.message ||

@@ -1617,6 +1617,19 @@ import EvaluationsBarChart from "./EvaluationsBarChart";
 import ReportDownload from "./ReportDownload";
 import DailyEscalationChart from "./DailyEscalationChart";
 import DailyMarketingLineChart from "./DailyMarketingLineChart.jsx";
+import {
+  ROLES,
+  normalizeRole,
+  isSuperAdmin,
+  ROLE_LABELS,
+  SUPER_ADMIN_PANEL_ROLES,
+  isAgentRole,
+  isQcRole,
+} from "../utils/roles";
+import {
+  loginAndRedirect,
+  parseAuthFromRegisterResponse,
+} from "../utils/authSession";
 
 const COLORS = [
   "#0088FE",
@@ -1636,8 +1649,10 @@ const Overview = () => {
   const [totalMarketingCounts, setTotalMarketingCounts] = useState(null);
   const [chartData, setChartData] = useState([]);
   const [evaluationAnalytics, setEvaluationAnalytics] = useState(null);
-  const [draftCount, setDraftCount] = useState(0);
   const [publishedCount, setPublishedCount] = useState(0);
+  const currentUserRole = normalizeRole(localStorage.getItem("userRole") || "");
+  const canAddUsers = isSuperAdmin(currentUserRole);
+  const addUserRoleOptions = SUPER_ADMIN_PANEL_ROLES;
   const [recentActivity, setRecentActivity] = useState([]);
   const token = localStorage.getItem("token");
   let username = null;
@@ -1680,7 +1695,6 @@ const Overview = () => {
     const fetchContentOverview = async () => {
       const result = await getContentOverviewApi();
       if (result?.success) {
-        setDraftCount(result.draftCount ?? 0);
         setPublishedCount(result.publishedCount ?? 0);
         setRecentActivity(Array.isArray(result.recentActivity) ? result.recentActivity : []);
       }
@@ -1694,22 +1708,21 @@ const Overview = () => {
     name: "",
     email: "",
     password: "",
-    role: "sales agent",
+    role: ROLES.AGENT_USER,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alertMessage, setAlertMessage] = useState({ type: "", message: "" });
 
-  // Admin, Agents & QC Users
-  const [admins, setAdmins] = useState([]);
+  // QC Team & Sales Agent Team
+  const [qcTeam, setQcTeam] = useState([]);
   const [agents, setAgents] = useState([]);
-  const [qcUsers, setQcUsers] = useState([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
 
   // Users Modal states
   const [showUsersModal, setShowUsersModal] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [activeTab, setActiveTab] = useState("admin");
+  const [activeTab, setActiveTab] = useState("agent_user");
   const [searchTerm, setSearchTerm] = useState("");
   const [usersError, setUsersError] = useState("");
 
@@ -1775,38 +1788,12 @@ const Overview = () => {
         const res = await getallusersApi();
         const users = res?.data?.data || [];
 
-        const normalizeRole = (role) =>
-          (role || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
-
-        const isQcUser = (u) => {
-          const r = normalizeRole(u.role);
-          return r === "qc user" || r === "qc" || r.includes("qc");
-        };
-
-        const isAgentUser = (u) => {
-          const r = normalizeRole(u.role);
-          return (
-            r === "agent user" ||
-            r === "agent" ||
-            r === "sales agent" ||
-            r.includes("agent") ||
-            r.includes("sales")
-          );
-        };
-
-        const isAdminUser = (u) => {
-          const r = normalizeRole(u.role);
-          return r === "admin" || r === "superadmin" || r.includes("admin");
-        };
-
-        setQcUsers(users.filter(isQcUser));
-        setAgents(users.filter(isAgentUser));
-        setAdmins(users.filter(isAdminUser));
+        setQcTeam(users.filter((u) => isQcRole(u.role)));
+        setAgents(users.filter((u) => isAgentRole(u.role)));
       } catch (err) {
         console.error("Error fetching users", err);
         setAgents([]);
-        setQcUsers([]);
-        setAdmins([]);
+        setQcTeam([]);
       } finally {
         setLoadingAgents(false);
       }
@@ -1846,17 +1833,14 @@ const Overview = () => {
     setShowUsersModal(false);
     setSearchTerm("");
     setUsersError("");
-    setActiveTab("admin");
+    setActiveTab("agent_user");
   };
 
   // Filter users based on role and search term
   const getFilteredUsers = (role) => {
-    const roleUsers = allUsers.filter((user) => {
-      if (role === "admin") {
-        return user.role === "admin" || user.role === "superadmin";
-      }
-      return user.role === "sales agent" || user.role === "agent";
-    });
+    const roleUsers = allUsers.filter(
+      (user) => normalizeRole(user.role) === normalizeRole(role)
+    );
 
     if (!searchTerm) return roleUsers;
 
@@ -1867,9 +1851,23 @@ const Overview = () => {
     );
   };
 
-  const adminUsers = getFilteredUsers("admin");
-  const salesAgentUsers = getFilteredUsers("sales agent");
-  const currentUsers = activeTab === "admin" ? adminUsers : salesAgentUsers;
+  const agentUserList = getFilteredUsers(ROLES.AGENT_USER);
+  const agentAdminList = getFilteredUsers(ROLES.AGENT_ADMIN);
+  const qcAdminUsers = getFilteredUsers(ROLES.QC_ADMIN);
+  const qcUserList = getFilteredUsers(ROLES.QC_USER);
+  const superAdminList = allUsers.filter(
+    (u) => normalizeRole(u.role) === ROLES.SUPER_ADMIN
+  );
+  const currentUsers =
+    activeTab === "agent_user"
+      ? agentUserList
+      : activeTab === "agent_admin"
+      ? agentAdminList
+      : activeTab === "qc_admin"
+      ? qcAdminUsers
+      : activeTab === "qc_user"
+      ? qcUserList
+      : agentUserList;
 
   // Handle edit user
   const handleEditUser = (user) => {
@@ -2060,7 +2058,7 @@ const Overview = () => {
       name: "",
       email: "",
       password: "",
-      role: "sales agent",
+      role: ROLES.AGENT_USER,
     });
     setAlertMessage({ type: "", message: "" });
   };
@@ -2097,9 +2095,17 @@ const Overview = () => {
       const response = await LeadRegister(formData);
 
       if (response.status === 200 || response.status === 201) {
+        const auth = parseAuthFromRegisterResponse(response.data);
+        if (auth) {
+          loginAndRedirect(auth.user, auth.token);
+          return;
+        }
+
+        const roleLabel =
+          ROLE_LABELS[normalizeRole(formData.role)] || formData.role;
         setAlertMessage({
           type: "success",
-          message: "User registered successfully!",
+          message: `User "${formData.name.trim()}" created as ${roleLabel}.`,
         });
 
         const updatedUsers = await totalUserCountApi();
@@ -2154,11 +2160,13 @@ const Overview = () => {
                 {totalUsers ?? 0} Total Users
               </Button>
             </div>
-            <div>
-              <Button variant="dark" onClick={handleShowModal}>
-                Add User
-              </Button>
-            </div>
+            {canAddUsers ? (
+              <div>
+                <Button variant="dark" onClick={handleShowModal}>
+                  Add User
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -2191,137 +2199,100 @@ const Overview = () => {
             className="mx-3 mt-3 border-bottom-0"
             fill
           >
-            <Tab
-              eventKey="admin"
-              title={
-                <span className="d-flex align-items-center gap-2">
-                  <Shield size={16} />
-                  Admin Team ({adminUsers.length})
-                </span>
-              }
-            >
-              <div className="p-3">
-                {/* Search Bar */}
-                <div className="row mb-4">
-                  <div className="col-md-8">
-                    <div className="search-box position-relative">
-                      <Search
-                        size={18}
-                        className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      />
-                      <Form.Control
-                        type="text"
-                        className="ps-5"
-                        placeholder="Search admin users by name or email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
+            {[
+              {
+                key: "superadmin",
+                label: ROLE_LABELS[ROLES.SUPER_ADMIN],
+                users: superAdminList,
+                icon: Shield,
+              },
+              {
+                key: "agent_user",
+                label: ROLE_LABELS[ROLES.AGENT_USER],
+                users: agentUserList,
+                icon: UserCheck,
+              },
+              {
+                key: "agent_admin",
+                label: ROLE_LABELS[ROLES.AGENT_ADMIN],
+                users: agentAdminList,
+                icon: UserCheck,
+              },
+              {
+                key: "qc_user",
+                label: ROLE_LABELS[ROLES.QC_USER],
+                users: qcUserList,
+                icon: Shield,
+              },
+              {
+                key: "qc_admin",
+                label: ROLE_LABELS[ROLES.QC_ADMIN],
+                users: qcAdminUsers,
+                icon: Shield,
+              },
+            ].map(({ key, label, users, icon: TabIcon }) => (
+              <Tab
+                key={key}
+                eventKey={key}
+                title={
+                  <span className="d-flex align-items-center gap-2">
+                    <TabIcon size={16} />
+                    {label} ({users.length})
+                  </span>
+                }
+              >
+                <div className="p-3">
+                  <div className="row mb-4">
+                    <div className="col-md-8">
+                      <div className="search-box position-relative">
+                        <Search
+                          size={18}
+                          className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
+                        />
+                        <Form.Control
+                          type="text"
+                          className="ps-5"
+                          placeholder={`Search ${label.toLowerCase()} by name or email...`}
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="col-md-4 text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                      <Shield size={16} className="text-info" />
+                    <div className="col-md-4 text-end">
                       <span className="fw-semibold">
-                        {adminUsers.length} Admin
-                        {adminUsers.length !== 1 ? "s" : ""}
+                        {users.length} {label}
+                        {users.length !== 1 ? "s" : ""}
                       </span>
                     </div>
                   </div>
-                </div>
 
-                {/* Users List */}
-                <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-                  {loadingUsers ? (
-                    <div className="d-flex justify-content-center align-items-center py-5">
-                      <Spinner animation="border" className="me-2" />
-                      <span>Loading admin users...</span>
-                    </div>
-                  ) : adminUsers.length > 0 ? (
-                    <div className="row g-2">
-                      {adminUsers.map((user) => (
-                        <UserCard key={user._id || user.email} user={user} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted py-5">
-                      <XCircle size={48} className="mb-3 opacity-50" />
-                      <h5>No Admin Users Found</h5>
-                      <p className="mb-0">
-                        {searchTerm
-                          ? "Try adjusting your search terms"
-                          : "No admin users are currently registered"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Tab>
-
-            <Tab
-              eventKey="sales-agent"
-              title={
-                <span className="d-flex align-items-center gap-2">
-                  <UserCheck size={16} />
-                  Sales Agents ({salesAgentUsers.length})
-                </span>
-              }
-            >
-              <div className="p-3">
-                {/* Search Bar */}
-                <div className="row mb-4">
-                  <div className="col-md-8">
-                    <div className="search-box position-relative">
-                      <Search
-                        size={18}
-                        className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      />
-                      <Form.Control
-                        type="text"
-                        className="ps-5"
-                        placeholder="Search sales agents by name or email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-4 text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                      <UserCheck size={16} className="text-success" />
-                      <span className="fw-semibold">
-                        {salesAgentUsers.length} sales agent
-                        {salesAgentUsers.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
+                  <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+                    {loadingUsers ? (
+                      <div className="d-flex justify-content-center align-items-center py-5">
+                        <Spinner animation="border" className="me-2" />
+                        <span>Loading users...</span>
+                      </div>
+                    ) : users.length > 0 ? (
+                      <div className="row g-2">
+                        {users.map((user) => (
+                          <UserCard key={user._id || user.email} user={user} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center text-muted py-5">
+                        <XCircle size={48} className="mb-3 opacity-50" />
+                        <h5>No {label} Users Found</h5>
+                        <p className="mb-0">
+                          {searchTerm
+                            ? "Try adjusting your search terms"
+                            : `No ${label.toLowerCase()} users are currently registered`}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Users List */}
-                <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-                  {loadingUsers ? (
-                    <div className="d-flex justify-content-center align-items-center py-5">
-                      <Spinner animation="border" className="me-2" />
-                      <span>Loading sales agents...</span>
-                    </div>
-                  ) : salesAgentUsers.length > 0 ? (
-                    <div className="row g-2">
-                      {salesAgentUsers.map((user) => (
-                        <UserCard key={user._id || user.email} user={user} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted py-5">
-                      <XCircle size={48} className="mb-3 opacity-50" />
-                      <h5>No Sales Agents Found</h5>
-                      <p className="mb-0">
-                        {searchTerm
-                          ? "Try adjusting your search terms"
-                          : "No sales agents are currently registered"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Tab>
+              </Tab>
+            ))}
           </Tabs>
         </Modal.Body>
 
@@ -2329,7 +2300,7 @@ const Overview = () => {
           <div className="d-flex justify-content-between align-items-center w-100">
             <div className="text-muted small">
               Total Users: {allUsers.length} | Showing: {currentUsers.length}{" "}
-              {activeTab === "admin" ? "admins" : "sales agents"}
+              {ROLE_LABELS[normalizeRole(activeTab)] || "users"}
             </div>
             <div>
               <Button variant="secondary" onClick={handleCloseUsersModal}>
@@ -2504,11 +2475,16 @@ const Overview = () => {
                 onChange={handleInputChange}
                 required
               >
-                <option value="sales agent">Sales Agent</option>
-                <option value="agent user">Agent User</option>
-                <option value="qc user">QC User</option>
-                <option value="admin">Admin</option>
+                {addUserRoleOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {ROLE_LABELS[role]}
+                  </option>
+                ))}
               </Form.Select>
+              <Form.Text className="text-muted">
+                New users must log in with their email and password at the login
+                page. Agent Admin can see all team submissions on /agent.
+              </Form.Text>
             </Form.Group>
           </Form>
         </Modal.Body>
@@ -2548,22 +2524,6 @@ const Overview = () => {
                 >
                   Content Overview
                 </p>
-                {/* Draft Section */}
-                <div className="d-flex align-items-center justify-content-between mb-3 p-2 rounded bg-light">
-                  <div>
-                    <h5 className="mb-0 fw-semibold">Total Drafts</h5>
-                    <small className="text-muted">{draftCount}</small>
-                  </div>
-                  <Button
-                    variant="dark"
-                    size="sm"
-                    onClick={() => navigate(`/dashboard/qc-team`, { state: { tab: "drafts" } })}
-                  >
-                    Publish
-                  </Button>
-                </div>
-
-                {/* Publish Section */}
                 <div className="d-flex align-items-center justify-content-between p-2 rounded bg-light mb-3">
                   <div>
                     <h5 className="mb-0 fw-semibold">Total Published</h5>
@@ -2572,9 +2532,7 @@ const Overview = () => {
                   <Button
                     variant="dark"
                     size="sm"
-                    onClick={() =>
-                      navigate(`/dashboard/qc-team`, { state: { tab: "published" } })
-                    }
+                    onClick={() => navigate(`/dashboard/qc-team`)}
                   >
                     View
                   </Button>
@@ -2790,14 +2748,22 @@ const Overview = () => {
           </div>
         </div>
 
-        {/* Row 3: QC & Sales Agent Teams */}
+        {/* QC Team & Sales Agent Team */}
         <div className="row g-3">
           {[
-            { title: "QC Team", data: qcUsers, link: "/dashboard/qc-team" },
             {
-              title: "Sale Agent Team",
+              title: "QC Team",
+              data: qcTeam,
+              link: "/dashboard/qc-team",
+              description: "Quality Control Team Members",
+              icon: Shield,
+            },
+            {
+              title: "Sales Agent Team",
               data: agents,
-              link: "/dashboard/sales-team",
+              link: "/agent",
+              description: "Sales and Marketing Team",
+              icon: UserCheck,
             },
           ].map((team, idx) => (
             <div className="col-12 col-lg-6" key={idx}>
@@ -2805,34 +2771,63 @@ const Overview = () => {
                 <div
                   style={{
                     background: "linear-gradient(90deg, #4CAF50, #2196F3)",
-                    borderRadius: "0.5rem 0.5rem 0 0",
-                    fontSize: "23px",
                   }}
-                  className="card-header d-flex justify-content-between align-items-center"
+                  className="card-header d-flex justify-content-between align-items-center py-3"
                 >
-                  <p className="mb-0 text-white">{team.title}</p>
-                  <button
-                    onClick={() => navigate(team.link)}
-                    className="btn text-white border btn-sm btn-link text-decoration-none"
-                  >
-                    View All
-                  </button>
+                  <div className="d-flex align-items-center gap-2">
+                    <team.icon size={20} className="text-white" />
+                    <div>
+                      <h5 className="mb-0 text-white fw-bold">{team.title}</h5>
+                      <small className="text-white opacity-75">
+                        {team.description}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="badge bg-white text-primary px-3 py-2 rounded-pill">
+                      {team.data.length} Members
+                    </span>
+                    <button
+                      onClick={() => navigate(team.link)}
+                      className="btn btn-light btn-sm"
+                    >
+                      View All
+                    </button>
+                  </div>
                 </div>
-                <div className="card-body">
-                  {team.data && team.data.length > 0 ? (
+                <div className="card-body p-0">
+                  {loadingAgents ? (
+                    <div className="d-flex justify-content-center align-items-center py-5">
+                      <Spinner
+                        animation="border"
+                        variant="primary"
+                        className="me-2"
+                      />
+                      <span className="text-muted">
+                        Loading {team.title.toLowerCase()}...
+                      </span>
+                    </div>
+                  ) : team.data.length > 0 ? (
                     <ul className="list-group list-group-flush">
-                      {team.data.slice(0, 5).map((member) => (
+                      {team.data.slice(0, 5).map((member, memberIdx) => (
                         <li
                           key={member._id}
-                          className="list-group-item text-capitalize d-flex justify-content-between align-items-center"
+                          className="list-group-item d-flex justify-content-between align-items-center py-3"
+                          style={{
+                            borderLeft:
+                              memberIdx === 0 ? "3px solid #4CAF50" : "none",
+                          }}
                         >
                           <div>
                             <strong>{member.name}</strong>
                             <div className="text-muted small">
                               {member.email}
                             </div>
+                            <span className="badge bg-light text-dark border mt-1">
+                              {ROLE_LABELS[normalizeRole(member.role)] ||
+                                member.role}
+                            </span>
                           </div>
-                          {/* Edit/Delete Buttons */}
                           <div className="d-flex gap-2">
                             <button
                               className="btn btn-outline-primary btn-sm p-1"
@@ -2853,7 +2848,7 @@ const Overview = () => {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-muted text-center my-3">
+                    <p className="text-muted text-center my-5">
                       No users found.
                     </p>
                   )}

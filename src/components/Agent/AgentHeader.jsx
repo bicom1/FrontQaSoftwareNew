@@ -17,12 +17,14 @@ const AgentHeader = ({
   sidebarOpen,
   setSidebarOpen,
   notifications,
-  setNotifications,
+  markAllAsRead,
+  markAsRead,
   showNotifications,
   setShowNotifications,
   showUserMenu,
   setShowUserMenu,
   setIsLoggedIn,
+  onViewAllSubmissions,
 }) => {
   const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
@@ -42,8 +44,14 @@ const AgentHeader = ({
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllAsRead = () => {
-    setNotifications((arr) => arr.map((n) => ({ ...n, read: true })));
+  const handleMarkAllAsRead = () => {
+    markAllAsRead?.();
+  };
+
+  const handleNotificationClick = (note) => {
+    markAsRead?.(note.id);
+    setShowNotifications(false);
+    onViewAllSubmissions?.();
   };
 
   const handleLogout = () => {
@@ -158,11 +166,14 @@ const AgentHeader = ({
                       "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   }}
                 >
-                  <h6 className="mb-0 text-white fw-semibold">Notifications</h6>
+                  <h6 className="mb-0 text-white fw-semibold">
+                    Form Notifications
+                  </h6>
                   <button
                     className="btn btn-sm btn-link text-white text-decoration-none fw-medium p-0 hover-underline"
-                    onClick={markAllAsRead}
+                    onClick={handleMarkAllAsRead}
                     style={{ fontSize: "12px" }}
+                    type="button"
                   >
                     Mark all as read
                   </button>
@@ -173,9 +184,10 @@ const AgentHeader = ({
                 >
                   {notifications.length > 0 ? (
                     notifications.map((note) => (
-                      <div
+                      <button
                         key={note.id}
-                        className={`px-4 py-3 border-bottom position-relative hover-bg-light transition-all ${
+                        type="button"
+                        className={`w-100 text-start px-4 py-3 border-bottom position-relative hover-bg-light transition-all border-0 ${
                           !note.read ? "bg-light" : ""
                         }`}
                         style={{
@@ -183,17 +195,31 @@ const AgentHeader = ({
                             ? "3px solid #667eea"
                             : "3px solid transparent",
                           transition: "all 0.2s ease",
+                          cursor: "pointer",
                         }}
+                        onClick={() => handleNotificationClick(note)}
                       >
                         <div className="d-flex justify-content-between align-items-start">
                           <div className="flex-grow-1">
+                            <span
+                              className={`badge me-2 ${
+                                note.formType === "evaluation"
+                                  ? "bg-primary"
+                                  : "bg-danger"
+                              }`}
+                              style={{ fontSize: "10px" }}
+                            >
+                              {note.formType === "evaluation"
+                                ? "Evaluation"
+                                : "Escalation"}
+                            </span>
                             <p
-                              className="mb-1 fw-medium"
+                              className="mb-1 fw-medium d-inline"
                               style={{ fontSize: "14px", lineHeight: "1.4" }}
                             >
                               {note.text}
                             </p>
-                            <small className="text-muted d-flex align-items-center">
+                            <small className="text-muted d-flex align-items-center mt-1">
                               <div
                                 className="rounded-circle me-2"
                                 style={{
@@ -203,7 +229,7 @@ const AgentHeader = ({
                                     ? "#667eea"
                                     : "#dee2e6",
                                 }}
-                              ></div>
+                              />
                               {note.time}
                             </small>
                           </div>
@@ -221,18 +247,25 @@ const AgentHeader = ({
                             </span>
                           )}
                         </div>
-                      </div>
+                      </button>
                     ))
                   ) : (
                     <div className="p-5 text-center text-muted">
                       <Bell size={32} className="text-muted mb-2 opacity-50" />
-                      <p className="mb-0">No notifications</p>
+                      <p className="mb-0">No evaluation or escalation updates</p>
                     </div>
                   )}
                 </div>
                 <div className="text-center p-3 border-top bg-light">
-                  <button className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-medium">
-                    View all notifications
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-medium"
+                    onClick={() => {
+                      setShowNotifications(false);
+                      onViewAllSubmissions?.();
+                    }}
+                  >
+                    View all submissions
                   </button>
                 </div>
               </div>

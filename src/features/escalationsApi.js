@@ -678,10 +678,10 @@ export const getEscalationsPublishedApi = async (agentName) => {
 export const getEscalationsByAgentNameApi = async (agentName) => {
   try {
     const response = await axios.get(
-      `${baseUrl}/api/escalations/escalations/drafts?agentName=${agentName}`,
+      `${baseUrl}/api/escalations/agent/${encodeURIComponent(agentName)}`,
       authHeader()
     );
-    return response.data?.data || response.data;
+    return response.data?.data || [];
   } catch (error) {
     console.error(
       "Get Escalations by Agent Name Error:",

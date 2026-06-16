@@ -13,42 +13,32 @@ import {
   Home,
   LayoutDashboard,
 } from "lucide-react";
-import { getProfileApi } from "../features/userApis";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { normalizeRole, ROLES, isSuperAdmin, isQcAdmin } from "../utils/roles";
 
-const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
+const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [formsExpanded, setFormsExpanded] = useState(false);
-  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await getProfileApi();
-        setProfile(res.data);
-
-        // ✅ Auto redirect QC user to QC dashboard
-        const userRole = res.data?.role?.toLowerCase();
-        if (
-          (userRole === "qc user" || userRole === "qc") &&
-          location.pathname === "/dashboard"
-        ) {
-          navigate("/dashboard/qc-team");
-        }
-      } catch (err) {
-        console.error("Failed to fetch user profile:", err);
-      }
-    };
-    fetchProfile();
-  }, [location.pathname, navigate]);
+    if (!profile?.role) return;
+    const userRole = normalizeRole(profile.role);
+    if (
+      (userRole === ROLES.QC_USER || userRole === ROLES.QC_ADMIN) &&
+      location.pathname === "/dashboard"
+    ) {
+      navigate("/dashboard/qc-team");
+    }
+  }, [profile?.role, location.pathname, navigate]);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const handleFormsClick = () => setFormsExpanded(!formsExpanded);
   const isActive = (path) =>
     location.pathname === path || location.pathname.startsWith(path);
 
-  const role = profile?.role?.toLowerCase();
+  const role = normalizeRole(profile?.role || "");
+  const homePath = isSuperAdmin(role) ? "/admin/home" : "/dashboard/home";
 
   return (
     <div
@@ -74,7 +64,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
       <div className="nav flex-column nav-pills">
         {/* ✅ QC User Sidebar */}
-        {role === "qc user" || role === "qc" || role === "qcuser" ? (
+        {role === ROLES.QC_USER || role === ROLES.QC_ADMIN ? (
           <>
             {/* Dashboard */}
             <Link
@@ -147,14 +137,30 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <Target size={20} />
               {sidebarOpen && <span className="ms-2">Download Report</span>}
             </Link>
+
+            {isQcAdmin(role) && (
+              <Link
+                to="/dashboard/team-users"
+                className={`btn text-start mb-2 d-flex align-items-center ${
+                  isActive("/dashboard/team-users")
+                    ? "btn-primary"
+                    : "btn-dark"
+                }`}
+              >
+                <CircleUser size={20} />
+                {sidebarOpen && <span className="ms-2">QC Team Users</span>}
+              </Link>
+            )}
           </>
         ) : (
           <>
             {/* 🔹 Non-QC Users Sidebar */}
             <Link
-              to="/dashboard/home"
+              to={homePath}
               className={`btn text-start mb-2 d-flex align-items-center ${
-                isActive("/dashboard/home") ? "btn-primary" : "btn-dark"
+                isActive(homePath) || isActive("/dashboard/home") || isActive("/admin/home")
+                  ? "btn-primary"
+                  : "btn-dark"
               }`}
             >
               <Home size={20} />
@@ -301,27 +307,36 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         )}
       </div>
 
-      {/* Footer (Profile) */}
+      {/* Footer (Profile) — same account as header; click opens profile */}
       <div className="mt-auto">
         {sidebarOpen && (
-          <div className="d-flex align-items-center p-2 border-top border-secondary mt-4 pt-2">
+          <button
+            type="button"
+            className="d-flex align-items-center p-2 border-top border-secondary mt-4 pt-2 w-100 text-start bg-transparent text-white border-0 rounded"
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/dashboard/profile")}
+            title="View profile"
+          >
             <div
               className="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2"
               style={{ width: "40px", height: "40px" }}
             >
               <span className="text-capitalize fw-bold">
-                {profile?.name?.charAt(0) || "L"}
+                {profile?.name?.charAt(0) || "?"}
               </span>
             </div>
-            <div>
-              <div className="text-capitalize fw-bold">
+            <div className="min-w-0">
+              <div className="text-capitalize fw-bold text-truncate">
                 {profile?.name || "Loading..."}
               </div>
-              <div className="text-capitalize small">
-                {profile?.role || "Loading..."}
+              <div
+                className="text-capitalize small text-truncate"
+                style={{ opacity: 0.85 }}
+              >
+                {profile?.role || "—"}
               </div>
             </div>
-          </div>
+          </button>
         )}
       </div>
     </div>

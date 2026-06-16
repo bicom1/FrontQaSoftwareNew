@@ -654,11 +654,14 @@ export const createEvaluationApi = async (evaluation, otherReason = "") => {
 };
 
 // ✅ READ All Evaluations
-export const getEvaluationsApi = async () => {
+export const getEvaluationsApi = async (params = {}) => {
   try {
     const response = await axios.get(
       `${baseUrl}/api/evaluations/getevaluations`,
-      authHeader()
+      {
+        ...authHeader(),
+        params: { limit: 1000, page: 1, ...params },
+      }
     );
     return response.data;
   } catch (error) {

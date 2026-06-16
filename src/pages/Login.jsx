@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock } from "react-icons/fa";
-import { LoginApi, forgotPasswordApi } from "../features/userApis";
-import { useNavigate } from "react-router-dom";
+import { LoginApi } from "../features/userApis";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getDashboardPath, normalizeRole } from "../utils/roles";
 
 function Login({ onLoginSuccess }) {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -15,6 +16,22 @@ function Login({ onLoginSuccess }) {
   const [isForgotPasswordHovered, setIsForgotPasswordHovered] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.message) {
+      toast.info(location.state.message, { autoClose: 6000 });
+    }
+    if (location.state?.email) {
+      setFormData((prev) => ({
+        ...prev,
+        email: location.state.email,
+      }));
+    }
+    if (location.state?.message || location.state?.email) {
+      navigate("/login", { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,20 +45,23 @@ function Login({ onLoginSuccess }) {
     if (!formData.email) errors.email = "Email is required";
     else if (!emailRegex.test(formData.email)) errors.email = "Invalid email";
     if (!formData.password) errors.password = "Password is required";
-    else if (formData.password.length < 6)
-      errors.password = "Minimum 6 characters required";
+    else if (formData.password.length < 8)
+      errors.password = "Minimum 8 characters required";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e) => { 
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
-      const res = await LoginApi(formData);
+      const res = await LoginApi({
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      });
 
       if (res.data.success) {
         const user = res.data.user;
@@ -50,7 +70,7 @@ function Login({ onLoginSuccess }) {
         // ✅ Save auth data - UPDATED to include individual fields
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
-        localStorage.setItem("userRole", user.role);
+        localStorage.setItem("userRole", normalizeRole(user.role));
 
         // ✅ NEW: Save individual user fields for dashboard
         localStorage.setItem("userId", user._id);
@@ -62,24 +82,7 @@ function Login({ onLoginSuccess }) {
         setTimeout(() => {
           onLoginSuccess?.();
 
-          const role = user.role; // Keep original case from backend
-
-          // ✅ Role-based navigation matching backend roles exactly
-          if (role === "Agent User") {
-            navigate("/agent");
-          } else if (role === "Qc User") {
-            navigate("/dashboard/qc-team");
-          } else if (
-            role === "Admin" ||
-            role === "admin" ||
-            role === "superadmin" ||
-            role === "Superadmin"
-          ) {
-            navigate("/dashboard/home");
-          } else {
-            // default fallback
-            navigate("/dashboard/home");
-          }
+          navigate(getDashboardPath(user.role));
         }, 1000);
       } else {
         toast.error(res.data.message || "Invalid credentials");
@@ -88,19 +91,6 @@ function Login({ onLoginSuccess }) {
       toast.error(err?.response?.data?.message || "Login failed");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!formData.email) {
-      toast.error("Enter your email first");
-      return;
-    }
-    try {
-      const res = await forgotPasswordApi({ email: formData.email });
-      toast.info(res.data.message || "Reset link sent to your email");
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Error sending reset link");
     }
   };
 
@@ -401,7 +391,7 @@ function Login({ onLoginSuccess }) {
 
             <div style={styles.forgotPassword}>
               <span
-                onClick={handleForgotPassword}
+                onClick={() => navigate("/forgot-password")}
                 style={{
                   ...styles.forgotPasswordLink,
                   ...(isForgotPasswordHovered
@@ -410,14 +400,32 @@ function Login({ onLoginSuccess }) {
                 }}
                 onMouseEnter={() => setIsForgotPasswordHovered(true)}
                 onMouseLeave={() => setIsForgotPasswordHovered(false)}
-                role="button"
+                role="link"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ")
-                    handleForgotPassword();
+                    navigate("/forgot-password");
                 }}
               >
                 Forgot Password?
+              </span>
+            </div>
+
+            <div style={{ textAlign: "center", marginTop: "12px" }}>
+              <span
+                onClick={() => navigate("/signup")}
+                style={{
+                  color: "#2575fc",
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") navigate("/signup");
+                }}
+              >
+                Don&apos;t have an account? Sign up
               </span>
             </div>
           </form>

@@ -1,1183 +1,564 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
-  Upload,
-  MessageSquare,
-  Phone,
   FileText,
-  X,
-  AlertTriangle,
-  Clock,
-  Calendar,
+  ShieldAlert,
   Send,
-  Star,
+  Upload,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  MessageSquare,
+  Paperclip,
+  Clock,
 } from "lucide-react";
-import {
-  getLowRatingCallApi,
-  getLowRatingChatsApi,
-} from "../../features/agents";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { getToken } from "../../features/config";
+import { getEvaluationsByAgentNameApi, getEvaluationsByUserEmailApi } from "../../features/evaluationApi";
+import {
+  getEscalationsByAgentNameApi,
+  getEscalationsByUserEmailApi,
+} from "../../features/escalationsApi";
+import { createAppealApi, getMyAppealsApi } from "../../features/feedback";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILES = 5;
+const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".zip"];
+const PAGE_SIZE = 10;
+
+const mergeForms = (lists) => {
+  const map = new Map();
+  lists.flat().forEach((item) => {
+    if (item?._id) map.set(String(item._id), item);
+  });
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  );
+};
+
+const formatDate = (val) =>
+  val ? new Date(val).toLocaleString() : "-";
 
 const AgentFeedbackBox = () => {
-  const [activeTab, setActiveTab] = useState("flagged-chats");
-  const [expandedChats, setExpandedChats] = useState({});
-  const [expandedCalls, setExpandedCalls] = useState({});
-  const [comments, setComments] = useState({});
-  const [uploadedFiles, setUploadedFiles] = useState({});
-  const [generalComment, setGeneralComment] = useState("");
-  const [generalFiles, setGeneralFiles] = useState([]);
-  const [flaggedCalls, setFlaggedCalls] = useState([]);
-  const [flaggedChats, setFlaggedChats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const [expandedKey, setExpandedKey] = useState(null);
+  const [evaluations, setEvaluations] = useState([]);
+  const [escalations, setEscalations] = useState([]);
+  const [appeals, setAppeals] = useState([]);
+  const [appealText, setAppealText] = useState({});
+  const [appealFiles, setAppealFiles] = useState({});
+
+  // Pagination state
+  const [formsVisibleCount, setFormsVisibleCount] = useState(PAGE_SIZE);
+  const [appealsVisibleCount, setAppealsVisibleCount] = useState(PAGE_SIZE);
+
   const token = getToken();
-  const decoded = JSON.parse(atob(token.split(".")[1]));
-  const currentUserName = decoded.name;
-  const currentUserEmail = decoded.email;
-  const currentUserId = decoded.id; // if you store user id
+  const decoded = useMemo(() => {
+    try {
+      if (!token) return null;
+      return JSON.parse(atob(token.split(".")[1]));
+    } catch {
+      return null;
+    }
+  }, [token]);
 
-  const normalizeData = (rawData, type) => {
-    return rawData.map((item) => ({
-      id: item._id,
-      title: `${type === "chat" ? "Chat" : "Call"} with ${item.agentName}`,
-      time: new Date(item.createdAt).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      date: new Date(item.createdAt).toLocaleDateString(),
-      duration: `${Math.floor(Math.random() * 15) + 5}:${String(
-        Math.floor(Math.random() * 59)
-      ).padStart(2, "0")}`,
-      severity:
-        item.rating <= 40 ? "high" : item.rating <= 70 ? "medium" : "low",
-      agent: item.agentName,
-      raw: item,
-    }));
-  };
+  const agentName = decoded?.name || "";
+  const agentEmail = decoded?.email || "";
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const loadData = useCallback(async () => {
+    if (!agentEmail && !agentName) {
+      setLoading(false);
+      return;
+    }
+    try {
       setLoading(true);
-      try {
-        const token = getToken();
-        const decoded = JSON.parse(atob(token.split(".")[1]));
-        const currentUserName = (decoded.name || "").toLowerCase(); // 👈 "haris"
-
-        const [callsRes, chatsRes] = await Promise.all([
-          getLowRatingCallApi(),
-          getLowRatingChatsApi(),
+      const [evalByName, evalByEmail, escByName, escByEmail, appealsRes] =
+        await Promise.all([
+          agentName ? getEvaluationsByAgentNameApi(agentName) : [],
+          agentEmail ? getEvaluationsByUserEmailApi(agentEmail) : [],
+          agentName ? getEscalationsByAgentNameApi(agentName) : [],
+          agentEmail ? getEscalationsByUserEmailApi(agentEmail) : [],
+          getMyAppealsApi(),
         ]);
 
-        // Filter calls by current user's name
-        const callsRaw = (
-          Array.isArray(callsRes?.data) ? callsRes.data : []
-        ).filter(
-          (item) => (item.agentName || "").toLowerCase() === currentUserName
-        );
+      setEvaluations(mergeForms([evalByName, evalByEmail]));
+      setEscalations(mergeForms([escByName, escByEmail]));
+      setAppeals(appealsRes?.data || []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load forms and appeals");
+    } finally {
+      setLoading(false);
+    }
+  }, [agentEmail, agentName]);
 
-        // Filter chats by current user's name
-        const chatsRaw = (
-          Array.isArray(chatsRes?.data) ? chatsRes.data : []
-        ).filter(
-          (item) => (item.agentName || "").toLowerCase() === currentUserName
-        );
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-        setFlaggedCalls(normalizeData(callsRaw, "call"));
-        setFlaggedChats(normalizeData(chatsRaw, "chat"));
-      } catch (error) {
-        console.error("Error fetching flagged data:", error);
-      } finally {
-        setLoading(false);
+  const forms = useMemo(() => {
+    const evalItems = evaluations.map((e) => ({
+      key: `evaluation-${e._id}`,
+      formType: "evaluation",
+      formId: e._id,
+      leadID: e.leadID,
+      agentName: e.agentName,
+      teamleader: e.teamleader,
+      rating: e.rating,
+      mod: e.mod,
+      createdAt: e.createdAt,
+      label: "Evaluation",
+      Icon: FileText,
+      badgeClass: "bg-primary",
+    }));
+    const escItems = escalations.map((e) => ({
+      key: `escalation-${e._id}`,
+      formType: "escalation",
+      formId: e._id,
+      leadID: e.leadID,
+      agentName: e.agentName,
+      teamleader: e.teamleader,
+      escSeverity: e.escSeverity,
+      leadStatus: e.leadStatus,
+      createdAt: e.createdAt,
+      label: "Escalation",
+      Icon: ShieldAlert,
+      badgeClass: "bg-danger",
+    }));
+    const all = [...evalItems, ...escItems].sort(
+      (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    );
+    if (filter === "evaluations") return evalItems;
+    if (filter === "escalations") return escItems;
+    return all;
+  }, [evaluations, escalations, filter]);
+
+  const appealedFormIds = useMemo(
+    () => new Set(appeals.map((a) => `${a.formType}-${a.formId}`)),
+    [appeals]
+  );
+
+  // Reset pagination when filter changes
+  useEffect(() => {
+    setFormsVisibleCount(PAGE_SIZE);
+  }, [filter]);
+
+  const visibleForms = useMemo(
+    () => forms.slice(0, formsVisibleCount),
+    [forms, formsVisibleCount]
+  );
+
+  const visibleAppeals = useMemo(
+    () => appeals.slice(0, appealsVisibleCount),
+    [appeals, appealsVisibleCount]
+  );
+
+  const validateFiles = (files) => {
+    if (!files?.length) return { ok: true, files: [] };
+    if (files.length > MAX_FILES) {
+      return { ok: false, message: `Maximum ${MAX_FILES} files allowed` };
+    }
+    for (const file of files) {
+      const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+      if (!ALLOWED_EXT.includes(ext)) {
+        return {
+          ok: false,
+          message: "Only images (JPG, PNG, GIF, WEBP), PDF, and ZIP are allowed",
+        };
       }
-    };
+      if (file.size > MAX_FILE_SIZE) {
+        return { ok: false, message: `"${file.name}" exceeds 5MB limit` };
+      }
+    }
+    return { ok: true, files: [...files] };
+  };
 
-    fetchData();
-  }, []);
+  const handleFileChange = (formKey, fileList) => {
+    const result = validateFiles(Array.from(fileList || []));
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    setAppealFiles((prev) => ({ ...prev, [formKey]: result.files }));
+  };
 
-  const toggleChatExpanded = (chatId) => {
-    setExpandedChats((prev) => ({
+  const removeFile = (formKey, index) => {
+    setAppealFiles((prev) => ({
       ...prev,
-      [chatId]: !prev[chatId],
+      [formKey]: (prev[formKey] || []).filter((_, i) => i !== index),
     }));
   };
 
-  const toggleCallExpanded = (callId) => {
-    setExpandedCalls((prev) => ({
-      ...prev,
-      [callId]: !prev[callId],
-    }));
-  };
+  const handleSubmitAppeal = async (form) => {
+    const message = (appealText[form.key] || "").trim();
+    if (message.length < 20) {
+      toast.error("Please describe your case in at least 20 characters");
+      return;
+    }
 
-  const handleCommentChange = (type, id, value) => {
-    setComments((prev) => ({
-      ...prev,
-      [`${type}-${id}`]: value,
-    }));
-  };
+    const files = appealFiles[form.key] || [];
+    const fileCheck = validateFiles(files);
+    if (!fileCheck.ok) {
+      toast.error(fileCheck.message);
+      return;
+    }
 
-  const getSeverityConfig = (severity) => {
-    switch (severity) {
-      case "high":
-        return {
-          bg: "linear-gradient(to right, #ef4444, #dc2626)",
-          text: "#ffffff",
-          icon: AlertTriangle,
-          light: { bg: "#fef2f2", border: "#fecaca", text: "#b91c1c" },
-        };
-      case "medium":
-        return {
-          bg: "linear-gradient(to right, #f59e0b, #ea580c)",
-          text: "#ffffff",
-          icon: Clock,
-          light: { bg: "#fffbeb", border: "#fde68a", text: "#d97706" },
-        };
-      case "low":
-        return {
-          bg: "linear-gradient(to right, #10b981, #059669)",
-          text: "#ffffff",
-          icon: Star,
-          light: { bg: "#ecfdf5", border: "#a7f3d0", text: "#047857" },
-        };
-      default:
-        return {
-          bg: "linear-gradient(to right, #6b7280, #4b5563)",
-          text: "#ffffff",
-          icon: Clock,
-          light: { bg: "#f9fafb", border: "#d1d5db", text: "#374151" },
-        };
+    const data = new FormData();
+    data.append("formType", form.formType);
+    data.append("formId", form.formId);
+    data.append("leadID", form.leadID ?? "");
+    data.append("agentName", form.agentName || agentName);
+    data.append("appealMessage", message);
+    files.forEach((file) => data.append("attachments", file));
+
+    try {
+      setSubmitting(true);
+      await createAppealApi(data);
+      toast.success("Appeal submitted successfully");
+      setAppealText((prev) => ({ ...prev, [form.key]: "" }));
+      setAppealFiles((prev) => ({ ...prev, [form.key]: [] }));
+      setExpandedKey(null);
+      await loadData();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || err.message || "Failed to submit appeal"
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const renderFlaggedItem = (item, type, expandedState, toggleExpanded) => {
-    const isExpanded = expandedState[item.id];
-    const key = `${type}-${item.id}`;
-    const severityConfig = getSeverityConfig(item.severity);
-    const SeverityIcon = severityConfig.icon;
-
+  if (loading) {
     return (
-      <div
-        key={item.id}
-        style={{
-          backgroundColor: "#ffffff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-          overflow: "hidden",
-          marginBottom: "24px",
-          transition: "box-shadow 0.2s",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "20px",
-            cursor: "pointer",
-            transition: "background-color 0.2s",
-          }}
-          onClick={() => toggleExpanded(item.id)}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background =
-              "linear-gradient(to right, #f9fafb, #eff6ff)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "transparent")
-          }
-        >
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div
-              style={{
-                width: "48px",
-                height: "48px",
-                background: severityConfig.bg,
-                borderRadius: "12px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: "16px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-              }}
-            >
-              {type === "chat" ? (
-                <MessageSquare
-                  style={{ width: "24px", height: "24px", color: "#ffffff" }}
-                />
-              ) : (
-                <Phone
-                  style={{ width: "24px", height: "24px", color: "#ffffff" }}
-                />
-              )}
-            </div>
-            <div>
-              <h4
-                style={{
-                  fontWeight: "600",
-                  color: "#111827",
-                  fontSize: "18px",
-                  margin: "0 0 8px 0",
-                }}
-              >
-                {item.title}
-              </h4>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "16px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "14px",
-                    color: "#6b7280",
-                  }}
-                >
-                  <Calendar
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      marginRight: "4px",
-                    }}
-                  />
-                  {item.date} at {item.time}
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "14px",
-                    color: "#6b7280",
-                  }}
-                >
-                  <Clock
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      marginRight: "4px",
-                    }}
-                  />
-                  {item.duration}
-                </div>
-                <div style={{ fontSize: "14px", color: "#6b7280" }}>
-                  Agent:{" "}
-                  <span style={{ fontWeight: "500", color: "#374151" }}>
-                    {item.agent}
-                  </span>
-                </div>
-              </div>
-              <div style={{ marginTop: "12px" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "4px 12px",
-                    borderRadius: "20px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    backgroundColor: severityConfig.light.bg,
-                    border: `1px solid ${severityConfig.light.border}`,
-                    color: severityConfig.light.text,
-                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                  }}
-                >
-                  <SeverityIcon
-                    style={{
-                      width: "12px",
-                      height: "12px",
-                      marginRight: "4px",
-                    }}
-                  />
-                  {item.severity.charAt(0).toUpperCase() +
-                    item.severity.slice(1)}{" "}
-                  Priority
-                </span>
-              </div>
-            </div>
-          </div>
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              backgroundColor: "#f3f4f6",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s",
-              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-            }}
-          >
-            <ChevronDown
-              style={{ width: "20px", height: "20px", color: "#6b7280" }}
-            />
-          </div>
-        </div>
-
-        {isExpanded && (
-          <div
-            style={{
-              borderTop: "1px solid #f3f4f6",
-              background: "linear-gradient(to bottom right, #f9fafb, #ffffff)",
-            }}
-          >
-            <div style={{ padding: "24px" }}>
-              <div style={{ marginBottom: "24px" }}>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    color: "#111827",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <MessageSquare
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      marginRight: "8px",
-                      color: "#2563eb",
-                    }}
-                  />
-                  Feedback Comments
-                </label>
-                <div style={{ position: "relative" }}>
-                  <textarea
-                    value={comments[key] || ""}
-                    onChange={(e) =>
-                      handleCommentChange(type, item.id, e.target.value)
-                    }
-                    placeholder="Share your detailed feedback about this interaction..."
-                    style={{
-                      width: "100%",
-                      padding: "16px",
-                      paddingRight: "48px",
-                      border: "2px solid #e5e7eb",
-                      borderRadius: "12px",
-                      resize: "none",
-                      backgroundColor: "#ffffff",
-                      boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                      outline: "none",
-                      transition: "all 0.2s",
-                      fontFamily: "inherit",
-                    }}
-                    rows="4"
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#3b82f6";
-                      e.target.style.boxShadow =
-                        "0 0 0 3px rgba(59, 130, 246, 0.1)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#e5e7eb";
-                      e.target.style.boxShadow =
-                        "0 1px 2px 0 rgba(0, 0, 0, 0.05)";
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "12px",
-                      right: "12px",
-                      fontSize: "12px",
-                      color: "#9ca3af",
-                      backgroundColor: "#ffffff",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    {(comments[key] || "").length}/500
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  paddingTop: "16px",
-                  borderTop: "1px solid #e5e7eb",
-                }}
-              >
-                <button
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "12px 24px",
-                    background: "linear-gradient(to right, #2563eb, #1d4ed8)",
-                    color: "#ffffff",
-                    fontWeight: "600",
-                    borderRadius: "12px",
-                    border: "none",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background =
-                      "linear-gradient(to right, #1d4ed8, #1e40af)";
-                    e.target.style.boxShadow =
-                      "0 10px 15px -3px rgba(0, 0, 0, 0.1)";
-                    e.target.style.transform = "scale(1.05)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background =
-                      "linear-gradient(to right, #2563eb, #1d4ed8)";
-                    e.target.style.boxShadow =
-                      "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
-                    e.target.style.transform = "scale(1)";
-                  }}
-                >
-                  <Send
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      marginRight: "8px",
-                    }}
-                  />
-                  Submit Feedback
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="d-flex align-items-center justify-content-center py-5">
+        <Loader2 className="me-2 spin" size={22} />
+        <span>Loading your submitted forms...</span>
+        <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
-  };
+  }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(to bottom right, #f1f5f9, #eff6ff, #e0e7ff)",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-      }}
-    >
-      <div
-        style={{ maxWidth: "1152px", margin: "0 auto", padding: "32px 16px" }}
-      >
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "40px" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "64px",
-              height: "64px",
-              background: "linear-gradient(to right, #2563eb, #4f46e5)",
-              borderRadius: "16px",
-              marginBottom: "16px",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <MessageSquare
-              style={{ width: "32px", height: "32px", color: "#ffffff" }}
-            />
-          </div>
-          <h1
-            style={{
-              fontSize: "48px",
-              fontWeight: "bold",
-              background:
-                "linear-gradient(to right, #111827, #1e40af, #4338ca)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              marginBottom: "12px",
-              lineHeight: "1.1",
-            }}
-          >
-            Agent Feedback Center
-          </h1>
-          <p
-            style={{
-              fontSize: "18px",
-              color: "#6b7280",
-              maxWidth: "512px",
-              margin: "0 auto",
-              lineHeight: "1.6",
-            }}
-          >
-            Review flagged interactions and provide comprehensive feedback to
-            enhance agent performance and customer satisfaction
-          </p>
-        </div>
+    <div className="container-fluid px-4 py-4">
+      <div className="mb-4">
+        <h1 className="fw-bold mb-1">Form Appeals & Feedback</h1>
+        <p className="text-muted mb-0">
+          Review QC on your submitted forms and appeal if you believe the evaluation was incorrect.
+          Attach images, PDF, or ZIP evidence (max 5 files, 5MB each).
+        </p>
+      </div>
 
-        {/* Tab Navigation */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: "8px",
-            marginBottom: "32px",
-            backgroundColor: "#ffffff",
-            padding: "8px",
-            borderRadius: "16px",
-            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-            border: "1px solid #e5e7eb",
-            flexWrap: "wrap",
-          }}
-        >
-          <button
-            onClick={() => setActiveTab("flagged-chats")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "16px 24px",
-              borderRadius: "12px",
-              transition: "all 0.3s",
-              fontWeight: "600",
-              fontSize: "14px",
-              border: "none",
-              cursor: "pointer",
-              position: "relative",
-              overflow: "hidden",
-              flex: "1",
-              minWidth: "160px",
-              ...(activeTab === "flagged-chats"
-                ? {
-                    background: "linear-gradient(to right, #2563eb, #1d4ed8)",
-                    color: "#ffffff",
-                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                    transform: "scale(1.05)",
-                  }
-                : {
-                    color: "#6b7280",
-                    backgroundColor: "transparent",
-                  }),
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== "flagged-chats") {
-                e.target.style.color = "#111827";
-                e.target.style.backgroundColor = "#f9fafb";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== "flagged-chats") {
-                e.target.style.color = "#6b7280";
-                e.target.style.backgroundColor = "transparent";
-              }
-            }}
-          >
-            <MessageSquare
-              style={{ width: "20px", height: "20px", marginRight: "12px" }}
-            />
-            Flagged Chats
-            <span
-              style={{
-                marginLeft: "12px",
-                padding: "4px 12px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: "bold",
-                ...(activeTab === "flagged-chats"
-                  ? {
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      color: "#ffffff",
-                    }
-                  : {
-                      backgroundColor: "#dbeafe",
-                      color: "#1e40af",
-                    }),
-              }}
-            >
-              {flaggedChats.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("flagged-calls")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "16px 24px",
-              borderRadius: "12px",
-              transition: "all 0.3s",
-              fontWeight: "600",
-              fontSize: "14px",
-              border: "none",
-              cursor: "pointer",
-              position: "relative",
-              overflow: "hidden",
-              flex: "1",
-              minWidth: "160px",
-              ...(activeTab === "flagged-calls"
-                ? {
-                    background: "linear-gradient(to right, #059669, #047857)",
-                    color: "#ffffff",
-                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                    transform: "scale(1.05)",
-                  }
-                : {
-                    color: "#6b7280",
-                    backgroundColor: "transparent",
-                  }),
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== "flagged-calls") {
-                e.target.style.color = "#111827";
-                e.target.style.backgroundColor = "#f9fafb";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== "flagged-calls") {
-                e.target.style.color = "#6b7280";
-                e.target.style.backgroundColor = "transparent";
-              }
-            }}
-          >
-            <Phone
-              style={{ width: "20px", height: "20px", marginRight: "12px" }}
-            />
-            Flagged Calls
-            <span
-              style={{
-                marginLeft: "12px",
-                padding: "4px 12px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: "bold",
-                ...(activeTab === "flagged-calls"
-                  ? {
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      color: "#ffffff",
-                    }
-                  : {
-                      backgroundColor: "#dcfce7",
-                      color: "#166534",
-                    }),
-              }}
-            >
-              {flaggedCalls.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("general")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "16px 24px",
-              borderRadius: "12px",
-              transition: "all 0.3s",
-              fontWeight: "600",
-              fontSize: "14px",
-              border: "none",
-              cursor: "pointer",
-              position: "relative",
-              overflow: "hidden",
-              flex: "1",
-              minWidth: "160px",
-              ...(activeTab === "general"
-                ? {
-                    background: "linear-gradient(to right, #7c3aed, #6d28d9)",
-                    color: "#ffffff",
-                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                    transform: "scale(1.05)",
-                  }
-                : {
-                    color: "#6b7280",
-                    backgroundColor: "transparent",
-                  }),
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== "general") {
-                e.target.style.color = "#111827";
-                e.target.style.backgroundColor = "#f9fafb";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== "general") {
-                e.target.style.color = "#6b7280";
-                e.target.style.backgroundColor = "transparent";
-              }
-            }}
-          >
-            <FileText
-              style={{ width: "20px", height: "20px", marginRight: "12px" }}
-            />
-            General Feedback
-          </button>
-        </div>
-
-        {/* Content Area */}
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "16px",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-            minHeight: "384px",
-            overflow: "hidden",
-          }}
-        >
-          {activeTab === "flagged-chats" && (
-            <div style={{ padding: "32px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: "24px",
-                }}
-              >
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    backgroundColor: "#dbeafe",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "16px",
-                  }}
-                >
-                  <MessageSquare
-                    style={{ width: "24px", height: "24px", color: "#2563eb" }}
-                  />
-                </div>
-                <h2
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "bold",
-                    color: "#111827",
-                    margin: 0,
-                  }}
-                >
-                  Flagged Chat Conversations
-                </h2>
-              </div>
-              {flaggedChats.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "64px 0" }}>
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      backgroundColor: "#f3f4f6",
-                      borderRadius: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 16px",
-                    }}
-                  >
-                    <MessageSquare
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        color: "#9ca3af",
-                      }}
-                    />
-                  </div>
-                  <p
-                    style={{
-                      color: "#6b7280",
-                      fontSize: "18px",
-                      margin: "0 0 8px 0",
-                    }}
-                  >
-                    No flagged chats to review
-                  </p>
-                  <p style={{ color: "#9ca3af", fontSize: "14px", margin: 0 }}>
-                    All chat conversations are performing well!
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  {flaggedChats.map((chat) =>
-                    renderFlaggedItem(
-                      chat,
-                      "chat",
-                      expandedChats,
-                      toggleChatExpanded
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "flagged-calls" &&
-            (loading ? (
-              <p style={{ textAlign: "center", color: "#6b7280" }}>
-                Loading flagged calls...
-              </p>
-            ) : flaggedCalls.length > 0 ? (
-              flaggedCalls.map((call) =>
-                renderFlaggedItem(
-                  call,
-                  "call",
-                  expandedCalls,
-                  toggleCallExpanded
-                )
-              )
-            ) : (
-              <p style={{ textAlign: "center", color: "#6b7280" }}>
-                No flagged calls found
-              </p>
-            ))}
-
-          {activeTab === "general" && (
-            <div style={{ padding: "32px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: "24px",
-                }}
-              >
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    backgroundColor: "#f3e8ff",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "16px",
-                  }}
-                >
-                  <FileText
-                    style={{ width: "24px", height: "24px", color: "#7c3aed" }}
-                  />
-                </div>
-                <h2
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "bold",
-                    color: "#111827",
-                    margin: 0,
-                  }}
-                >
-                  General Feedback
-                </h2>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "32px",
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "#111827",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <MessageSquare
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        marginRight: "8px",
-                        color: "#7c3aed",
-                      }}
-                    />
-                    Share Your Insights
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <textarea
-                      value={generalComment}
-                      onChange={(e) => setGeneralComment(e.target.value)}
-                      placeholder="Share your comprehensive feedback about agent performance, suggest improvements, highlight positive interactions, or provide any other valuable observations..."
-                      style={{
-                        width: "100%",
-                        padding: "24px",
-                        paddingRight: "64px",
-                        border: "2px solid #e5e7eb",
-                        borderRadius: "12px",
-                        resize: "none",
-                        backgroundColor: "#ffffff",
-                        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                        outline: "none",
-                        transition: "all 0.2s",
-                        fontFamily: "inherit",
-                      }}
-                      rows="8"
-                      onFocus={(e) => {
-                        e.target.style.borderColor = "#7c3aed";
-                        e.target.style.boxShadow =
-                          "0 0 0 3px rgba(124, 58, 237, 0.1)";
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = "#e5e7eb";
-                        e.target.style.boxShadow =
-                          "0 1px 2px 0 rgba(0, 0, 0, 0.05)";
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: "16px",
-                        right: "16px",
-                        fontSize: "12px",
-                        color: "#9ca3af",
-                        backgroundColor: "#ffffff",
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      {generalComment.length}/1000
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    paddingTop: "24px",
-                    borderTop: "1px solid #e5e7eb",
-                  }}
-                >
-                  <button
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      padding: "16px 32px",
-                      background: "linear-gradient(to right, #7c3aed, #6d28d9)",
-                      color: "#ffffff",
-                      fontWeight: "bold",
-                      borderRadius: "12px",
-                      border: "none",
-                      cursor: "pointer",
-                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background =
-                        "linear-gradient(to right, #6d28d9, #5b21b6)";
-                      e.target.style.boxShadow =
-                        "0 20px 25px -5px rgba(0, 0, 0, 0.1)";
-                      e.target.style.transform = "scale(1.05)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background =
-                        "linear-gradient(to right, #7c3aed, #6d28d9)";
-                      e.target.style.boxShadow =
-                        "0 10px 15px -3px rgba(0, 0, 0, 0.1)";
-                      e.target.style.transform = "scale(1)";
-                    }}
-                  >
-                    <Send
-                      style={{
-                        width: "20px",
-                        height: "20px",
-                        marginRight: "12px",
-                      }}
-                    />
-                    Submit General Feedback
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Enhanced Summary Stats */}
-        <div
-          style={{
-            marginTop: "40px",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: "24px",
-          }}
-        >
-          <div
-            style={{
-              background: "linear-gradient(to bottom right, #3b82f6, #2563eb)",
-              borderRadius: "16px",
-              padding: "24px",
-              color: "#ffffff",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    color: "#bfdbfe",
-                    fontWeight: "500",
-                    marginBottom: "8px",
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  Flagged Chats
-                </p>
-                <p
-                  style={{
-                    fontSize: "48px",
-                    fontWeight: "bold",
-                    margin: "0 0 4px 0",
-                  }}
-                >
-                  {flaggedChats.length}
-                </p>
-                <p style={{ color: "#dbeafe", fontSize: "14px", margin: 0 }}>
-                  Conversations pending review
-                </p>
-              </div>
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <MessageSquare
-                  style={{ width: "28px", height: "28px", color: "#ffffff" }}
-                />
-              </div>
+      <div className="row g-3 mb-4">
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="text-muted small">Submitted Forms</div>
+              <div className="fs-3 fw-bold">{evaluations.length + escalations.length}</div>
             </div>
           </div>
-
-          <div
-            style={{
-              background: "linear-gradient(to bottom right, #10b981, #059669)",
-              borderRadius: "16px",
-              padding: "24px",
-              color: "#ffffff",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    color: "#a7f3d0",
-                    fontWeight: "500",
-                    marginBottom: "8px",
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  Flagged Calls
-                </p>
-                <p
-                  style={{
-                    fontSize: "48px",
-                    fontWeight: "bold",
-                    margin: "0 0 4px 0",
-                  }}
-                >
-                  {flaggedCalls.length}
-                </p>
-                <p style={{ color: "#d1fae5", fontSize: "14px", margin: 0 }}>
-                  Recordings under review
-                </p>
-              </div>
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Phone
-                  style={{ width: "28px", height: "28px", color: "#ffffff" }}
-                />
-              </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="text-muted small">My Appeals</div>
+              <div className="fs-3 fw-bold">{appeals.length}</div>
             </div>
           </div>
-
-          <div
-            style={{
-              background: "linear-gradient(to bottom right, #8b5cf6, #7c3aed)",
-              borderRadius: "16px",
-              padding: "24px",
-              color: "#ffffff",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    color: "#c4b5fd",
-                    fontWeight: "500",
-                    marginBottom: "8px",
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  Active Reviews
-                </p>
-                <p
-                  style={{
-                    fontSize: "48px",
-                    fontWeight: "bold",
-                    margin: "0 0 4px 0",
-                  }}
-                >
-                  {Object.keys(expandedChats).filter(
-                    (key) => expandedChats[key]
-                  ).length +
-                    Object.keys(expandedCalls).filter(
-                      (key) => expandedCalls[key]
-                    ).length}
-                </p>
-                <p style={{ color: "#ddd6fe", fontSize: "14px", margin: 0 }}>
-                  Currently being reviewed
-                </p>
-              </div>
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <FileText
-                  style={{ width: "28px", height: "28px", color: "#ffffff" }}
-                />
+        </div>
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="text-muted small">Pending Review</div>
+              <div className="fs-3 fw-bold text-warning">
+                {appeals.filter((a) => a.status === "pending").length}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <div className="card border-0 shadow-sm mb-4">
+        <div className="card-header bg-white d-flex flex-wrap gap-2 align-items-center justify-content-between">
+          <h5 className="mb-0">Your Submitted Forms</h5>
+          <div className="btn-group btn-group-sm">
+            {[
+              { id: "all", label: "All" },
+              { id: "evaluations", label: "Evaluations" },
+              { id: "escalations", label: "Escalations" },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                className={`btn ${filter === id ? "btn-primary" : "btn-outline-primary"}`}
+                onClick={() => setFilter(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="card-body">
+          {forms.length === 0 ? (
+            <div className="text-center text-muted py-5">
+              No submitted forms found for your account.
+            </div>
+          ) : (
+            <>
+              {visibleForms.map((form) => {
+                const isOpen = expandedKey === form.key;
+                const hasAppeal = appealedFormIds.has(`${form.formType}-${form.formId}`);
+                const FormIcon = form.Icon;
+
+                return (
+                  <div key={form.key} className="border rounded-3 mb-3 overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-100 btn btn-light text-start d-flex align-items-center justify-content-between p-3 border-0"
+                      onClick={() => setExpandedKey(isOpen ? null : form.key)}
+                    >
+                      <div className="d-flex align-items-center gap-3 flex-wrap">
+                        <span className={`badge ${form.badgeClass}`}>{form.label}</span>
+                        <span className="fw-semibold">Lead #{form.leadID || "-"}</span>
+                        <span className="text-muted small">TL: {form.teamleader || "-"}</span>
+                        {form.formType === "evaluation" && (
+                          <span className="text-muted small">Rating: {form.rating ?? "-"}</span>
+                        )}
+                        {form.formType === "escalation" && (
+                          <span className="text-muted small">{form.escSeverity || "-"}</span>
+                        )}
+                        <span className="text-muted small d-inline-flex align-items-center gap-1">
+                          <Clock size={14} />
+                          {formatDate(form.createdAt)}
+                        </span>
+                        {hasAppeal && (
+                          <span className="badge bg-success-subtle text-success border">
+                            Appeal submitted
+                          </span>
+                        )}
+                      </div>
+                      {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </button>
+
+                    {isOpen && (
+                      <div className="p-4 border-top bg-light-subtle">
+                        <div className="row g-3 mb-4">
+                          <div className="col-md-6">
+                            <div className="small text-muted">Agent</div>
+                            <div>{form.agentName || "-"}</div>
+                          </div>
+                          <div className="col-md-6">
+                            <div className="small text-muted">Team Lead</div>
+                            <div>{form.teamleader || "-"}</div>
+                          </div>
+                          {form.formType === "evaluation" && (
+                            <>
+                              <div className="col-md-6">
+                                <div className="small text-muted">MOD</div>
+                                <div>{form.mod || "-"}</div>
+                              </div>
+                              <div className="col-md-6">
+                                <div className="small text-muted">Rating</div>
+                                <div>{form.rating ?? "-"}</div>
+                              </div>
+                            </>
+                          )}
+                          {form.formType === "escalation" && (
+                            <>
+                              <div className="col-md-6">
+                                <div className="small text-muted">Severity</div>
+                                <div>{form.escSeverity || "-"}</div>
+                              </div>
+                              <div className="col-md-6">
+                                <div className="small text-muted">Lead Status</div>
+                                <div>{form.leadStatus || "-"}</div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <label className="form-label fw-semibold d-flex align-items-center gap-2">
+                          <MessageSquare size={16} className="text-primary" />
+                          Your Response / Appeal
+                        </label>
+                        <textarea
+                          className="form-control mb-2"
+                          rows={5}
+                          placeholder="Explain why you disagree with this QC evaluation. Describe your case clearly (e.g. the QC missed context, wrong criteria applied, etc.)..."
+                          value={appealText[form.key] || ""}
+                          onChange={(e) =>
+                            setAppealText((prev) => ({
+                              ...prev,
+                              [form.key]: e.target.value,
+                            }))
+                          }
+                          maxLength={2000}
+                        />
+                        <div className="text-end text-muted small mb-3">
+                          {(appealText[form.key] || "").length}/2000 (min 20)
+                        </div>
+
+                        <label className="form-label fw-semibold d-flex align-items-center gap-2">
+                          <Upload size={16} className="text-primary" />
+                          Supporting Documents
+                        </label>
+                        <p className="text-muted small mb-2">
+                          Images, PDF, or ZIP — up to {MAX_FILES} files, 5MB each
+                        </p>
+                        <input
+                          type="file"
+                          className="form-control mb-2"
+                          accept="image/*,.pdf,.zip,application/zip"
+                          multiple
+                          onChange={(e) => handleFileChange(form.key, e.target.files)}
+                        />
+                        {(appealFiles[form.key] || []).length > 0 && (
+                          <ul className="list-group mb-3">
+                            {(appealFiles[form.key] || []).map((file, idx) => (
+                              <li
+                                key={`${file.name}-${idx}`}
+                                className="list-group-item d-flex justify-content-between align-items-center py-2"
+                              >
+                                <span className="small d-flex align-items-center gap-2">
+                                  <Paperclip size={14} />
+                                  {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                </span>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => removeFile(form.key, idx)}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <div className="d-flex justify-content-end">
+                          <button
+                            type="button"
+                            className="btn btn-primary d-inline-flex align-items-center gap-2"
+                            disabled={submitting}
+                            onClick={() => handleSubmitAppeal(form)}
+                          >
+                            {submitting ? (
+                              <>
+                                <Loader2 size={16} className="spin" />
+                                Submitting...
+                              </>
+                            ) : (
+                              <>
+                                <Send size={16} />
+                                Submit Appeal
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {forms.length > formsVisibleCount && (
+                <div className="d-flex justify-content-center mt-3">
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary px-4"
+                    onClick={() => setFormsVisibleCount((c) => c + PAGE_SIZE)}
+                  >
+                    View More ({forms.length - formsVisibleCount} remaining)
+                  </button>
+                </div>
+              )}
+
+              {formsVisibleCount > PAGE_SIZE && (
+                <div className="d-flex justify-content-center mt-2">
+                  <button
+                    type="button"
+                    className="btn btn-link btn-sm text-muted"
+                    onClick={() => setFormsVisibleCount(PAGE_SIZE)}
+                  >
+                    Show Less
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {appeals.length > 0 && (
+        <div className="card border-0 shadow-sm">
+          <div className="card-header bg-white">
+            <h5 className="mb-0">My Submitted Appeals</h5>
+          </div>
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0 align-middle">
+                <thead className="table-light">
+                  <tr>
+                    <th>Form</th>
+                    <th>Lead ID</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleAppeals.map((appeal) => (
+                    <tr key={appeal._id}>
+                      <td className="text-capitalize">{appeal.formType}</td>
+                      <td>{appeal.leadID || "-"}</td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            appeal.status === "pending"
+                              ? "bg-warning text-dark"
+                              : appeal.status === "resolved"
+                              ? "bg-success"
+                              : "bg-info"
+                          }`}
+                        >
+                          {appeal.status}
+                        </span>
+                      </td>
+                      <td className="small text-muted">{formatDate(appeal.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {appeals.length > appealsVisibleCount && (
+              <div className="d-flex justify-content-center py-3 border-top">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary px-4"
+                  onClick={() => setAppealsVisibleCount((c) => c + PAGE_SIZE)}
+                >
+                  View More ({appeals.length - appealsVisibleCount} remaining)
+                </button>
+              </div>
+            )}
+
+            {appealsVisibleCount > PAGE_SIZE && (
+              <div className="d-flex justify-content-center pb-3">
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm text-muted"
+                  onClick={() => setAppealsVisibleCount(PAGE_SIZE)}
+                >
+                  Show Less
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
     </div>
   );
 };

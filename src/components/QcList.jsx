@@ -2279,7 +2279,9 @@ import {
   patchUserApi,
   deleteUserApi,
 } from "../features/userApis";
-import { getEvaluationsApi, publishEvaluationApi } from "../features/evaluationApi";
+import { getEvaluationsApi } from "../features/evaluationApi";
+import { normalizeRole, ROLES } from "../utils/roles";
+import WeeklyStatsChart from "./WeeklyStatsChart";
 import { getEscalationsApi } from "../features/escalationsApi";
 import { getAllMarketingAdminApi } from "../features/marketingApi";
 
@@ -2290,7 +2292,7 @@ const QcList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterOnline, setFilterOnline] = useState(false);
   const [teamStatusFilter, setTeamStatusFilter] = useState("all"); // 'all' | 'active' | 'inactive'
-  const [activeTab, setActiveTab] = useState("team"); // 'team', 'published', 'drafts'
+  const [activeTab, setActiveTab] = useState("team");
   const [editingUser, setEditingUser] = useState(null);
   const [editFormData, setEditFormData] = useState({ name: "", email: "", role: "" });
   const [savingUser, setSavingUser] = useState(false);
@@ -2299,8 +2301,6 @@ const QcList = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [forms, setForms] = useState([]);
   const [selectedForm, setSelectedForm] = useState(null);
-  const [publishing, setPublishing] = useState(false);
-  const [publishError, setPublishError] = useState("");
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -2339,18 +2339,9 @@ const QcList = () => {
             ? uData
             : [];
           setAllUsers(rawUsers);
-          const normalizeRole = (role) =>
-            (role || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
           const qcTeamMembers = rawUsers.filter((u) => {
             const r = normalizeRole(u.role);
-            return (
-              r === "qc user" ||
-              r === "qc" ||
-              r.includes("qc") ||
-              r === "admin" ||
-              r === "superadmin" ||
-              r.includes("admin")
-            );
+            return r === ROLES.QC_USER || r === ROLES.QC_ADMIN;
           });
           setAgents(qcTeamMembers);
         }
@@ -2410,14 +2401,7 @@ const QcList = () => {
               ? "bitrix"
               : "frontend";
 
-          const derivedStatus =
-            status === "published" || status === "draft"
-              ? status
-              : source === "bitrix"
-              ? "draft"
-              : "published";
-
-          return { source, status: derivedStatus };
+          return { source, status: "published" };
         };
 
         const unify = (rows, type) =>
@@ -2458,7 +2442,7 @@ const QcList = () => {
 
   useEffect(() => {
     const tab = location?.state?.tab;
-    if (tab === "published" || tab === "drafts" || tab === "team") {
+    if (tab === "team") {
       setActiveTab(tab);
     }
     const teamStatus = location?.state?.teamStatus; // 'active' | 'inactive' | 'all'
@@ -2468,57 +2452,6 @@ const QcList = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handlePublishSelected = async () => {
-    if (!selectedForm?._id) return;
-    if (selectedForm.type !== "evaluation") {
-      setPublishError("Only Evaluation drafts can be published from here.");
-      return;
-    }
-    if (selectedForm.status === "published") return;
-
-    try {
-      setPublishError("");
-      setPublishing(true);
-      await publishEvaluationApi(selectedForm._id);
-
-      setForms((prev) =>
-        (Array.isArray(prev) ? prev : []).map((f) =>
-          f._id === selectedForm._id
-            ? {
-                ...f,
-                status: "published",
-                raw: {
-                  ...(f.raw || {}),
-                  status: "published",
-                  publishedAt: new Date().toISOString(),
-                },
-              }
-            : f
-        )
-      );
-      setSelectedForm((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: "published",
-              raw: {
-                ...(prev.raw || {}),
-                status: "published",
-                publishedAt: new Date().toISOString(),
-              },
-            }
-          : prev
-      );
-      setActiveTab("published");
-    } catch (e) {
-      setPublishError(
-        e?.response?.data?.message || e?.message || "Failed to publish evaluation"
-      );
-    } finally {
-      setPublishing(false);
-    }
-  };
 
   const handleAdminClick = (agent) => {
     // Pass email explicitly so AdminDetails knows to fetch data by "useremail" (submitter)
@@ -2640,11 +2573,10 @@ const QcList = () => {
       });
   }, [processedAgents, searchTerm, filterOnline, teamStatusFilter, currentUser]);
 
-  // --- FORMS LOGIC (Bitrix = Drafts, Frontend = Published) ---
-  const { publishedRecords, draftRecords } = useMemo(() => {
+  const publishedRecords = useMemo(() => {
     const term = searchTerm.toLowerCase();
     const match = (v) => (v || "").toString().toLowerCase().includes(term);
-    const base = forms.filter(
+    return forms.filter(
       (f) =>
         match(f.submitterName) ||
         match(f.submitterEmail) ||
@@ -2653,10 +2585,6 @@ const QcList = () => {
         match(f.leadID) ||
         match(f.type)
     );
-    return {
-      publishedRecords: base.filter((f) => f.status === "published"),
-      draftRecords: base.filter((f) => f.status === "draft"),
-    };
   }, [forms, searchTerm]);
 
   const stats = useMemo(() => {
@@ -2664,9 +2592,8 @@ const QcList = () => {
       totalAgents: processedAgents.length,
       onlineAgents: processedAgents.filter((a) => a.isOnline).length,
       publishedCount: publishedRecords.length,
-      draftCount: draftRecords.length,
     };
-  }, [processedAgents, publishedRecords, draftRecords]);
+  }, [processedAgents, publishedRecords]);
 
   const getActivityIcon = (activity) => {
     if (!activity) return <Clock className="w-3.5 h-3.5" />;
@@ -2826,20 +2753,10 @@ const QcList = () => {
                   {getTypeBadge(selectedForm.type)}
                 </span>
                 <span className="text-sm text-slate-600">
-                  {selectedForm.status === "published" ? "Published" : "Draft"} •{" "}
-                  {selectedForm.source === "bitrix" ? "Bitrix" : "Frontend"}
+                  Published • {selectedForm.source === "bitrix" ? "Bitrix" : "Frontend"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                {selectedForm.status !== "published" && selectedForm.type === "evaluation" && (
-                  <button
-                    onClick={handlePublishSelected}
-                    disabled={publishing}
-                    className="px-3 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-all disabled:opacity-60"
-                  >
-                    {publishing ? "Publishing..." : "Publish"}
-                  </button>
-                )}
                 <button
                   onClick={() => setSelectedForm(null)}
                   className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
@@ -2850,11 +2767,6 @@ const QcList = () => {
               </div>
             </div>
             <div className="p-5 space-y-4 max-h-[70vh] overflow-auto">
-              {publishError ? (
-                <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
-                  {publishError}
-                </div>
-              ) : null}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="p-3 rounded-xl border border-slate-200 bg-white">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Submitted By</div>
@@ -2939,20 +2851,12 @@ const QcList = () => {
             </span>
           </div>
 
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 transition-all hover:shadow-md col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <Archive className="w-4 h-4 text-amber-600" />
-              </div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Drafts
-              </span>
-            </div>
-            <span className="text-2xl font-bold text-slate-800">
-              {stats.draftCount}
-            </span>
-          </div>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6">
+        <h3 className="text-lg font-semibold text-slate-800 mb-3">Weekly QC Activity</h3>
+        <WeeklyStatsChart />
       </div>
 
       {/* Main Content Card */}
@@ -2975,60 +2879,6 @@ const QcList = () => {
             QC Team
             {activeTab === "team" && (
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("published")}
-            className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-all relative ${
-              activeTab === "published"
-                ? "text-blue-700 bg-white shadow-sm"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            <CheckCircle2
-              className={`w-4 h-4 ${
-                activeTab === "published" ? "text-green-600" : "text-slate-400"
-              }`}
-            />
-            Published
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs ${
-                activeTab === "published"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              {stats.publishedCount}
-            </span>
-            {activeTab === "published" && (
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-green-500 rounded-t-full" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("drafts")}
-            className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-all relative ${
-              activeTab === "drafts"
-                ? "text-amber-700 bg-white shadow-sm"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            <Database
-              className={`w-4 h-4 ${
-                activeTab === "drafts" ? "text-amber-600" : "text-slate-400"
-              }`}
-            />
-            Drafts (Bitrix)
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs ${
-                activeTab === "drafts"
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              {stats.draftCount}
-            </span>
-            {activeTab === "drafts" && (
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500 rounded-t-full" />
             )}
           </button>
         </div>
@@ -3225,107 +3075,6 @@ const QcList = () => {
                 </div>
               )}
 
-              {/* --- RECORDS TAB (Published & Drafts) --- */}
-              {(activeTab === "published" || activeTab === "drafts") && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(activeTab === "published" ? publishedRecords : draftRecords)
-                    .length === 0 ? (
-                    <div className="col-span-full">
-                      {renderEmptyState(
-                        activeTab === "published"
-                          ? "No published records"
-                          : "No draft records",
-                        activeTab === "published"
-                          ? "Submitted forms will appear here."
-                          : "Bitrix source forms appear here for review."
-                      )}
-                    </div>
-                  ) : (
-                    (activeTab === "published"
-                      ? publishedRecords
-                      : draftRecords
-                    ).map((record) => (
-                      <div
-                        key={record._id || Math.random()}
-                        className="group bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col h-full"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm ${
-                              activeTab === "drafts"
-                                ? "bg-amber-500"
-                                : "bg-gradient-to-br from-blue-500 to-indigo-600"
-                            }`}
-                          >
-                            {record.type === "evaluation" ? (
-                              <FileSearch className="w-5 h-5" />
-                            ) : record.type === "escalation" ? (
-                              <ShieldAlert className="w-5 h-5" />
-                            ) : (
-                              <Zap className="w-5 h-5" />
-                            )}
-                          </div>
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                              activeTab === "drafts"
-                                ? "bg-amber-50 text-amber-700 border-amber-100"
-                                : "bg-green-50 text-green-700 border-green-100"
-                            }`}
-                          >
-                            {activeTab === "drafts" ? "Draft" : "Published"}
-                          </span>
-                        </div>
-
-                        <div className="mb-4 flex-1">
-                          <h3
-                            className="font-bold text-slate-900 text-lg mb-1 line-clamp-1"
-                            title={record.submitterName}
-                          >
-                            {record.submitterName || "Unknown User"}
-                          </h3>
-                          <div className="flex items-center gap-2 text-slate-500 text-sm mb-2">
-                            <Mail className="w-3.5 h-3.5" />
-                            <span className="truncate">
-                              {record.submitterEmail || "No email"}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            <div className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                              <Globe className="w-3 h-3" />
-                              {record.source === "bitrix" ? "Bitrix" : "Frontend"}
-                            </div>
-                            <div className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                              <Calendar className="w-3 h-3" />
-                              {record.createdAt
-                                ? new Date(
-                                    record.createdAt
-                                  ).toLocaleDateString()
-                                : "Date N/A"}
-                            </div>
-                            <div className="inline-flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wide">
-                              {getTypeBadge(record.type)}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                          <span className="text-xs text-slate-400 font-medium">
-                            ID:{" "}
-                            {record.leadID || record._id?.substring(0, 6) || "N/A"}
-                          </span>
-                          <button
-                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 group-hover:gap-2 transition-all"
-                            onClick={() => setSelectedForm(record)}
-                          >
-                            View Details
-                            <ArrowRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>

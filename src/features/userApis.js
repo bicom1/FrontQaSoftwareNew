@@ -177,29 +177,73 @@ export const onlineUsersCountApi = async () => {
   return response.data;
 };
 
-export const LeadRegister = async (data) => {
-  const res = await axios.post(`${baseUrl}/api/users/register-user`, data);
-  return res;
-};
-
-export const LoginApi = async (data) => {
-  const res = await axios.post(`${baseUrl}/api/users/login-user`, data);
-  return res;
-};
-
-export const forgotPasswordApi = async (email) => {
-  const res = await axios.post(`${baseUrl}/api/users/forgot-password`, {
-    email,
+export const signupApi = async (data) => {
+  const res = await axios.post(`${baseUrl}/api/users/signup`, {
+    name: data.name,
+    email: data.email,
+    password: data.password,
+    role: data.role,
   });
   return res;
 };
 
-export const resetPasswordApi = async (data) => {
+export const LeadRegister = async (data) => {
   const token = getToken();
-  const res = await axios.post(`${baseUrl}/api/users/reset-password`, data, {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
+  if (!token) {
+    const err = new Error("You must be logged in as admin to add users");
+    err.response = {
+      status: 401,
+      data: {
+        success: false,
+        code: "NO_TOKEN",
+        message: "You must be logged in as admin to add users",
+      },
+    };
+    throw err;
+  }
+  const res = await axios.post(`${baseUrl}/api/users/register-user`, data, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res;
+};
+
+export const getUsersByRoleApi = async (role) => {
+  const token = getToken();
+  const res = await axios.get(`${baseUrl}/api/users/getallusers`, {
+    params: role ? { role } : {},
+    headers: { Authorization: token ? `Bearer ${token}` : "" },
+  });
+  return res;
+};
+
+export const LoginApi = async (data) => {
+  const res = await axios.post(`${baseUrl}/api/users/login-user`, {
+    email: data.email?.trim().toLowerCase(),
+    password: data.password,
+  });
+  return res;
+};
+
+export const forgotPasswordApi = async (email) => {
+  const normalizedEmail =
+    typeof email === "string"
+      ? email.trim().toLowerCase()
+      : email?.email?.trim().toLowerCase();
+  const res = await axios.post(`${baseUrl}/api/users/forgot-password`, {
+    email: normalizedEmail,
+  });
+  return res;
+};
+
+export const verifyOtpApi = async (data) => {
+  const res = await axios.post(`${baseUrl}/api/users/verify-otp`, data);
+  return res;
+};
+
+export const resetPasswordApi = async (data) => {
+  const res = await axios.post(`${baseUrl}/api/users/reset-password`, {
+    email: data.email?.trim().toLowerCase(),
+    newPassword: data.newPassword,
   });
   return res;
 };

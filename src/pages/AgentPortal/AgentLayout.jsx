@@ -3,11 +3,12 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import AgentSidebar from "../../components/Agent/AgentSidebar";
 import AgentHeader from "../../components/Agent/AgentHeader";
+import useAgentFormNotifications from "../../hooks/useAgentFormNotifications";
 
 const pathnameToTab = (pathname) => {
-  // strip trailing slash
   const clean = pathname.replace(/\/+$/, "");
   if (clean === "/agent") return "agent";
+  if (clean.endsWith("team-users")) return "team-users";
   if (clean.endsWith("feedback")) return "feedback";
   if (clean.endsWith("submissions")) return "submissions";
   return "agent";
@@ -15,21 +16,17 @@ const pathnameToTab = (pathname) => {
 
 const AgentLayout = ({ setIsLoggedIn }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      text: "New user registration",
-      time: "5 minutes ago",
-      read: false,
-    },
-    {
-      id: 2,
-      text: "Server update completed",
-      time: "2 hours ago",
-      read: false,
-    },
-    { id: 3, text: "Weekly report available", time: "1 day ago", read: true },
-  ]);
+
+  // Dynamic notifications — evaluations & escalations for logged-in agent
+  const { notifications, markAllAsRead, markAsRead } = useAgentFormNotifications();
+
+  // ── REMOVED (commented for future use): static placeholder notifications ───
+  // const [notifications, setNotifications] = useState([
+  //   { id: 1, text: "New user registration", time: "5 minutes ago", read: false },
+  //   { id: 2, text: "Server update completed", time: "2 hours ago", read: false },
+  //   { id: 3, text: "Weekly report available", time: "1 day ago", read: true },
+  // ]);
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [formsExpanded, setFormsExpanded] = useState(false);
@@ -62,11 +59,13 @@ const AgentLayout = ({ setIsLoggedIn }) => {
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           notifications={notifications}
-          setNotifications={setNotifications}
+          markAllAsRead={markAllAsRead}
+          markAsRead={markAsRead}
           showNotifications={showNotifications}
           setShowNotifications={setShowNotifications}
           showUserMenu={showUserMenu}
           setShowUserMenu={setShowUserMenu}
+          onViewAllSubmissions={() => navigate("/agent/submissions")}
         />
 
         <div className="flex-grow-1 bg-light p-4">
