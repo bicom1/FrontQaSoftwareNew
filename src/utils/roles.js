@@ -70,6 +70,7 @@ export const getManageableRoles = (actorRole) => {
   const actor = normalizeRole(actorRole);
   if (isSuperAdmin(actor)) return [...ALL_ROLES];
   if (isAgentAdmin(actor)) return [ROLES.AGENT_USER];
+  // QC Admin may view QC users only; Super Admin creates them
   if (isQcAdmin(actor)) return [ROLES.QC_USER];
   return [];
 };
@@ -91,6 +92,13 @@ export const getDashboardPath = (role) => {
   if (r === ROLES.AGENT_USER || r === ROLES.AGENT_ADMIN) return "/agent";
   if (r === ROLES.QC_ADMIN || r === ROLES.QC_USER) return "/dashboard/qc-team";
   return "/login";
+};
+
+/** Base path for shared dashboard routes (super admin uses /admin, others /dashboard) */
+export const getModuleBasePath = (role) => {
+  const r = normalizeRole(role);
+  if (r === ROLES.SUPER_ADMIN) return "/admin";
+  return "/dashboard";
 };
 
 export const ROLE_LABELS = {

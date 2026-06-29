@@ -425,7 +425,7 @@ function Login({ onLoginSuccess }) {
                   if (e.key === "Enter" || e.key === " ") navigate("/signup");
                 }}
               >
-                Don&apos;t have an account? Sign up
+                {/* Don&apos;t have an account? Sign up */}
               </span>
             </div>
           </form>

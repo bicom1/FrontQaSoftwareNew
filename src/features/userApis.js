@@ -177,6 +177,20 @@ export const onlineUsersCountApi = async () => {
   return response.data;
 };
 
+export const getUsersByPresenceApi = async (status = "active") => {
+  const token = getToken();
+  if (!token) return null;
+
+  const response = await axios.get(`${baseUrl}/api/users/presence`, {
+    params: { status },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
+
 export const signupApi = async (data) => {
   const res = await axios.post(`${baseUrl}/api/users/signup`, {
     name: data.name,

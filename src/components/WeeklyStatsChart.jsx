@@ -11,11 +11,22 @@ import {
 } from "recharts";
 import { getWeeklyStatsApi } from "../features/analytics";
 
-const WeeklyStatsChart = ({ title = "Weekly Activity", height = 300 }) => {
+const WeeklyStatsChart = ({
+  title = "Weekly Activity",
+  height = 300,
+  data: externalData,
+  loading: externalLoading,
+}) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (Array.isArray(externalData)) {
+      setData(externalData);
+      setLoading(Boolean(externalLoading));
+      return;
+    }
+
     const load = async () => {
       try {
         const res = await getWeeklyStatsApi();
@@ -29,7 +40,7 @@ const WeeklyStatsChart = ({ title = "Weekly Activity", height = 300 }) => {
       }
     };
     load();
-  }, []);
+  }, [externalData, externalLoading]);
 
   if (loading) {
     return <p className="text-muted mb-0">Loading weekly chart...</p>;

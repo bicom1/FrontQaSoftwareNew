@@ -937,16 +937,18 @@ const TeamLeadManagement = () => {
             />
           </InputGroup>
         </Col>
-        <Col md={4}>
-          <Card style={{ background: GRADIENT }} className="text-white h-100">
-            <Card.Body className="d-flex align-items-center justify-content-between">
-              <div>
-                <small>{teamLeads.length} Total Team Leads</small>
-              </div>
-              <i className="bi bi-people-fill" style={{ fontSize: "2rem", opacity: 0.75 }} />
-            </Card.Body>
-          </Card>
-        </Col>
+      <Col md={4}>
+  <InputGroup size="lg">
+    <InputGroup.Text className="bg-light border-end-0">
+      <i className="bi bi-people-fill text-muted" />
+    </InputGroup.Text>
+    <Form.Control
+      readOnly
+      value={`${teamLeads.length} Total Team Lead${teamLeads.length !== 1 ? "s" : ""}`}
+      className="border-start-0 ps-0 bg-white fw-semibold"
+    />
+  </InputGroup>
+</Col>
       </Row>
 
       {/* Table */}

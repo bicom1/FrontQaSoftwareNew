@@ -2291,7 +2291,7 @@ const QcList = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterOnline, setFilterOnline] = useState(false);
-  const [teamStatusFilter, setTeamStatusFilter] = useState("all"); // 'all' | 'active' | 'inactive'
+  const [teamStatusFilter, setTeamStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("team");
   const [editingUser, setEditingUser] = useState(null);
   const [editFormData, setEditFormData] = useState({ name: "", email: "", role: "" });

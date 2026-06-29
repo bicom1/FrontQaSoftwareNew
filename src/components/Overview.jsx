@@ -1617,6 +1617,8 @@ import EvaluationsBarChart from "./EvaluationsBarChart";
 import ReportDownload from "./ReportDownload";
 import DailyEscalationChart from "./DailyEscalationChart";
 import DailyMarketingLineChart from "./DailyMarketingLineChart.jsx";
+import ContentOverviewCard from "./ContentOverviewCard";
+import UserPresenceModal from "./UserPresenceModal";
 import {
   ROLES,
   normalizeRole,
@@ -1625,6 +1627,7 @@ import {
   SUPER_ADMIN_PANEL_ROLES,
   isAgentRole,
   isQcRole,
+  getModuleBasePath,
 } from "../utils/roles";
 import {
   loginAndRedirect,
@@ -1651,6 +1654,7 @@ const Overview = () => {
   const [evaluationAnalytics, setEvaluationAnalytics] = useState(null);
   const [publishedCount, setPublishedCount] = useState(0);
   const currentUserRole = normalizeRole(localStorage.getItem("userRole") || "");
+  const moduleBase = getModuleBasePath(currentUserRole);
   const canAddUsers = isSuperAdmin(currentUserRole);
   const addUserRoleOptions = SUPER_ADMIN_PANEL_ROLES;
   const [recentActivity, setRecentActivity] = useState([]);
@@ -1695,8 +1699,14 @@ const Overview = () => {
     const fetchContentOverview = async () => {
       const result = await getContentOverviewApi();
       if (result?.success) {
-        setPublishedCount(result.publishedCount ?? 0);
+        setPublishedCount(result.publishedCount ?? result.totalEvaluations ?? 0);
         setRecentActivity(Array.isArray(result.recentActivity) ? result.recentActivity : []);
+        if (result.totalEvaluations != null) {
+          setTotalEvaluationCounts(result.totalEvaluations);
+        }
+        if (result.totalEscalations != null) {
+          setTotalEscalationCounts(result.totalEscalations);
+        }
       }
     };
     fetchContentOverview();
@@ -1743,6 +1753,27 @@ const Overview = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingUser, setDeletingUser] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showPresenceModal, setShowPresenceModal] = useState(false);
+  const [presenceStatus, setPresenceStatus] = useState("active");
+
+  const refreshPresenceCounts = async () => {
+    if (!canAddUsers) return;
+    try {
+      const [users, onlineUsers] = await Promise.all([
+        totalUserCountApi(),
+        onlineUsersCountApi(),
+      ]);
+      setTotalUsers(users?.count ?? 0);
+      setOnlineUsersCount(onlineUsers?.count ?? 0);
+    } catch (err) {
+      console.error("Failed to refresh presence counts:", err);
+    }
+  };
+
+  const openPresenceModal = (status) => {
+    setPresenceStatus(status);
+    setShowPresenceModal(true);
+  };
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -1764,21 +1795,29 @@ const Overview = () => {
           getEscalationAnalyticsApi(),
           getEvaluationAnalyticsApi(),
           getMarketingAnalyticsApi(),
-          onlineUsersCountApi(),
+          canAddUsers ? onlineUsersCountApi() : Promise.resolve(null),
         ]);
 
         setTotalUsers(users?.count ?? 0);
         setTotalEscalationCounts(escalations?.count ?? 0);
         setTotalEvaluationCounts(evaluations?.count ?? 0);
         setTotalMarketingCounts(marketing?.count ?? 0);
-        setOnlineUsersCount(onlineUsers?.count ?? 0);
+        if (canAddUsers) {
+          setOnlineUsersCount(onlineUsers?.count ?? 0);
+        }
       } catch (err) {
         console.error("Failed to fetch data:", err);
       }
     };
 
     fetchAllData();
-  }, []);
+  }, [canAddUsers]);
+
+  useEffect(() => {
+    if (!canAddUsers) return undefined;
+    const timer = setInterval(refreshPresenceCounts, 15000);
+    return () => clearInterval(timer);
+  }, [canAddUsers]);
 
   // Fetch ALL users in a single useEffect - QC, Agents, and Admins
   useEffect(() => {
@@ -2129,23 +2168,27 @@ const Overview = () => {
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex gap-2">
-          <Button
-            variant="success"
-            onClick={() => navigate("/dashboard/qc-team", { state: { teamStatus: "active" } })}
-          >
-            Active Users : {onlineUsersCount ?? "Loading..."}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => navigate("/dashboard/qc-team", { state: { teamStatus: "inactive" } })}
-          >
-            Inactive Users :{" "}
-            {totalUsers && onlineUsersCount !== null
-              ? totalUsers - onlineUsersCount
-              : "Loading..."}
-          </Button>
-        </div>
+        {canAddUsers ? (
+          <div className="d-flex gap-2">
+            <Button
+              variant="success"
+              onClick={() => openPresenceModal("active")}
+            >
+              Active Users : {onlineUsersCount ?? "Loading..."}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => openPresenceModal("inactive")}
+            >
+              Inactive Users :{" "}
+              {totalUsers !== null && onlineUsersCount !== null
+                ? Math.max(0, totalUsers - onlineUsersCount)
+                : "Loading..."}
+            </Button>
+          </div>
+        ) : (
+          <div />
+        )}
 
         <div>
           <div className="d-flex gap-3">
@@ -2418,6 +2461,14 @@ const Overview = () => {
         </Modal.Footer>
       </Modal>
 
+      {canAddUsers && (
+        <UserPresenceModal
+          show={showPresenceModal}
+          onHide={() => setShowPresenceModal(false)}
+          status={presenceStatus}
+        />
+      )}
+
       {/* Add User Modal */}
       <Modal show={showModal} onHide={handleCloseModal} centered>
         <Modal.Header closeButton>
@@ -2512,60 +2563,13 @@ const Overview = () => {
         <div className="row g-3 mb-4">
           {/* Column 1: Content Overview */}
           <div className="col-12 col-md-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body">
-                <p
-                  style={{
-                    background: "linear-gradient(90deg, #4CAF50, #2196F3)",
-                    borderRadius: "0.5rem 0.5rem 0 0",
-                    fontSize: "23px",
-                  }}
-                  className="text-white p-2 mb-4"
-                >
-                  Content Overview
-                </p>
-                <div className="d-flex align-items-center justify-content-between p-2 rounded bg-light mb-3">
-                  <div>
-                    <h5 className="mb-0 fw-semibold">Total Published</h5>
-                    <small className="text-muted">{publishedCount}</small>
-                  </div>
-                  <Button
-                    variant="dark"
-                    size="sm"
-                    onClick={() => navigate(`/dashboard/qc-team`)}
-                  >
-                    View
-                  </Button>
-                </div>
-
-                {/* Recent Activity Section */}
-                <div className="mt-4">
-                  <h5 className="text-muted mb-3 fw-bold">Recent Activity</h5>
-                  <ul className="list-group list-group-flush">
-                    {recentActivity?.length > 0 ? (
-                      recentActivity.slice(0, 5).map((item) => (
-                        <li
-                          key={item.id}
-                          className="list-group-item d-flex justify-content-between align-items-center"
-                        >
-                          <span>
-                            {item.actorName} {item.action}
-                          </span>
-                          <small className="text-muted">
-                            {timeAgo(item.createdAt)}
-                          </small>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="list-group-item d-flex justify-content-between align-items-center">
-                        <span className="text-muted">No recent activity</span>
-                        <small className="text-muted"></small>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <ContentOverviewCard
+              evaluationCount={totalEvaluationCounts ?? 0}
+              escalationCount={totalEscalationCounts ?? 0}
+              recentActivity={recentActivity}
+              viewPath={`${moduleBase}/qc-members`}
+              timeAgo={timeAgo}
+            />
           </div>
 
           {/* Column 2: Evaluations Chart */}
@@ -2754,14 +2758,14 @@ const Overview = () => {
             {
               title: "QC Team",
               data: qcTeam,
-              link: "/dashboard/qc-team",
+              link: `${moduleBase}/qc-team`,
               description: "Quality Control Team Members",
               icon: Shield,
             },
             {
               title: "Sales Agent Team",
               data: agents,
-              link: "/agent",
+              link: `${moduleBase}/sales-team`,
               description: "Sales and Marketing Team",
               icon: UserCheck,
             },

@@ -1,4 +1,3 @@
-// src/components/ReportDownload.jsx
 import React, { useState } from "react";
 import {
   Container,
@@ -27,8 +26,16 @@ import {
 } from "lucide-react";
 import { createReportEvaluationsApi } from "../features/evaluationApi";
 import { createReportEscalationsApi } from "../features/escalationsApi";
+import { isQcAdmin, isQcUser, normalizeRole } from "../utils/roles";
 
 const ReportDownload = () => {
+  const actorRole = normalizeRole(localStorage.getItem("userRole") || "");
+  const isQc = isQcUser(actorRole) || isQcAdmin(actorRole);
+  const scopeLabel = isQcAdmin(actorRole)
+    ? "all QC team records"
+    : isQcUser(actorRole)
+    ? "your own records only"
+    : "all records";
   const [activeTab, setActiveTab] = useState("evaluations");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -213,7 +220,14 @@ const ReportDownload = () => {
       <div className="d-flex justify-content-between align-items-center mb-4" style={{ backgroundColor: "#fff", padding: "1.5rem", borderRadius: "0.5rem", boxShadow: "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)" }}>
         <div>
           <h2 className="fw-bold text-dark mb-1">Reports Center</h2>
-          <p className="text-muted">Download Evaluation and Escalation Reports</p>
+          <p className="text-muted mb-0">
+            Download Evaluation and Escalation Reports
+            {isQc && (
+              <span className="d-block small mt-1">
+                QC scope: {scopeLabel}
+              </span>
+            )}
+          </p>
         </div>
         <Badge bg="light" text="dark" className="p-2">
           <Calendar size={16} className="me-1" />
@@ -410,7 +424,9 @@ const ReportDownload = () => {
 
             <div className="mt-4 text-center">
               <small className="text-muted">
-                Reports will include all records from {formatDate(startDate) || 'start date'} to {formatDate(endDate) || 'end date'}
+                Reports include {scopeLabel} from{" "}
+                {formatDate(startDate) || "start date"} to{" "}
+                {formatDate(endDate) || "end date"}
                 {agentName && `, filtered by agent: ${agentName}`}
                 {teamleader && `, filtered by team leader: ${teamleader}`}
               </small>

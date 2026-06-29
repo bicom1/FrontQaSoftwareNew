@@ -2,7 +2,9 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Overview from "../components/Overview";
-import QcList from "../components/QcList";
+import QcDashboard from "../components/QcDashboard";
+import QcTeamList from "../components/QcTeamList";
+import QcSubmittedForms from "../components/QcSubmittedForms";
 import UserManagement from "../components/UserManagement";
 import AddTeamLead from "../components/AddTeamLead";
 import Projects from "../components/Projects";
@@ -26,7 +28,9 @@ const Dashboard = ({ onLogout }) => {
         {/* /admin/* uses same dashboard; home is admin overview */}
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="qc-team" element={<QcList />} />
+        <Route path="qc-team" element={<QcDashboard />} />
+        <Route path="qc-members" element={<QcTeamList />} />
+        <Route path="submitted-forms" element={<QcSubmittedForms />} />
         {/* ✅ Protected route */}
         <Route path="qc-team/:agentName" element={<ProtectedAgent />} />
         {/* <Route path="qc-team/:agentName" element={<TableAdmin/>} /> */}

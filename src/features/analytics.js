@@ -18,7 +18,7 @@ export const getContentOverviewApi = async () => {
     return response.data;
   } catch (error) {
     console.error("Error fetching content overview:", error);
-    return { success: false, publishedCount: 0, recentActivity: [] };
+    return { success: false, publishedCount: 0, totalEvaluations: 0, totalEscalations: 0, recentActivity: [] };
   }
 };
 
