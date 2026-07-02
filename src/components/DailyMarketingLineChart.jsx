@@ -10,7 +10,8 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { getDailyMarketingSubmissions } from "../features/marketingApi";
-
+import { baseUrl } from "../features/config";
+import axios from "axios";
 
 const DailyMarketingLineChart = () => {
   const [chartData, setChartData] = useState([]);
@@ -23,7 +24,7 @@ const DailyMarketingLineChart = () => {
       setLoading(false);
       try {
         const res = await axios.get(
-          "http://localhost:3001/api/marketing/dailyMarketingFormSubmit"
+          `${baseUrl}/api/marketing/dailyMarketingFormSubmit`
         );
 
         if (res.data.success) {

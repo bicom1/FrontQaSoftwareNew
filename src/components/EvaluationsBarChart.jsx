@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getDailyEvaluations } from "../features/evaluationApi";
+import { baseUrl } from "../features/config";
 import axios from "axios";
 
 const EvaluationsBarChart = () => {
@@ -23,11 +24,8 @@ const EvaluationsBarChart = () => {
       setLoading(false);
       try {
         const res = await axios.get(
-          "http://localhost:3001/api/evaluations/dailyEvaluationFormSubmit"
+          `${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`
         );
-        // const res = await axios.get(
-        //   // "https://backendqasoftware-1jfe.onrender.com/api/evaluations/dailyEvaluationFormSubmit"
-        // );
 
         // Sort data by date in ascending order and take last 5 entries
         const sortedData = res.data.sort(
