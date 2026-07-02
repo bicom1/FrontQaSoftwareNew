@@ -131,7 +131,7 @@
 // // 🔹 Total User Count
 // // ===============================
 // export const totalUserCountApi = async () => {
-//   const response = await fetch(`${baseUrl}/api/users/totalUserCount`, {
+//   const response = await fetch(`${baseUrl}/api/users/totalusercount`, {
 //     headers: authHeader(),
 //   });
 
@@ -313,7 +313,7 @@ export const getAllLeadsApi = async () => {
 };
 
 export const totalUserCountApi = async () => {
-  const response = await fetch(`${baseUrl}/api/users/totalUserCount`, {
+  const response = await fetch(`${baseUrl}/api/users/totalusercount`, {
     headers: authHeader(),
   });
 

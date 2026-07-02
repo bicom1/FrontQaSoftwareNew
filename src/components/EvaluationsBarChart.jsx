@@ -24,7 +24,7 @@ const EvaluationsBarChart = () => {
       setLoading(false);
       try {
         const res = await axios.get(
-          `${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`
+          `${baseUrl}/api/evaluations/dailyevaluationformsubmit`
         );
 
         // Sort data by date in ascending order and take last 5 entries

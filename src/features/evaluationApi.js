@@ -4,7 +4,7 @@
 // // export const getDailyEvaluations = async () => {
 // //   try {
 // //     const res = await axios.get(
-// //       `${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`,
+// //       `${baseUrl}/api/evaluations/dailyevaluationformsubmit`,
 // //       {
 // //         headers: {
 // //           Authorization: `Bearer ${getToken()}`,
@@ -337,7 +337,7 @@
 // export const getDailyEvaluations = async () => {
 //   try {
 //     const res = await axios.get(
-//       `${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`,
+//       `${baseUrl}/api/evaluations/dailyevaluationformsubmit`,
 //       authHeader()
 //     );
 //     const sortedData = res.data.sort(
@@ -527,7 +527,7 @@ const authHeader = () => ({
 export const getDailyEvaluations = async () => {
   try {
     const res = await axios.get(
-      `${baseUrl}/api/evaluations/dailyEvaluationFormSubmit`,
+      `${baseUrl}/api/evaluations/dailyevaluationformsubmit`,
       {
         headers: {
           Authorization: `Bearer ${getToken()}`,

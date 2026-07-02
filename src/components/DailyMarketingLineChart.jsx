@@ -24,7 +24,7 @@ const DailyMarketingLineChart = () => {
       setLoading(false);
       try {
         const res = await axios.get(
-          `${baseUrl}/api/marketing/dailyMarketingFormSubmit`
+          `${baseUrl}/api/marketing/dailymarketingformsubmit`
         );
 
         if (res.data.success) {

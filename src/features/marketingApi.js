@@ -12,7 +12,7 @@ const authHeader = () => ({
 
 export const getDailyMarketingSubmissions = async () => {
   try {
-    const res = await axios.get(`${baseUrl}/api/marketing/dailyMarketingFormSubmit`, {
+    const res = await axios.get(`${baseUrl}/api/marketing/dailymarketingformsubmit`, {
       headers: {
         Authorization: `Bearer ${getToken()}`,
       },

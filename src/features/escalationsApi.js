@@ -300,7 +300,7 @@
 // // export const getEscalationAnalyticsApi = async () => {
 // //   try {
 // //     const response = await axios.get(
-// //       `${baseUrl}/api/analytics/getescalationAnalytics`,
+// //       `${baseUrl}/api/analytics/getEscalationAnalytics`,
 // //       authHeader()
 // //     );
 // //     return response.data;
@@ -838,7 +838,7 @@ export const totalEscalationCountsApi = async () => {
 export const getEscalationAnalyticsApi = async () => {
   try {
     const response = await axios.get(
-      `${baseUrl}/api/analytics/getescalationAnalytics`,
+      `${baseUrl}/api/analytics/getEscalationAnalytics`,
       authHeader()
     );
     return response.data;
