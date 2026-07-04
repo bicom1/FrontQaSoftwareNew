@@ -1,5 +1,5 @@
 const LOCAL_API_URL = "http://localhost:3001";
-const PRODUCTION_API_URL = "https://backendqasoftware.onrender.com";
+const PRODUCTION_API_URL = "https://backendqasoftwarenew.onrender.com";
 
 const normalizeBaseUrl = (url) => {
   if (!url || typeof url !== "string") return "";
