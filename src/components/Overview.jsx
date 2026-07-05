@@ -73,10 +73,6 @@ import {
   isQcRole,
   getModuleBasePath,
 } from "../utils/roles";
-import {
-  loginAndRedirect,
-  parseAuthFromRegisterResponse,
-} from "../utils/authSession";
 
 const COLORS = [
   "#0088FE",
@@ -578,21 +574,22 @@ const Overview = () => {
       const response = await LeadRegister(formData);
 
       if (response.status === 200 || response.status === 201) {
-        const auth = parseAuthFromRegisterResponse(response.data);
-        if (auth) {
-          loginAndRedirect(auth.user, auth.token);
-          return;
-        }
-
         const roleLabel =
           ROLE_LABELS[normalizeRole(formData.role)] || formData.role;
         setAlertMessage({
           type: "success",
-          message: `User "${formData.name.trim()}" created as ${roleLabel}.`,
+          message: `User "${formData.name.trim()}" created as ${roleLabel}. They can log in with the credentials you provided.`,
         });
 
-        const updatedUsers = await totalUserCountApi();
+        const [updatedUsers, usersRes] = await Promise.all([
+          totalUserCountApi(),
+          getallusersApi(),
+        ]);
         setTotalUsers(updatedUsers?.count ?? 0);
+
+        const users = usersRes?.data?.data || [];
+        setQcTeam(users.filter((u) => isQcRole(u.role)));
+        setAgents(users.filter((u) => isAgentRole(u.role)));
 
         setTimeout(() => {
           handleCloseModal();
