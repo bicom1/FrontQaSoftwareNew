@@ -2074,7 +2074,7 @@ const Overview = () => {
       onClick={() => !isSubmitting && handleCloseModal()}
     />
 
-    <div className="relative z-10 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+    <div className="relative z-10 flex max-h-[70vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4">
         <div className="flex items-center gap-3">
