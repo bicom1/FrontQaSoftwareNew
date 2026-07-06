@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
+import AcceptInvite from "./pages/AcceptInvite";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./components/Unauthorized";
 import AgentRoutes from "./Routes/AgentRoutes";
@@ -66,6 +67,9 @@ function App() {
         element={<Login onLoginSuccess={() => setIsLoggedIn(true)} />}
       />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/accept-invite/:token" element={<AcceptInvite />} />
+      <Route path="/invite/:token" element={<AcceptInvite />} />
+      <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route
         path="/signup"
         element={
@@ -172,7 +176,7 @@ function App() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

@@ -335,3 +335,103 @@ export const logoutApi = async () => {
     },
   });
 };
+
+// ---------- Invited Users ----------
+
+// Returns { count: number } of pending (or all, per backend) invites
+export const invitedUsersCountApi = async () => {
+  const token = getToken();
+  if (!token) return null;
+
+  const response = await axios.get(`${baseUrl}/api/users/invites/count`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
+
+// Returns list of invites: { success, data: [{ _id, email, role, status, invitedAt, expiresAt }] }
+export const getInvitedUsersApi = async () => {
+  const token = getToken();
+  const res = await axios.get(`${baseUrl}/api/users/invites`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  return res;
+};
+
+// Sends an invite email with a signup link. payload: { email, role }
+export const sendInviteApi = async (payload) => {
+  const token = getToken();
+  if (!token) {
+    const err = new Error("You must be logged in as admin to send invites");
+    err.response = {
+      status: 401,
+      data: {
+        success: false,
+        code: "NO_TOKEN",
+        message: "You must be logged in as admin to send invites",
+      },
+    };
+    throw err;
+  }
+  const res = await axios.post(
+    `${baseUrl}/api/users/invites`,
+    {
+      email: payload.email?.trim().toLowerCase(),
+      role: payload.role,
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res;
+};
+
+// Resends an existing pending invite (new token/expiry, same email+role)
+export const resendInviteApi = async (inviteId) => {
+  const token = getToken();
+  const res = await axios.post(
+    `${baseUrl}/api/users/invites/${inviteId}/resend`,
+    {},
+    {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+    }
+  );
+  return res;
+};
+
+// Deletes a pending invite and its saved user record
+export const deleteInviteApi = async (inviteId) => {
+  const token = getToken();
+  const res = await axios.delete(`${baseUrl}/api/users/invites/${inviteId}`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+  return res;
+};
+
+/** @deprecated use deleteInviteApi */
+export const cancelInviteApi = deleteInviteApi;
+
+// Public: validates an invite token before showing the "set your password" form
+// No auth header — the invited user isn't logged in yet.
+export const validateInviteTokenApi = async (token) => {
+  const res = await axios.get(`${baseUrl}/api/users/invites/${token}`);
+  return res;
+};
+
+// Public: invited user completes signup. payload: { name, password }
+export const acceptInviteApi = async (token, payload) => {
+  const res = await axios.post(`${baseUrl}/api/users/invites/${token}/accept`, {
+    name: payload.name,
+    password: payload.password,
+  });
+  return res;
+};
