@@ -1328,11 +1328,7 @@ import {
   getallusersApi,
   patchUserApi,
   deleteUserApi,
-  invitedUsersCountApi,
   getInvitedUsersApi,
-  sendInviteApi,
-  resendInviteApi,
-  deleteInviteApi,
 } from "../features/userApis";
 import {
   totalEscalationCountsApi,
@@ -1367,7 +1363,6 @@ import {
   Edit,
   Trash2,
   UserPlus,
-  Send,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getAgentFormSubmitsApi, getContentOverviewApi } from "../features/analytics";
@@ -1379,6 +1374,9 @@ import DailyEscalationChart from "./DailyEscalationChart";
 import DailyMarketingLineChart from "./DailyMarketingLineChart.jsx";
 import ContentOverviewCard from "./ContentOverviewCard";
 import UserPresenceModal from "./UserPresenceModal";
+import InvitedUsersModal from "./InvitedUsersModal";
+import TotalUsersModal from "./TotalUsersModal";
+import { computeInviteStats } from "../utils/inviteStats";
 import {
   ROLES,
   normalizeRole,
@@ -1483,14 +1481,17 @@ const Overview = () => {
   const [qcTeam, setQcTeam] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  // Tracks which team lists (keyed by team.key, e.g. "qc" / "agents") are
+  // expanded to show every member instead of just the first 3.
+  const [expandedTeams, setExpandedTeams] = useState({});
 
-  // Users Modal states
+  const toggleTeamExpanded = (teamKey) => {
+    setExpandedTeams((prev) => ({ ...prev, [teamKey]: !prev[teamKey] }));
+  };
+
+  // Users modal
   const [showUsersModal, setShowUsersModal] = useState(false);
-  const [allUsers, setAllUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [activeTab, setActiveTab] = useState("agent_user");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [usersError, setUsersError] = useState("");
+  const [usersRefreshKey, setUsersRefreshKey] = useState(0);
 
   // Edit User Modal states
   const [showEditModal, setShowEditModal] = useState(false);
@@ -1512,37 +1513,36 @@ const Overview = () => {
   const [showPresenceModal, setShowPresenceModal] = useState(false);
   const [presenceStatus, setPresenceStatus] = useState("active");
 
-  // Invited Users states
-  const [invitedUsersCount, setInvitedUsersCount] = useState(null);
+  // Invited Users modal
+  const [inviteStats, setInviteStats] = useState(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [invitedUsers, setInvitedUsers] = useState([]);
-  const [loadingInvites, setLoadingInvites] = useState(false);
-  const [inviteSearchTerm, setInviteSearchTerm] = useState("");
-  const [inviteFormData, setInviteFormData] = useState({
-    email: "",
-    role: ROLES.AGENT_USER,
-  });
-  const [isSendingInvite, setIsSendingInvite] = useState(false);
-  const [inviteAlert, setInviteAlert] = useState({ type: "", message: "" });
-  const [resendingInviteId, setResendingInviteId] = useState(null);
-  const [deletingInviteId, setDeletingInviteId] = useState(null);
+
+  const applyInviteStats = (invites) => {
+    const stats = computeInviteStats(invites);
+    setInviteStats(stats);
+    return stats;
+  };
+
+  const refreshInviteStats = async () => {
+    try {
+      const res = await getInvitedUsersApi();
+      const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+      applyInviteStats(list);
+    } catch (err) {
+      console.error("Failed to refresh invite stats:", err);
+    }
+  };
 
   const refreshPresenceCounts = async () => {
     if (!canAddUsers) return;
     try {
-      const [users, onlineUsers, invited] = await Promise.all([
+      const [users, onlineUsers] = await Promise.all([
         totalUserCountApi(),
         onlineUsersCountApi(),
-        invitedUsersCountApi().catch((err) => {
-          console.error("Failed to refresh invited count:", err);
-          return null;
-        }),
       ]);
       setTotalUsers(users?.count ?? 0);
       setOnlineUsersCount(onlineUsers?.count ?? 0);
-      if (invited) {
-        setInvitedUsersCount(invited?.count ?? 0);
-      }
+      await refreshInviteStats();
     } catch (err) {
       console.error("Failed to refresh presence counts:", err);
     }
@@ -1565,7 +1565,6 @@ const Overview = () => {
           evaluationAnalyticsData,
           marketingAnalyticsData,
           onlineUsers,
-          invited,
         ] = await Promise.all([
           totalUserCountApi(),
           totalEscalationCountsApi(),
@@ -1575,12 +1574,6 @@ const Overview = () => {
           getEvaluationAnalyticsApi(),
           getMarketingAnalyticsApi(),
           canAddUsers ? onlineUsersCountApi() : Promise.resolve(null),
-          canAddUsers
-            ? invitedUsersCountApi().catch((err) => {
-                console.error("Failed to fetch invited users count:", err);
-                return null;
-              })
-            : Promise.resolve(null),
         ]);
 
         setTotalUsers(users?.count ?? 0);
@@ -1589,7 +1582,7 @@ const Overview = () => {
         setTotalMarketingCounts(marketing?.count ?? 0);
         if (canAddUsers) {
           setOnlineUsersCount(onlineUsers?.count ?? 0);
-          setInvitedUsersCount(invited?.count ?? 0);
+          await refreshInviteStats();
         }
       } catch (err) {
         console.error("Failed to fetch data:", err);
@@ -1627,72 +1620,22 @@ const Overview = () => {
     fetchUsers();
   }, []);
 
-  // Fetch all users for the modal
-  const fetchAllUsers = async () => {
+  const refreshTeamsFromApi = async () => {
     try {
-      setLoadingUsers(true);
-      setUsersError("");
       const res = await getallusersApi();
-      if (Array.isArray(res?.data?.data)) {
-        setAllUsers(res.data.data);
-      } else {
-        setAllUsers([]);
-        setUsersError("No users data found");
-      }
+      const users = res?.data?.data || [];
+      setQcTeam(users.filter((u) => isQcRole(u.role)));
+      setAgents(users.filter((u) => isAgentRole(u.role)));
+      setUsersRefreshKey((k) => k + 1);
     } catch (err) {
-      console.error("Error fetching users:", err);
-      setUsersError("Failed to fetch users. Please try again.");
-      setAllUsers([]);
-    } finally {
-      setLoadingUsers(false);
+      console.error("Error refreshing users:", err);
     }
   };
 
   // Handle users modal
   const handleShowUsersModal = () => {
     setShowUsersModal(true);
-    fetchAllUsers();
   };
-
-  const handleCloseUsersModal = () => {
-    setShowUsersModal(false);
-    setSearchTerm("");
-    setUsersError("");
-    setActiveTab("agent_user");
-  };
-
-  // Filter users based on role and search term
-  const getFilteredUsers = (role) => {
-    const roleUsers = allUsers.filter(
-      (user) => normalizeRole(user.role) === normalizeRole(role)
-    );
-
-    if (!searchTerm) return roleUsers;
-
-    return roleUsers.filter(
-      (user) =>
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
-
-  const agentUserList = getFilteredUsers(ROLES.AGENT_USER);
-  const agentAdminList = getFilteredUsers(ROLES.AGENT_ADMIN);
-  const qcAdminUsers = getFilteredUsers(ROLES.QC_ADMIN);
-  const qcUserList = getFilteredUsers(ROLES.QC_USER);
-  const superAdminList = allUsers.filter(
-    (u) => normalizeRole(u.role) === ROLES.SUPER_ADMIN
-  );
-  const currentUsers =
-    activeTab === "agent_user"
-      ? agentUserList
-      : activeTab === "agent_admin"
-      ? agentAdminList
-      : activeTab === "qc_admin"
-      ? qcAdminUsers
-      : activeTab === "qc_user"
-      ? qcUserList
-      : agentUserList;
 
   // Handle edit user
   const handleEditUser = (user) => {
@@ -1748,7 +1691,7 @@ const Overview = () => {
           message: "User updated successfully!",
         });
 
-        await fetchAllUsers();
+        await refreshTeamsFromApi();
 
         const updatedUsers = await totalUserCountApi();
         setTotalUsers(updatedUsers?.count ?? 0);
@@ -1786,7 +1729,7 @@ const Overview = () => {
       console.log("Delete response:", response);
 
       if (response.status === 200 || response.status === 201) {
-        await fetchAllUsers();
+        await refreshTeamsFromApi();
 
         const updatedUsers = await totalUserCountApi();
         setTotalUsers(updatedUsers?.count ?? 0);
@@ -1823,57 +1766,6 @@ const Overview = () => {
     setShowDeleteModal(false);
     setDeletingUser(null);
   };
-
-  // User card component
-  const UserCard = ({ user }) => (
-    <div className="col-12 mb-3">
-      <div className="card border-0 shadow-sm rounded-3 h-100">
-        <div className="card-body py-3">
-          <div className="d-flex align-items-center gap-3">
-            <div className="position-relative">
-              <div
-                className="admin-avatar rounded-circle bg-primary-gradient text-white d-flex align-items-center justify-content-center fw-bold"
-                style={{ width: "40px", height: "40px" }}
-              >
-                {user.name?.charAt(0)?.toUpperCase() || "U"}
-              </div>
-              {user.role === "superadmin" && (
-                <span className="position-absolute top-0 start-100 translate-middle">
-                  <Crown size={12} className="text-warning" />
-                </span>
-              )}
-            </div>
-
-            <div className="flex-grow-1">
-              <h6 className="fw-bold mb-1">{user.name || "Unknown User"}</h6>
-
-              <div className="d-flex align-items-center gap-1 text-muted">
-                <Mail size={14} />
-                <small>{user.email || "No email provided"}</small>
-              </div>
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <button
-                className="btn btn-outline-primary btn-sm p-2"
-                onClick={() => handleEditUser(user)}
-                title="Edit User"
-              >
-                <Edit size={14} />
-              </button>
-              <button
-                className="btn btn-outline-danger btn-sm p-2"
-                onClick={() => handleDeleteUser(user)}
-                title="Delete User"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   // Handle modal open/close for Add User
   const handleShowModal = () => setShowModal(true);
@@ -1952,257 +1844,20 @@ const Overview = () => {
     }
   };
 
-  // ---------- Invited Users handlers ----------
-
-  const fetchInvitedUsers = async () => {
-    try {
-      setLoadingInvites(true);
-      const res = await getInvitedUsersApi();
-      const invites = Array.isArray(res?.data?.data)
-        ? res.data.data
-        : Array.isArray(res?.data)
-        ? res.data
-        : [];
-      setInvitedUsers(invites);
-    } catch (err) {
-      console.error("Error fetching invited users:", err);
-      setInvitedUsers([]);
-    } finally {
-      setLoadingInvites(false);
-    }
-  };
-
-  const handleShowInviteModal = () => {
-    setShowInviteModal(true);
-    setInviteAlert({ type: "", message: "" });
-    fetchInvitedUsers();
-  };
-
-  const handleCloseInviteModal = () => {
-    setShowInviteModal(false);
-    setInviteSearchTerm("");
-    setInviteAlert({ type: "", message: "" });
-    setInviteFormData({ email: "", role: ROLES.AGENT_USER });
-  };
-
-  const handleInviteInputChange = (e) => {
-    const { name, value } = e.target;
-    setInviteFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSendInvite = async (e) => {
-    e.preventDefault();
-    setIsSendingInvite(true);
-    setInviteAlert({ type: "", message: "" });
-
-    try {
-      if (!inviteFormData.email.trim()) {
-        setInviteAlert({
-          type: "danger",
-          message: "Email is required to send an invite.",
-        });
-        setIsSendingInvite(false);
-        return;
-      }
-
-      const response = await sendInviteApi(inviteFormData);
-
-      if (
-        response.status === 200 ||
-        response.status === 201 ||
-        response?.data?.success
-      ) {
-        const roleLabel =
-          ROLE_LABELS[normalizeRole(inviteFormData.role)] ||
-          inviteFormData.role;
-        setInviteAlert({
-          type: "success",
-          message: `User saved as ${roleLabel}. Invite email sent to ${inviteFormData.email.trim()} — they will land on the correct dashboard after activation.`,
-        });
-
-        setInviteFormData({ email: "", role: ROLES.AGENT_USER });
-
-        await fetchInvitedUsers();
-
-        const [updatedInvited, updatedUsers] = await Promise.all([
-          invitedUsersCountApi().catch(() => null),
-          totalUserCountApi().catch(() => null),
-        ]);
-        if (updatedInvited) {
-          setInvitedUsersCount(updatedInvited?.count ?? 0);
-        }
-        if (updatedUsers) {
-          setTotalUsers(updatedUsers?.count ?? 0);
-        }
-      } else {
-        setInviteAlert({
-          type: "danger",
-          message: "Unexpected response from server.",
-        });
-      }
-    } catch (error) {
-      console.error("Send invite error:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to send invite. Please try again.";
-      setInviteAlert({ type: "danger", message: errorMessage });
-    } finally {
-      setIsSendingInvite(false);
-    }
-  };
-
-  const handleResendInvite = async (invite) => {
-    try {
-      setResendingInviteId(invite._id);
-      await resendInviteApi(invite._id);
-      setInviteAlert({
-        type: "success",
-        message: `Invite resent to ${invite.email}.`,
+  const handleInviteCountsChange = (payload) => {
+    if (payload?.total != null) {
+      setInviteStats({
+        total: payload.total,
+        pending: payload.pending ?? 0,
+        accepted: payload.accepted ?? 0,
+        expired: payload.expired ?? 0,
+        awaiting: payload.awaiting ?? payload.pending ?? 0,
       });
-      await fetchInvitedUsers();
-    } catch (error) {
-      console.error("Resend invite error:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to resend invite.";
-      setInviteAlert({ type: "danger", message: errorMessage });
-    } finally {
-      setResendingInviteId(null);
+    }
+    if (payload?.totalUsers != null) {
+      setTotalUsers(payload.totalUsers);
     }
   };
-
-  const handleDeleteInvite = async (invite) => {
-    if (
-      !window.confirm(
-        `Delete invite for ${invite.email}? This removes the pending user from the database.`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setDeletingInviteId(invite._id);
-      await deleteInviteApi(invite._id);
-      await fetchInvitedUsers();
-
-      const [updatedInvited, updatedUsers] = await Promise.all([
-        invitedUsersCountApi().catch(() => null),
-        totalUserCountApi().catch(() => null),
-      ]);
-      if (updatedInvited) {
-        setInvitedUsersCount(updatedInvited?.count ?? 0);
-      }
-      if (updatedUsers) {
-        setTotalUsers(updatedUsers?.count ?? 0);
-      }
-
-      setInviteAlert({
-        type: "success",
-        message: `Invite for ${invite.email} deleted.`,
-      });
-    } catch (error) {
-      console.error("Delete invite error:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to delete invite.";
-      setInviteAlert({ type: "danger", message: errorMessage });
-    } finally {
-      setDeletingInviteId(null);
-    }
-  };
-
-  const getFilteredInvites = () => {
-    if (!inviteSearchTerm) return invitedUsers;
-    return invitedUsers.filter(
-      (invite) =>
-        invite.email?.toLowerCase().includes(inviteSearchTerm.toLowerCase())
-    );
-  };
-
-  const filteredInvites = getFilteredInvites();
-
-  const getInviteStatusBadge = (status) => {
-    switch (status) {
-      case "accepted":
-        return "bg-success";
-      case "expired":
-        return "bg-secondary";
-      default:
-        return "bg-warning text-dark";
-    }
-  };
-
-  // Invite card component
-  const InviteCard = ({ invite }) => (
-    <div className="col-12 mb-3">
-      <div className="card border-0 shadow-sm rounded-3 h-100">
-        <div className="card-body py-3">
-          <div className="d-flex align-items-center gap-3">
-            <div className="position-relative">
-              <div
-                className="admin-avatar rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold"
-                style={{ width: "40px", height: "40px" }}
-              >
-                {invite.email?.charAt(0)?.toUpperCase() || "?"}
-              </div>
-            </div>
-
-            <div className="flex-grow-1">
-              <h6 className="fw-bold mb-1">{invite.email}</h6>
-              <div className="d-flex align-items-center gap-2">
-                <span className="badge bg-light text-dark border">
-                  {ROLE_LABELS[normalizeRole(invite.role)] || invite.role}
-                </span>
-                <span className={`badge ${getInviteStatusBadge(invite.status)}`}>
-                  {invite.status || "pending"}
-                </span>
-                {invite.invitedAt && (
-                  <small className="text-muted">
-                    Sent {timeAgo(invite.invitedAt)}
-                  </small>
-                )}
-              </div>
-            </div>
-
-            {(invite.status === "pending" || !invite.status) && (
-              <div className="d-flex align-items-center gap-2">
-                <button
-                  className="btn btn-outline-primary btn-sm p-2"
-                  onClick={() => handleResendInvite(invite)}
-                  disabled={resendingInviteId === invite._id}
-                  title="Resend Invite"
-                >
-                  {resendingInviteId === invite._id ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    <Send size={14} />
-                  )}
-                </button>
-                <button
-                  className="btn btn-outline-danger btn-sm p-2"
-                  onClick={() => handleDeleteInvite(invite)}
-                  disabled={deletingInviteId === invite._id}
-                  title="Delete Invite"
-                >
-                  {deletingInviteId === invite._id ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    <Trash2 size={14} />
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -2227,10 +1882,10 @@ const Overview = () => {
             <Button
               variant="warning"
               className="text-dark"
-              onClick={handleShowInviteModal}
+              onClick={() => setShowInviteModal(true)}
             >
-              {/* <UserPlus size={16} className="me-1" /> */}
-              Invited Users : {invitedUsersCount ?? "Loading..."}
+              Invited Users :{" "}
+              {inviteStats != null ? inviteStats.pending : "Loading..."}
             </Button>
           </div>
         ) : (
@@ -2238,305 +1893,57 @@ const Overview = () => {
         )}
 
         <div>
-          <div className="d-flex gap-2">
-            <div>
-             <Button
-  className="!flex !items-center gap-2"
-  style={{
-    background: "linear-gradient(90deg, #4CAF50, #2196F3)",
-  }}
-  onClick={handleShowUsersModal}
->
-  <Users size={18} />
-  <span>{totalUsers ?? 0} Total Users</span>
-</Button>
-            </div>
-            {canAddUsers ? (
+          <div className="d-flex gap-2 align-items-center">
             <Button
-  variant="dark"
-  onClick={handleShowModal}
-  className="d-flex align-items-center gap-2"
->
-  <UserPlus size={18} />
-  <span>Add User</span>
-</Button>
+              className="d-flex align-items-center justify-content-center gap-2 text-nowrap border-0"
+              style={{
+                minHeight: "38px",
+                padding: "0.5rem 1rem",
+                background: "linear-gradient(90deg, #4CAF50, #2196F3)",
+                color: "#fff",
+                fontWeight: 500,
+              }}
+              onClick={handleShowUsersModal}
+            >
+              <Users size={18} />
+              <span>{totalUsers ?? 0} Total Users</span>
+            </Button>
+            {canAddUsers ? (
+              <Button
+                variant="dark"
+                onClick={handleShowModal}
+                className="d-flex align-items-center justify-content-center gap-2 text-nowrap"
+                style={{
+                  minHeight: "38px",
+                  padding: "0.5rem 1rem",
+                  fontWeight: 500,
+                }}
+              >
+                <UserPlus size={18} />
+                <span>Add User</span>
+              </Button>
             ) : null}
           </div>
         </div>
       </div>
 
-      {/* Users List Modal */}
-      <Modal
+      <TotalUsersModal
         show={showUsersModal}
-        onHide={handleCloseUsersModal}
-        size="xl"
-        centered
-      >
-        <Modal.Header closeButton className="bg-light">
-          <Modal.Title className="d-flex align-items-center gap-2">
-            <Users size={24} className="text-primary" />
-            All Users List
-          </Modal.Title>
-        </Modal.Header>
+        onHide={() => setShowUsersModal(false)}
+        actorRole={currentUserRole}
+        onEditUser={handleEditUser}
+        onDeleteUser={handleDeleteUser}
+        refreshKey={usersRefreshKey}
+      />
 
-        <Modal.Body className="p-0">
-          {usersError && (
-            <Alert variant="danger" className="mx-3 mt-3 mb-0">
-              {usersError}
-            </Alert>
-          )}
-
-          {/* Tabs */}
-          <Tabs
-            activeKey={activeTab}
-            onSelect={(k) => setActiveTab(k)}
-            className="mx-3 mt-3 border-bottom-0"
-            fill
-          >
-            {[
-              {
-                key: "superadmin",
-                label: ROLE_LABELS[ROLES.SUPER_ADMIN],
-                users: superAdminList,
-                icon: Shield,
-              },
-              {
-                key: "agent_user",
-                label: ROLE_LABELS[ROLES.AGENT_USER],
-                users: agentUserList,
-                icon: UserCheck,
-              },
-              {
-                key: "agent_admin",
-                label: ROLE_LABELS[ROLES.AGENT_ADMIN],
-                users: agentAdminList,
-                icon: UserCheck,
-              },
-              {
-                key: "qc_user",
-                label: ROLE_LABELS[ROLES.QC_USER],
-                users: qcUserList,
-                icon: Shield,
-              },
-              {
-                key: "qc_admin",
-                label: ROLE_LABELS[ROLES.QC_ADMIN],
-                users: qcAdminUsers,
-                icon: Shield,
-              },
-            ].map(({ key, label, users, icon: TabIcon }) => (
-              <Tab
-                key={key}
-                eventKey={key}
-                title={
-                  <span className="d-flex align-items-center gap-2">
-                    <TabIcon size={16} />
-                    {label} ({users.length})
-                  </span>
-                }
-              >
-                <div className="p-3">
-                  <div className="row mb-4">
-                    <div className="col-md-8">
-                      <div className="search-box position-relative">
-                        <Search
-                          size={18}
-                          className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                        />
-                        <Form.Control
-                          type="text"
-                          className="ps-5"
-                          placeholder={`Search ${label.toLowerCase()} by name or email...`}
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="col-md-4 text-end">
-                      <span className="fw-semibold">
-                        {users.length} {label}
-                        {users.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-                    {loadingUsers ? (
-                      <div className="d-flex justify-content-center align-items-center py-5">
-                        <Spinner animation="border" className="me-2" />
-                        <span>Loading users...</span>
-                      </div>
-                    ) : users.length > 0 ? (
-                      <div className="row g-2">
-                        {users.map((user) => (
-                          <UserCard key={user._id || user.email} user={user} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center text-muted py-5">
-                        <XCircle size={48} className="mb-3 opacity-50" />
-                        <h5>No {label} Users Found</h5>
-                        <p className="mb-0">
-                          {searchTerm
-                            ? "Try adjusting your search terms"
-                            : `No ${label.toLowerCase()} users are currently registered`}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Tab>
-            ))}
-          </Tabs>
-        </Modal.Body>
-
-        <Modal.Footer className="bg-light">
-          <div className="d-flex justify-content-between align-items-center w-100">
-            <div className="text-muted small">
-              Total Users: {allUsers.length} | Showing: {currentUsers.length}{" "}
-              {ROLE_LABELS[normalizeRole(activeTab)] || "users"}
-            </div>
-            <div>
-              <Button variant="secondary" onClick={handleCloseUsersModal}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Invited Users Modal */}
-      <Modal
-        show={showInviteModal}
-        onHide={handleCloseInviteModal}
-        size="lg"
-        centered
-      >
-        <Modal.Header closeButton className="bg-light">
-          <Modal.Title className="d-flex align-items-center gap-2">
-            <UserPlus size={24} className="text-warning" />
-            Invited Users
-          </Modal.Title>
-        </Modal.Header>
-
-        <Modal.Body>
-          {inviteAlert.message && (
-            <Alert variant={inviteAlert.type} className="mb-3">
-              {inviteAlert.message}
-            </Alert>
-          )}
-
-          {/* Send Invite Form */}
-          <Form onSubmit={handleSendInvite} className="mb-4">
-            <div className="row g-2 align-items-end">
-              <div className="col-12 col-md-6">
-                <Form.Label className="small text-muted mb-1">
-                  Email Address *
-                </Form.Label>
-                <Form.Control
-                  type="email"
-                  name="email"
-                  placeholder="Enter email to invite"
-                  value={inviteFormData.email}
-                  onChange={handleInviteInputChange}
-                  required
-                />
-              </div>
-              <div className="col-8 col-md-4">
-                <Form.Label className="small text-muted mb-1">
-                  Role *
-                </Form.Label>
-                <Form.Select
-                  name="role"
-                  value={inviteFormData.role}
-                  onChange={handleInviteInputChange}
-                  required
-                >
-                  {addUserRoleOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {ROLE_LABELS[role]}
-                    </option>
-                  ))}
-                </Form.Select>
-              </div>
-              <div className="col-4 col-md-2">
-                <Button
-                  type="submit"
-                  variant="dark"
-                  className="w-100"
-                  disabled={isSendingInvite}
-                >
-                  {isSendingInvite ? (
-                    <Spinner animation="border" size="sm" />
-                  ) : (
-                    "Send"
-                  )}
-                </Button>
-              </div>
-            </div>
-            <Form.Text className="text-muted">
-              An invite link will be emailed to this address. The invited
-              user sets their own name and password to activate their
-              account.
-            </Form.Text>
-          </Form>
-
-          {/* Search */}
-          <div className="search-box position-relative mb-3">
-            <Search
-              size={18}
-              className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-            />
-            <Form.Control
-              type="text"
-              className="ps-5"
-              placeholder="Search invites by email..."
-              value={inviteSearchTerm}
-              onChange={(e) => setInviteSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Invite List */}
-          <div style={{ maxHeight: "350px", overflowY: "auto" }}>
-            {loadingInvites ? (
-              <div className="d-flex justify-content-center align-items-center py-5">
-                <Spinner animation="border" className="me-2" />
-                <span>Loading invites...</span>
-              </div>
-            ) : filteredInvites.length > 0 ? (
-              <div className="row g-2">
-                {filteredInvites.map((invite) => (
-                  <InviteCard key={invite._id || invite.email} invite={invite} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted py-5">
-                <UserPlus size={48} className="mb-3 opacity-50" />
-                <h5>No Invites Found</h5>
-                <p className="mb-0">
-                  {inviteSearchTerm
-                    ? "Try adjusting your search terms"
-                    : "No invites have been sent yet"}
-                </p>
-              </div>
-            )}
-          </div>
-        </Modal.Body>
-
-        <Modal.Footer className="bg-light">
-          <div className="d-flex justify-content-between align-items-center w-100">
-            <div className="text-muted small">
-              Total Invited: {invitedUsers.length} | Showing:{" "}
-              {filteredInvites.length}
-            </div>
-            <div>
-              <Button variant="secondary" onClick={handleCloseInviteModal}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </Modal.Footer>
-      </Modal>
+      {canAddUsers && (
+        <InvitedUsersModal
+          show={showInviteModal}
+          onHide={() => setShowInviteModal(false)}
+          roleOptions={addUserRoleOptions}
+          onCountsChange={handleInviteCountsChange}
+        />
+      )}
 
       {/* Edit User Modal */}
       <Modal show={showEditModal} onHide={handleCloseEditModal} centered>
@@ -2654,92 +2061,181 @@ const Overview = () => {
       )}
 
       {/* Add User Modal */}
-      <Modal show={showModal} onHide={handleCloseModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Add New User</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {alertMessage.message && (
-            <Alert variant={alertMessage.type} className="mb-3">
-              {alertMessage.message}
-            </Alert>
+    {/* Add User Modal */}
+{showModal && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="add-user-modal-title"
+  >
+    <div
+      className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+      onClick={() => !isSubmitting && handleCloseModal()}
+    />
+
+    <div className="relative z-10 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+            <UserPlus size={20} />
+          </span>
+          <h2
+            id="add-user-modal-title"
+            className="text-base font-semibold text-slate-900"
+          >
+            Add New User
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCloseModal}
+          disabled={isSubmitting}
+          aria-label="Close"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        {alertMessage.message && (
+          <div
+            className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+              alertMessage.type === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {alertMessage.message}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Name *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="Enter full name"
+              required
+              className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Email *
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              placeholder="Enter email address"
+              required
+              className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Password *
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              placeholder="Enter password"
+              required
+              className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Role *
+            </label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              required
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            >
+              {addUserRoleOptions.map((role) => (
+                <option key={role} value={role}>
+                  {ROLE_LABELS[role]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-slate-500">
+              New users must log in with their email and password at the
+              login page.
+            </p>
+          </div>
+        </form>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+        <button
+          type="button"
+          onClick={handleCloseModal}
+          disabled={isSubmitting}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSubmitting && (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="animate-spin"
+            >
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
           )}
-
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label>Name *</Form.Label>
-              <Form.Control
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="Enter full name"
-                required
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Email *</Form.Label>
-              <Form.Control
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Enter email address"
-                required
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Password *</Form.Label>
-              <Form.Control
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="Enter password"
-                required
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Role *</Form.Label>
-              <Form.Select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                required
-              >
-                {addUserRoleOptions.map((role) => (
-                  <option key={role} value={role}>
-                    {ROLE_LABELS[role]}
-                  </option>
-                ))}
-              </Form.Select>
-              <Form.Text className="text-muted">
-                New users must log in with their email and password at the login
-                page. Agent Admin can see all team submissions on /agent.
-              </Form.Text>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            variant="secondary"
-            onClick={handleCloseModal}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Adding..." : "Add User"}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+          {isSubmitting ? "Adding..." : "Add User"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Stats Cards */}
       <div className="container-fluid p-2">
@@ -2940,6 +2436,7 @@ const Overview = () => {
         <div className="row g-3">
           {[
             {
+              key: "qc",
               title: "QC Team",
               data: qcTeam,
               link: `${moduleBase}/qc-members`,
@@ -2947,6 +2444,7 @@ const Overview = () => {
               icon: Shield,
             },
             {
+              key: "agents",
               title: "Sales Agent Team",
               data: agents,
               link: `${moduleBase}/sales-team`,
@@ -2996,45 +2494,64 @@ const Overview = () => {
                       </span>
                     </div>
                   ) : team.data.length > 0 ? (
-                    <ul className="list-group list-group-flush">
-                      {team.data.slice(0, 5).map((member, memberIdx) => (
-                        <li
-                          key={member._id}
-                          className="list-group-item d-flex justify-content-between align-items-center py-3"
-                          style={{
-                            borderLeft:
-                              memberIdx === 0 ? "3px solid #4CAF50" : "none",
-                          }}
-                        >
-                          <div>
-                            <strong>{member.name}</strong>
-                            <div className="text-muted small">
-                              {member.email}
+                    <>
+                      <ul className="list-group list-group-flush">
+                        {(expandedTeams[team.key]
+                          ? team.data
+                          : team.data.slice(0, 3)
+                        ).map((member, memberIdx) => (
+                          <li
+                            key={member._id}
+                            className="list-group-item d-flex justify-content-between align-items-center py-3"
+                            style={{
+                              borderLeft:
+                                memberIdx === 0 ? "3px solid #4CAF50" : "none",
+                            }}
+                          >
+                            <div>
+                              <strong>{member.name}</strong>
+                              <div className="text-muted small">
+                                {member.email}
+                              </div>
+                              <span className="badge bg-light text-dark border mt-1">
+                                {ROLE_LABELS[normalizeRole(member.role)] ||
+                                  member.role}
+                              </span>
                             </div>
-                            <span className="badge bg-light text-dark border mt-1">
-                              {ROLE_LABELS[normalizeRole(member.role)] ||
-                                member.role}
-                            </span>
-                          </div>
-                          <div className="d-flex gap-2">
-                            <button
-                              className="btn btn-outline-primary btn-sm p-1"
-                              onClick={() => handleEditUser(member)}
-                              title="Edit User"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              className="btn btn-outline-danger btn-sm p-1"
-                              onClick={() => handleDeleteUser(member)}
-                              title="Delete User"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                            <div className="d-flex gap-2">
+                              <button
+                                className="btn btn-outline-primary btn-sm p-1"
+                                onClick={() => handleEditUser(member)}
+                                title="Edit User"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              {/* Delete is always available for every member, regardless of role or any status */}
+                              <button
+                                className="btn btn-outline-danger btn-sm p-1"
+                                onClick={() => handleDeleteUser(member)}
+                                title="Delete User"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {team.data.length > 3 && (
+                        <div className="text-center py-2 border-top">
+                          <button
+                            className="btn btn-link btn-sm text-decoration-none fw-semibold"
+                            onClick={() => toggleTeamExpanded(team.key)}
+                          >
+                            {expandedTeams[team.key]
+                              ? "See less"
+                              : `See more (${team.data.length - 3} more)`}
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <p className="text-muted text-center my-5">
                       No users found.
@@ -3050,4 +2567,4 @@ const Overview = () => {
   );
 };
 
-export default Overview
+export default Overview;
