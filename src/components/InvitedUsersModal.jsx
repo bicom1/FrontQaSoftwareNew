@@ -295,7 +295,7 @@ const InvitedUsersModal = ({
                 Invited Users
               </h2>
               <p className="text-xs text-slate-500">
-                Save user first, then email invite link
+                 View all invited users and manage their invitation status.
               </p>
             </div>
           </div>
@@ -382,8 +382,8 @@ const InvitedUsersModal = ({
               </div>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              User is saved in the database before the email is sent. After
-              activation they go to their role dashboard.
+                Users are saved first, then invited by email.
+
             </p>
           </form>
 
