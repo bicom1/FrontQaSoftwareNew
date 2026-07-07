@@ -144,19 +144,15 @@ const AgentDashboard = () => {
     }));
     return [...evalItems, ...escItems]
       .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-      .slice(0, 8);
+      .slice(0, 5);
   }, [evaluations, escalations]);
 
   if (loading) {
     return (
-      <div className="d-flex align-items-center justify-content-center py-5">
+      <div className="flex items-center justify-center py-16">
         <div className="text-center">
-          <div
-            className="spinner-border text-primary mb-3"
-            role="status"
-            style={{ width: "3rem", height: "3rem" }}
-          />
-          <h5 className="text-muted">Loading your dashboard...</h5>
+          <div className="mx-auto mb-3 h-12 w-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+          <h5 className="text-gray-500 font-medium">Loading your dashboard...</h5>
         </div>
       </div>
     );
@@ -164,11 +160,15 @@ const AgentDashboard = () => {
 
   if (error) {
     return (
-      <div className="d-flex align-items-center justify-content-center py-5">
-        <div className="card border-0 shadow-sm text-center p-4" style={{ maxWidth: 420 }}>
-          <h5 className="text-danger mb-2">Could not load dashboard</h5>
-          <p className="text-muted small mb-3">{error}</p>
-          <button type="button" className="btn btn-primary" onClick={fetchDashboardData}>
+      <div className="flex items-center justify-center py-16">
+        <div className="bg-white rounded-2xl shadow-sm text-center p-6 max-w-md w-full">
+          <h5 className="text-red-600 font-bold mb-2">Could not load dashboard</h5>
+          <p className="text-gray-500 text-sm mb-4">{error}</p>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+            onClick={fetchDashboardData}
+          >
             Retry
           </button>
         </div>
@@ -182,7 +182,7 @@ const AgentDashboard = () => {
       value: stats.evaluations.total,
       sub: `${stats.evaluations.totalPoints} total points`,
       icon: FileText,
-      color: "success",
+      color: "green",
       onClick: () => navigate("/agent/submissions"),
     },
     {
@@ -190,7 +190,7 @@ const AgentDashboard = () => {
       value: stats.escalations.total,
       sub: `${stats.escalations.pending} pending`,
       icon: ShieldAlert,
-      color: "warning",
+      color: "amber",
       onClick: () => navigate("/agent/submissions"),
     },
     {
@@ -198,7 +198,7 @@ const AgentDashboard = () => {
       value: stats.evaluations.averageRating,
       sub: "Across your evaluations",
       icon: TrendingUp,
-      color: "primary",
+      color: "blue",
       onClick: () => navigate("/agent/submissions"),
     },
     {
@@ -206,10 +206,17 @@ const AgentDashboard = () => {
       value: stats.totalForms,
       sub: "Evaluations + escalations",
       icon: ClipboardList,
-      color: "info",
+      color: "cyan",
       onClick: () => navigate("/agent/submissions"),
     },
   ];
+
+  const colorClasses = {
+    green: "bg-green-50 text-green-600 border-green-100",
+    amber: "bg-amber-50 text-amber-600 border-amber-100",
+    blue: "bg-blue-50 text-blue-600 border-blue-100",
+    cyan: "bg-cyan-50 text-cyan-600 border-cyan-100",
+  };
 
   const quickLinks = [
     {
@@ -229,167 +236,231 @@ const AgentDashboard = () => {
   ];
 
   return (
-    <div className="container-fluid px-0">
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div className="w-full">
+      {/* Header */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-5">
+        <div className="p-6 flex flex-wrap justify-between items-center gap-4">
           <div>
-            <p className="text-muted small mb-1 text-uppercase fw-semibold">
+            <p className="text-gray-400 text-xs mb-1.5 uppercase font-semibold tracking-widest">
               Agent Dashboard
             </p>
-            <h1 className="h3 fw-bold mb-0 text-capitalize">{agentName}</h1>
-            <p className="text-muted mb-0 mt-1 small">{agentEmail}</p>
+            <h1 className="text-2xl font-bold mb-0 capitalize text-gray-900 tracking-tight">
+              {agentName}
+            </h1>
+            <p className="text-gray-500 mb-0 mt-1 text-sm">{agentEmail}</p>
             {isAgentAdminSession() && (
-              <p className="text-primary small mb-0 mt-2">
+              <span className="inline-flex items-center mt-2 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
                 Team view — showing all agent evaluations and escalations
-              </p>
+              </span>
             )}
           </div>
-          <div className="text-end">
-            <div className="text-muted small text-uppercase">Last updated</div>
-            <div className="fw-semibold">
+          <div className="text-right">
+            <div className="text-gray-400 text-xs uppercase font-semibold tracking-widest mb-1">
+              Last updated
+            </div>
+            <div className="font-semibold text-gray-900 text-sm">
               {lastUpdate ? lastUpdate.toLocaleTimeString() : "—"}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      {/* Quick links */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         {quickLinks.map(({ title, desc, path, icon: Icon, btn }) => (
-          <div className="col-md-6" key={path}>
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body d-flex align-items-center justify-content-between gap-3">
-                <div className="d-flex align-items-start gap-3">
-                  <div
-                    className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                    style={{
-                      width: 48,
-                      height: 48,
-                      background: "linear-gradient(90deg, #4CAF50, #2196F3)",
-                    }}
-                  >
-                    <Icon size={22} className="text-white" />
-                  </div>
-                  <div>
-                    <h6 className="fw-bold mb-1">{title}</h6>
-                    <p className="text-muted small mb-0">{desc}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-outline-primary btn-sm flex-shrink-0"
-                  onClick={() => navigate(path)}
+          <div
+            key={path}
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full h-[104px] hover:shadow-md transition-shadow"
+          >
+            <div className="h-full px-5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div
+                  className="rounded-xl flex items-center justify-center flex-shrink-0 w-11 h-11"
+                  style={{
+                    background: "linear-gradient(135deg, #4CAF50, #2196F3)",
+                  }}
                 >
-                  {btn}
-                </button>
+                  <Icon size={20} className="text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h6 className="font-bold mb-0.5 text-gray-900 text-[15px] truncate">
+                    {title}
+                  </h6>
+                  <p className="text-gray-500 text-xs mb-0 truncate">{desc}</p>
+                </div>
               </div>
+              <button
+                type="button"
+                className="flex-shrink-0 inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600 text-xs font-semibold hover:bg-blue-600 hover:text-white transition-colors whitespace-nowrap"
+                onClick={() => navigate(path)}
+              >
+                {btn}
+              </button>
             </div>
           </div>
         ))}
       </div>
 
       {/* Dynamic stats — from this user's evaluations & escalations */}
-      <div className="row g-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
         {statCards.map(({ label, value, sub, icon: Icon, color, onClick }) => (
-          <div className="col-sm-6 col-xl-3" key={label}>
-            <button
-              type="button"
-              className="card border-0 shadow-sm h-100 w-100 text-start"
-              style={{ cursor: "pointer" }}
-              onClick={onClick}
-            >
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <span className="text-muted small text-uppercase fw-semibold">
-                    {label}
-                  </span>
-                  <span
-                    className={`badge bg-${color}-subtle text-${color} border border-${color}-subtle`}
-                  >
-                    <Icon size={14} />
-                  </span>
-                </div>
-                <div className="display-6 fw-bold mb-1">{value}</div>
-                <div className="text-muted small">{sub}</div>
+          <button
+            key={label}
+            type="button"
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full h-[110px] text-left cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all"
+            onClick={onClick}
+          >
+            <div className="h-full px-5 py-3.5 flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                <span className="text-gray-500 text-xs uppercase font-semibold tracking-wide">
+                  {label}
+                </span>
+                <span
+                  className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border flex-shrink-0 ${colorClasses[color]}`}
+                >
+                  <Icon size={15} />
+                </span>
               </div>
-            </button>
-          </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">
+                  {value}
+                </div>
+                <div className="text-gray-400 text-xs truncate">{sub}</div>
+              </div>
+            </div>
+          </button>
         ))}
       </div>
 
-      <div className="row g-3 mb-4">
+      {/* Weekly activity + Recent submissions — equal, fixed height */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5 items-stretch">
         {/* User-specific weekly chart */}
-        <div className="col-lg-7">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <h5 className="fw-bold mb-1">Your Weekly Activity</h5>
-              <p className="text-muted small mb-3">
-                Your evaluations and escalations — last 7 days
-              </p>
-              {weeklyData.some((d) => d.evaluations > 0 || d.escalations > 0) ? (
-                <div style={{ width: "100%", height: 280 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={weeklyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="evaluations" fill="#2575fc" name="Evaluations" />
-                      <Bar dataKey="escalations" fill="#4CAF50" name="Escalations" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-muted text-center py-5 mb-0">
+        <div className="lg:col-span-7">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-[380px] flex flex-col p-5 md:p-6">
+            <div className="flex items-start justify-between mb-1">
+              <div>
+                <h5 className="font-bold text-gray-900 mb-1 text-[15px]">
+                  Your Weekly Activity
+                </h5>
+                <p className="text-gray-400 text-sm mb-0">
+                  Evaluations and escalations — last 7 days
+                </p>
+              </div>
+            </div>
+
+            {weeklyData.some((d) => d.evaluations > 0 || d.escalations > 0) ? (
+              <div className="w-full flex-1 min-h-[280px] mt-3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fontSize: 12, fill: "#94a3b8" }}
+                      axisLine={{ stroke: "#e2e8f0" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 12, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "#f8fafc" }}
+                      contentStyle={{
+                        borderRadius: 10,
+                        border: "1px solid #e2e8f0",
+                        fontSize: 13,
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 13, paddingTop: 8 }}
+                      iconType="circle"
+                    />
+                    <Bar
+                      dataKey="evaluations"
+                      fill="#2575fc"
+                      name="Evaluations"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={28}
+                    />
+                    <Bar
+                      dataKey="escalations"
+                      fill="#4CAF50"
+                      name="Escalations"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={28}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-gray-400 text-sm mb-0">
                   No submissions in the last 7 days.
                 </p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Recent submissions */}
-        <div className="col-lg-5">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body d-flex flex-column">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="fw-bold mb-0">Recent Submissions</h5>
-                <button
-                  type="button"
-                  className="btn btn-link btn-sm text-decoration-none p-0"
-                  onClick={() => navigate("/agent/submissions")}
-                >
-                  View all <ChevronRight size={14} />
-                </button>
+        <div className="lg:col-span-5">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-[380px] flex flex-col p-5 md:p-6">
+            <div className="flex justify-between items-center mb-1">
+              <h5 className="font-bold text-gray-900 mb-0 text-[15px]">
+                Recent Submissions
+              </h5>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 leading-none py-1 transition-colors"
+                onClick={() => navigate("/agent/submissions")}
+              >
+                <span>View all</span>
+                <ChevronRight size={15} className="shrink-0" />
+              </button>
+            </div>
+            <p className="text-gray-400 text-sm mb-3">Your latest 5 forms</p>
+
+            {recentForms.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-gray-400 text-sm mb-0">No forms submitted yet.</p>
               </div>
-              {recentForms.length === 0 ? (
-                <p className="text-muted text-center py-4 mb-0">
-                  No forms submitted yet.
-                </p>
-              ) : (
-                <ul className="list-group list-group-flush flex-grow-1">
-                  {recentForms.map((form) => (
-                    <li
-                      key={`${form.type}-${form.id}`}
-                      className="list-group-item px-0 d-flex justify-content-between align-items-start"
-                    >
-                      <div>
-                        <span className={`badge bg-${form.badge} me-2`}>
+            ) : (
+              <ul className="divide-y divide-gray-100 flex-1 overflow-y-auto -mx-1">
+                {recentForms.map((form) => (
+                  <li
+                    key={`${form.type}-${form.id}`}
+                    className="px-1 py-3 flex justify-between items-start gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span
+                          className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                            form.badge === "danger"
+                              ? "bg-red-50 text-red-600"
+                              : "bg-blue-50 text-blue-600"
+                          }`}
+                        >
                           {form.type}
                         </span>
-                        <span className="fw-semibold">Lead #{form.leadID || "-"}</span>
-                        <div className="text-muted small mt-1">{form.detail}</div>
-                        <div className="text-muted small">TL: {form.teamleader || "-"}</div>
+                        <span className="font-semibold text-gray-900 text-sm">
+                          Lead #{form.leadID || "-"}
+                        </span>
                       </div>
-                      <span className="text-muted small d-flex align-items-center gap-1 flex-shrink-0 ms-2">
-                        <Calendar size={12} />
-                        {formatDate(form.createdAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      <div className="text-gray-500 text-sm truncate">{form.detail}</div>
+                      <div className="text-gray-400 text-xs mt-0.5">
+                        TL: {form.teamleader || "-"}
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-gray-400 text-xs shrink-0 whitespace-nowrap mt-0.5">
+                      <Calendar size={12} />
+                      {formatDate(form.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
