@@ -64,16 +64,23 @@ const InvitedUsersModal = ({
   const [alert, setAlert] = useState({ type: "", message: "" });
   const prevInvitesRef = useRef([]);
 
+  // Keep the latest onCountsChange without making it an effect dependency,
+  // otherwise a new function identity each parent render causes an update loop.
+  const onCountsChangeRef = useRef(onCountsChange);
+  useEffect(() => {
+    onCountsChangeRef.current = onCountsChange;
+  }, [onCountsChange]);
+
   const refreshCounts = useCallback(async () => {
     try {
       const users = await totalUserCountApi().catch(() => null);
-      onCountsChange?.({
+      onCountsChangeRef.current?.({
         totalUsers: users?.count ?? null,
       });
     } catch {
       /* ignore */
     }
-  }, [onCountsChange]);
+  }, []);
 
   const fetchInvites = useCallback(async () => {
     if (!show) return;
@@ -141,11 +148,11 @@ const InvitedUsersModal = ({
 
   useEffect(() => {
     if (!show) return;
-    onCountsChange?.({
+    onCountsChangeRef.current?.({
       ...stats,
       invited: stats.pending,
     });
-  }, [show, stats, onCountsChange]);
+  }, [show, stats]);
 
   const acceptedVisible = useMemo(() => {
     if (showOlderAccepted) return acceptedRaw;
