@@ -18,6 +18,7 @@ import ProtectedAgent from "../components/ProtectedAgent";
 import ProfilePage from "../components/ProfilePage";
 import SettingsPage from "../components/SettingsPage";
 import QcTeamUsers from "../components/QcTeamUsers";
+import TeamLeadForms from "../components/TeamLeadForms";
 
 const Dashboard = ({ onLogout }) => {
   return (
@@ -31,6 +32,7 @@ const Dashboard = ({ onLogout }) => {
         <Route path="qc-team" element={<QcDashboard />} />
         <Route path="qc-members" element={<QcTeamList />} />
         <Route path="submitted-forms" element={<QcSubmittedForms />} />
+        <Route path="team-lead-forms" element={<TeamLeadForms />} />
         {/* ✅ Protected route */}
         <Route path="qc-team/:agentName" element={<ProtectedAgent />} />
         {/* <Route path="qc-team/:agentName" element={<TableAdmin/>} /> */}

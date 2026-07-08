@@ -8,6 +8,7 @@ import useAgentFormNotifications from "../../hooks/useAgentFormNotifications";
 const pathnameToTab = (pathname) => {
   const clean = pathname.replace(/\/+$/, "");
   if (clean === "/agent") return "agent";
+  if (clean.endsWith("team-lead-forms")) return "team-lead-forms";
   if (clean.endsWith("team-users")) return "team-users";
   if (clean.endsWith("feedback")) return "feedback";
   if (clean.endsWith("submissions")) return "submissions";

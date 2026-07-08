@@ -199,7 +199,14 @@ const AgentForm = () => {
 
       const res = await createEvaluationsApi(payload);
 
-      toast.success(" Evaluation submitted successfully!", {
+      const routed =
+        res?.teamLeadReviewRouted || res?.data?.teamLeadReview?.required;
+
+      toast.success(
+        routed
+          ? "Evaluation submitted. Low score sent to team lead for review."
+          : "Evaluation submitted successfully!",
+        {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,

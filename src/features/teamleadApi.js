@@ -14,6 +14,15 @@ export const getTeamLeadsApi = async () => {
   return response.data;
 };
 
+// Team lead profile for logged-in user (by email match)
+export const getMyTeamLeaderApi = async () => {
+  const token = getToken();
+  const response = await axios.get(`${baseUrl}/api/teamlead/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
 // Get single team lead by ID
 const getTeamLeadApi = async (id) => {
   const token = getToken();

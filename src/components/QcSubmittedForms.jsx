@@ -4,10 +4,12 @@ import { CalendarClock, Clock } from "lucide-react";
 import { MdArrowBackIosNew, MdArrowForwardIos, MdSkipNext } from "react-icons/md";
 import { useSearchParams } from "react-router-dom";
 import { getQcModuleFormsApi } from "../features/qcAnalytics";
-import { isQcAdmin, normalizeRole } from "../utils/roles";
+import { getMyTeamLeaderApi } from "../features/teamleadApi";
+import { isQcAdmin, isSuperAdmin, normalizeRole } from "../utils/roles";
 import GradientButton, {
   GRADIENT_HEADER_STYLE,
 } from "./common/GradientButton";
+import TeamLeadReviewBlock from "./TeamLeadReviewBlock";
 
 const HEADER_STYLE = GRADIENT_HEADER_STYLE;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -222,11 +224,23 @@ const CustomDateRangePanel = ({ startDate, endDate, onStartChange, onEndChange }
   </div>
 );
 
-const FormDetailModal = ({ show, onHide, record, type }) => {
+const FormDetailModal = ({
+  show,
+  onHide,
+  record,
+  type,
+  onRecordUpdated,
+  isTeamLeadView = false,
+  canAnswerReview = false,
+}) => {
   if (!record) return null;
-  const entries = Object.entries(record).filter(
-    ([k]) => !["__v", "owner"].includes(k)
-  );
+  const hideKeys = ["__v", "owner", "teamLeadReview"];
+  const entries = Object.entries(record).filter(([k]) => !hideKeys.includes(k));
+  const showReview =
+    (type === "evaluation" || type === "escalation") &&
+    record.teamLeadReview?.required;
+  const teamLeadName =
+    record.teamLeadReview?.teamLeaderName || record.teamleader || "—";
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered scrollable>
@@ -238,9 +252,25 @@ const FormDetailModal = ({ show, onHide, record, type }) => {
             ? "Escalation"
             : "Marketing"}{" "}
           — {record.submitterName || "Unknown"}
+          {showReview && (
+            <span className="badge bg-danger ms-2 small">Needs review</span>
+          )}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
+        {showReview && (
+          <div className="alert alert-warning py-2 small mb-3">
+            <strong>Team lead:</strong> {teamLeadName}
+            {record.teamLeadReview?.teamLeaderEmail && (
+              <span className="text-muted ms-2">
+                ({record.teamLeadReview.teamLeaderEmail})
+              </span>
+            )}
+            <span className="badge bg-secondary ms-2 text-capitalize">
+              {record.teamLeadReview?.status || "pending"}
+            </span>
+          </div>
+        )}
         <Table responsive bordered size="sm" className="mb-0">
           <tbody>
             {entries.map(([key, value]) => (
@@ -261,6 +291,15 @@ const FormDetailModal = ({ show, onHide, record, type }) => {
             ))}
           </tbody>
         </Table>
+        {showReview && (
+          <TeamLeadReviewBlock
+            evaluationId={record._id}
+            initialReview={record.teamLeadReview}
+            onReviewUpdated={(updated) => onRecordUpdated?.(updated)}
+            isTeamLeadView={isTeamLeadView}
+            canAnswerReview={canAnswerReview}
+          />
+        )}
       </Modal.Body>
     </Modal>
   );
@@ -286,9 +325,12 @@ const QcSubmittedForms = () => {
 
   const actorRole = normalizeRole(localStorage.getItem("userRole") || "");
   const actorId = localStorage.getItem("userId") || "";
-  const isAdmin = isQcAdmin(actorRole);
+  const actorEmail = (localStorage.getItem("userEmail") || "").trim().toLowerCase();
+  const isAdmin = isQcAdmin(actorRole) || isSuperAdmin(actorRole);
 
   const lockedUserId = isAdmin ? urlUserId : actorId;
+
+  const [isTeamLead, setIsTeamLead] = useState(false);
 
   const [formsTab, setFormsTab] = useState("evaluations");
   const [formsPage, setFormsPage] = useState(1);
@@ -305,8 +347,17 @@ const QcSubmittedForms = () => {
     userId: lockedUserId,
     startDate: "",
     endDate: "",
+    lowScoreOnly: false,
   });
   const [selectedForm, setSelectedForm] = useState(null);
+
+  const handleRecordUpdated = (updated) => {
+    if (!updated?._id) return;
+    setSelectedForm(updated);
+    setForms((prev) =>
+      prev.map((row) => (row._id === updated._id ? { ...row, ...updated } : row))
+    );
+  };
   const [showDetail, setShowDetail] = useState(false);
   const [lastPageToast, setLastPageToast] = useState(false);
   const toastTimerRef = useRef(null);
@@ -319,6 +370,21 @@ const QcSubmittedForms = () => {
   }, [lockedUserId]);
 
   useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await getMyTeamLeaderApi();
+        if (active) setIsTeamLead(Boolean(res?.isTeamLead));
+      } catch {
+        if (active) setIsTeamLead(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       const load = async () => {
         setFormsLoading(true);
@@ -329,9 +395,10 @@ const QcSubmittedForms = () => {
             limit: pageSize,
             search: formFilters.search.trim(),
             searchField: formFilters.searchField,
-            userId: isAdmin ? formFilters.userId : "",
+            userId: isAdmin ? (formFilters.userId || urlUserId) : "",
             startDate: formFilters.startDate,
             endDate: formFilters.endDate,
+            lowScoreOnly: formFilters.lowScoreOnly ? "1" : "",
           });
           if (res?.success) {
             setForms(res.data || []);
@@ -351,7 +418,7 @@ const QcSubmittedForms = () => {
       load();
     }, formFilters.search ? 400 : 0);
     return () => clearTimeout(timer);
-  }, [formsTab, formsPage, pageSize, formFilters, isAdmin]);
+  }, [formsTab, formsPage, pageSize, formFilters, isAdmin, urlUserId]);
 
   const qcUserOptions = formsMeta.qcUsers || [];
 
@@ -395,6 +462,7 @@ const QcSubmittedForms = () => {
       userId: lockedUserId,
       startDate: "",
       endDate: "",
+      lowScoreOnly: false,
     });
     setFormsPage(1);
   };
@@ -418,8 +486,21 @@ const QcSubmittedForms = () => {
   const pageTitle = urlUserName
     ? `${decodeURIComponent(urlUserName)}'s Submitted Forms`
     : isAdmin
-    ? "All QC Submitted Forms"
+    ? "All Submitted Forms"
     : "My Submitted Forms";
+
+  const isRecordSubmitter = (row) => {
+    const ownerId = String(row?.owner?._id || row?.owner || "");
+    const emails = [
+      row?.useremail,
+      row?.evaluatedby,
+      row?.userEmail,
+      row?.evaluatedBy,
+    ]
+      .filter(Boolean)
+      .map((v) => String(v).trim().toLowerCase());
+    return ownerId === actorId || (actorEmail && emails.includes(actorEmail));
+  };
 
   const showingFrom = totalCount === 0 ? 0 : (formsPage - 1) * pageSize + 1;
   const showingTo   = Math.min(formsPage * pageSize, totalCount);
@@ -492,11 +573,25 @@ const QcSubmittedForms = () => {
                 <Col xs={12} md={3}>
                   <Form.Label className="small mb-1">QC User</Form.Label>
                   <Form.Select size="sm" value={formFilters.userId} onChange={(e) => updateFormFilters({ userId: e.target.value })}>
-                    <option value="">All QC users</option>
+                    <option value="">All users</option>
                     {qcUserOptions.map((u) => (
                       <option key={u.userId} value={u.userId}>{u.name}</option>
                     ))}
                   </Form.Select>
+                </Col>
+              )}
+
+              {(formsTab === "evaluations" || formsTab === "escalations") && (
+                <Col xs={12} className={isAdmin && !lockedUserId ? "mt-2" : ""}>
+                  <Form.Check
+                    type="switch"
+                    id="low-score-only"
+                    label="Show low score / team lead review only"
+                    checked={formFilters.lowScoreOnly}
+                    onChange={(e) =>
+                      updateFormFilters({ lowScoreOnly: e.target.checked })
+                    }
+                  />
                 </Col>
               )}
             </Row>
@@ -523,13 +618,15 @@ const QcSubmittedForms = () => {
                   {formsTab === "evaluations" && (
                     <tr>
                       <th>Submitted By</th><th>Date</th><th>Agent Name</th>
-                      <th>Team Lead</th><th>Lead ID</th><th>MOD</th><th>Rating</th><th></th>
+                      <th>Team Lead</th><th>Lead ID</th><th>MOD</th><th>Rating</th>
+                      <th>Review</th><th></th>
                     </tr>
                   )}
                   {formsTab === "escalations" && (
                     <tr>
                       <th>Submitted By</th><th>Date</th><th>Agent Name</th>
-                      <th>Team Lead</th><th>Lead ID</th><th>Severity</th><th>Issue</th><th></th>
+                      <th>Team Lead</th><th>Lead ID</th><th>Rating</th>
+                      <th>Severity</th><th>Review</th><th></th>
                     </tr>
                   )}
                   {formsTab === "marketing" && (
@@ -542,32 +639,64 @@ const QcSubmittedForms = () => {
                 <tbody>
                   {forms.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-center text-muted py-4">No forms found</td>
+                      <td colSpan={9} className="text-center text-muted py-4">No forms found</td>
                     </tr>
                   )}
                   {formsTab === "evaluations" && forms.map((row) => (
-                    <tr key={row._id}>
+                    <tr key={row._id} className={row.teamLeadReview?.required ? "table-warning" : ""}>
                       <td className="fw-semibold">{row.submitterName}</td>
                       <td>{formatDate(row.createdAt)}</td>
                       <td>{row.agentName   || "—"}</td>
-                      <td>{row.teamleader  || "—"}</td>
+                      <td>
+                        {row.teamLeadReview?.teamLeaderName || row.teamleader || "—"}
+                      </td>
                       <td>{row.leadID      ?? "—"}</td>
                       <td>{row.mod         || "—"}</td>
-                      <td>{row.rating      ?? "—"}</td>
+                      <td>
+                        {row.rating ?? "—"}
+                        {row.teamLeadReview?.required && (
+                          <span className="badge bg-danger ms-1">Low</span>
+                        )}
+                      </td>
+                      <td>
+                        {row.teamLeadReview?.required ? (
+                          <span className="badge bg-secondary text-capitalize">
+                            {row.teamLeadReview.status || "pending"}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>
                         <GradientButton size="sm" onClick={() => { setSelectedForm(row); setShowDetail(true); }}>View</GradientButton>
                       </td>
                     </tr>
                   ))}
                   {formsTab === "escalations" && forms.map((row) => (
-                    <tr key={row._id}>
+                    <tr key={row._id} className={row.teamLeadReview?.required ? "table-warning" : ""}>
                       <td className="fw-semibold">{row.submitterName}</td>
                       <td>{formatDate(row.createdAt)}</td>
                       <td>{row.agentName   || "—"}</td>
-                      <td>{row.teamleader  || "—"}</td>
+                      <td>
+                        {row.teamLeadReview?.teamLeaderName || row.teamleader || "—"}
+                      </td>
                       <td>{row.leadID      || "—"}</td>
+                      <td>
+                        {row.userrating || "—"}
+                        {row.teamLeadReview?.required && (
+                          <span className="badge bg-danger ms-1">Bad</span>
+                        )}
+                      </td>
                       <td>{row.escSeverity || "—"}</td>
-                      <td>{row.issueIden   || "—"}</td>
+                      <td>
+                        {row.teamLeadReview?.required ? (
+                          <span className="badge bg-secondary text-capitalize">
+                            {row.teamLeadReview.status || "pending"}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>
                         <GradientButton size="sm" onClick={() => { setSelectedForm(row); setShowDetail(true); }}>View</GradientButton>
                       </td>
@@ -668,6 +797,11 @@ const QcSubmittedForms = () => {
         show={showDetail}
         onHide={() => setShowDetail(false)}
         record={selectedForm}
+        onRecordUpdated={handleRecordUpdated}
+        isTeamLeadView={isTeamLead}
+        canAnswerReview={
+          selectedForm ? isRecordSubmitter(selectedForm) : false
+        }
         type={
           formsTab === "escalations" ? "escalation"
           : formsTab === "marketing" ? "marketing"

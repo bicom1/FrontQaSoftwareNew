@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  AlertCircle,
   Briefcase,
   User,
   Menu,
@@ -16,6 +17,8 @@ import {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { normalizeRole, ROLES, isSuperAdmin, getModuleBasePath } from "../utils/roles";
 import { getQcModuleDashboardApi } from "../features/qcAnalytics";
+import { getMyTeamLeaderApi } from "../features/teamleadApi";
+import { getTeamLeadReviewCountApi } from "../features/teamLeadReviewApi";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
   const location = useLocation();
@@ -23,6 +26,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
   const [addFormExpanded, setAddFormExpanded] = useState(false);
   const [formsExpanded, setFormsExpanded] = useState(false);
   const [submittedFormsCount, setSubmittedFormsCount] = useState(null);
+  const [isTeamLead, setIsTeamLead] = useState(false);
+  const [teamLeadFormCount, setTeamLeadFormCount] = useState(null);
 
   const role = normalizeRole(profile?.role || "");
   const isQcRole = role === ROLES.QC_USER || role === ROLES.QC_ADMIN;
@@ -41,7 +46,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
   useEffect(() => {
     if (
       location.pathname.startsWith("/dashboard/submitted-forms") ||
-      location.pathname.startsWith("/dashboard/qc-members")
+      location.pathname.startsWith("/dashboard/qc-members") ||
+      location.pathname.startsWith("/dashboard/team-lead-forms") ||
+      location.pathname.startsWith("/admin/team-lead-forms")
     ) {
       setFormsExpanded(true);
     }
@@ -67,6 +74,31 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
       active = false;
     };
   }, [isQcRole, location.pathname]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await getMyTeamLeaderApi();
+        if (!active) return;
+        setIsTeamLead(Boolean(res?.isTeamLead));
+        if (res?.isTeamLead) {
+          const countRes = await getTeamLeadReviewCountApi();
+          if (active) setTeamLeadFormCount(countRes?.count ?? 0);
+        } else if (active) {
+          setTeamLeadFormCount(null);
+        }
+      } catch {
+        if (active) {
+          setIsTeamLead(false);
+          setTeamLeadFormCount(null);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!profile?.role) return;
@@ -268,6 +300,27 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
               )}
             </div>
 
+            {isTeamLead && (
+              <Link
+                to="/dashboard/team-lead-forms"
+                className={navLinkClass(
+                  isActive("/dashboard/team-lead-forms")
+                )}
+              >
+                <NavIcon>
+                  <AlertCircle size={18} />
+                </NavIcon>
+                {sidebarOpen && (
+                  <>
+                    <span className="flex-grow-1 text-start">
+                      Low Score QC Forms
+                    </span>
+                    <CountBadge count={teamLeadFormCount} />
+                  </>
+                )}
+              </Link>
+            )}
+
             {sidebarOpen && (
               <div className="sidebar-section-label mt-2"></div>
             )}
@@ -372,6 +425,28 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
               </NavIcon>
               {sidebarOpen && <span>Add Team Lead</span>}
             </Link>
+
+            {isTeamLead && (
+              <Link
+                to={`${moduleBase}/team-lead-forms`}
+                className={navLinkClass(
+                  isActive(`${moduleBase}/team-lead-forms`) ||
+                    isActive("/dashboard/team-lead-forms")
+                )}
+              >
+                <NavIcon>
+                  <AlertCircle size={18} />
+                </NavIcon>
+                {sidebarOpen && (
+                  <>
+                    <span className="flex-grow-1 text-start">
+                      Low Score QC Forms
+                    </span>
+                    <CountBadge count={teamLeadFormCount} />
+                  </>
+                )}
+              </Link>
+            )}
 
             <div className="sidebar-nav-group">
               <button

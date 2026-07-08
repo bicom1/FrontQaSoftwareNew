@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { Link } from "react-router-dom";
 import { getQcModuleDashboardApi } from "../features/qcAnalytics";
-import { getModuleBasePath, isQcAdmin, normalizeRole } from "../utils/roles";
+import { getModuleBasePath, isQcAdmin, isSuperAdmin, normalizeRole } from "../utils/roles";
 import GradientButton, {
   GRADIENT_HEADER_STYLE,
 } from "./common/GradientButton";
@@ -106,7 +106,8 @@ const QcDashboard = () => {
   if (error) return <Alert variant="danger">{error}</Alert>;
   if (!data) return <Alert variant="warning">No dashboard data available.</Alert>;
 
-  const isAdminView = data.isAdmin || isQcAdmin(actorRole);
+  const isAdminView =
+    data.isAdmin || isQcAdmin(actorRole) || isSuperAdmin(actorRole);
   const displayName = data.actor?.name || userName;
   const totalForms =
     (data.totalEvaluations || 0) +
@@ -133,7 +134,7 @@ const QcDashboard = () => {
           <GradientButton as={Link} to="/escalation" size="sm">
             + Escalation
           </GradientButton>
-          <GradientButton as={Link} to="/dashboard/submitted-forms" size="sm">
+          <GradientButton as={Link} to={`${moduleBase}/submitted-forms`} size="sm">
             Submitted Forms ({totalForms})
           </GradientButton>
         </div>
