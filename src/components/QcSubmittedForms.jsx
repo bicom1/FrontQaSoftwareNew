@@ -10,6 +10,7 @@ import GradientButton, {
   GRADIENT_HEADER_STYLE,
 } from "./common/GradientButton";
 import TeamLeadReviewBlock from "./TeamLeadReviewBlock";
+import FlaggedReviewDecisionBlock from "./FlaggedReviewDecisionBlock";
 
 const HEADER_STYLE = GRADIENT_HEADER_STYLE;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -232,32 +233,46 @@ const FormDetailModal = ({
   onRecordUpdated,
   isTeamLeadView = false,
   canAnswerReview = false,
+  canResolveFlagged = false,
 }) => {
   if (!record) return null;
-  const hideKeys = ["__v", "owner", "teamLeadReview"];
+
+  const hideKeys = [
+    "__v",
+    "owner",
+    "teamLeadReview",
+    "formType",
+    "submitterName",
+    "submittedByRole",
+  ];
   const entries = Object.entries(record).filter(([k]) => !hideKeys.includes(k));
   const showReview =
     (type === "evaluation" || type === "escalation") &&
     record.teamLeadReview?.required;
+  const showFlagged =
+    (type === "evaluation" || type === "escalation") &&
+    (record.flaggedReview?.required || record.teamLeadReview?.required);
   const teamLeadName =
     record.teamLeadReview?.teamLeaderName || record.teamleader || "—";
+  const formTitle =
+    type === "evaluation"
+      ? "Evaluation"
+      : type === "escalation"
+      ? "Escalation"
+      : "Marketing";
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          {type === "evaluation"
-            ? "Evaluation"
-            : type === "escalation"
-            ? "Escalation"
-            : "Marketing"}{" "}
-          — {record.submitterName || "Unknown"}
+          {formTitle} — {record.submitterName || "Unknown"}
           {showReview && (
             <span className="badge bg-danger ms-2 small">Needs review</span>
           )}
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body className="p-3">
+        {/* Form fields */}
         {showReview && (
           <div className="alert alert-warning py-2 small mb-3">
             <strong>Team lead:</strong> {teamLeadName}
@@ -271,6 +286,16 @@ const FormDetailModal = ({
             </span>
           </div>
         )}
+
+        {showFlagged && record.flaggedReview?.issueSummary && (
+          <div className="alert alert-danger py-2 small mb-3">
+            <strong>Flagged issue:</strong>
+            <pre className="mb-0 mt-1 small" style={{ whiteSpace: "pre-wrap", fontFamily: "inherit" }}>
+              {record.flaggedReview.issueSummary}
+            </pre>
+          </div>
+        )}
+
         <Table responsive bordered size="sm" className="mb-0">
           <tbody>
             {entries.map(([key, value]) => (
@@ -291,14 +316,29 @@ const FormDetailModal = ({
             ))}
           </tbody>
         </Table>
+
+        {/* Discussion */}
         {showReview && (
-          <TeamLeadReviewBlock
-            evaluationId={record._id}
-            initialReview={record.teamLeadReview}
-            onReviewUpdated={(updated) => onRecordUpdated?.(updated)}
-            isTeamLeadView={isTeamLeadView}
-            canAnswerReview={canAnswerReview}
-          />
+          <div className="mt-3 pt-3 border-top">
+            <TeamLeadReviewBlock
+              evaluationId={record._id}
+              initialReview={record.teamLeadReview}
+              onReviewUpdated={(updated) => onRecordUpdated?.(updated)}
+              isTeamLeadView={isTeamLeadView}
+              canAnswerReview={canAnswerReview}
+            />
+          </div>
+        )}
+
+        {showFlagged && (
+          <div className="mt-3 pt-3 border-top">
+            <FlaggedReviewDecisionBlock
+              formId={record._id}
+              initialReview={record.flaggedReview}
+              onUpdated={(updated) => onRecordUpdated?.(updated)}
+              canDecide={canResolveFlagged}
+            />
+          </div>
         )}
       </Modal.Body>
     </Modal>
@@ -322,15 +362,23 @@ const QcSubmittedForms = () => {
   const [searchParams] = useSearchParams();
   const urlUserId = searchParams.get("userId") || "";
   const urlUserName = searchParams.get("name") || "";
+  const flaggedQueue = searchParams.get("flaggedQueue") || "";
+
+  const FLAGGED_QUEUE_TITLES = {
+    forwarded: "Low Rating — Pending Review",
+    accepted: "Low Rating — Accepted",
+    rejected: "Low Rating — Rejected",
+  };
 
   const actorRole = normalizeRole(localStorage.getItem("userRole") || "");
   const actorId = localStorage.getItem("userId") || "";
   const actorEmail = (localStorage.getItem("userEmail") || "").trim().toLowerCase();
   const isAdmin = isQcAdmin(actorRole) || isSuperAdmin(actorRole);
+  const canResolveFlagged = isQcAdmin(actorRole) || isSuperAdmin(actorRole);
 
   const lockedUserId = isAdmin ? urlUserId : actorId;
 
-  const [isTeamLead, setIsTeamLead] = useState(false);
+  const [myTeamLeaders, setMyTeamLeaders] = useState([]);
 
   const [formsTab, setFormsTab] = useState("evaluations");
   const [formsPage, setFormsPage] = useState(1);
@@ -348,12 +396,30 @@ const QcSubmittedForms = () => {
     startDate: "",
     endDate: "",
     lowScoreOnly: false,
+    forwardedFlaggedOnly: false,
+    flaggedStatus: "",
   });
   const [selectedForm, setSelectedForm] = useState(null);
 
   const handleRecordUpdated = (updated) => {
     if (!updated?._id) return;
+    const resolved =
+      updated.teamLeadReview?.status === "resolved" ||
+      ["approved", "rejected"].includes(updated.flaggedReview?.status);
+
     setSelectedForm(updated);
+
+    if (
+      (formFilters.lowScoreOnly ||
+        formFilters.forwardedFlaggedOnly ||
+        formFilters.flaggedStatus) &&
+      resolved
+    ) {
+      setForms((prev) => prev.filter((row) => row._id !== updated._id));
+      setTotalCount((c) => Math.max(0, c - 1));
+      return;
+    }
+
     setForms((prev) =>
       prev.map((row) => (row._id === updated._id ? { ...row, ...updated } : row))
     );
@@ -365,6 +431,40 @@ const QcSubmittedForms = () => {
   const isCustomPeriod = period === "custom";
 
   useEffect(() => {
+    if (flaggedQueue === "forwarded") {
+      setFormFilters((f) => ({
+        ...f,
+        forwardedFlaggedOnly: true,
+        lowScoreOnly: false,
+        flaggedStatus: "",
+      }));
+      setFormsPage(1);
+    } else if (flaggedQueue === "accepted") {
+      setFormFilters((f) => ({
+        ...f,
+        forwardedFlaggedOnly: false,
+        lowScoreOnly: false,
+        flaggedStatus: "approved",
+      }));
+      setFormsPage(1);
+    } else if (flaggedQueue === "rejected") {
+      setFormFilters((f) => ({
+        ...f,
+        forwardedFlaggedOnly: false,
+        lowScoreOnly: false,
+        flaggedStatus: "rejected",
+      }));
+      setFormsPage(1);
+    } else if (!flaggedQueue) {
+      setFormFilters((f) => ({
+        ...f,
+        forwardedFlaggedOnly: false,
+        flaggedStatus: "",
+      }));
+    }
+  }, [flaggedQueue]);
+
+  useEffect(() => {
     setFormFilters((f) => ({ ...f, userId: lockedUserId }));
     setFormsPage(1);
   }, [lockedUserId]);
@@ -374,9 +474,11 @@ const QcSubmittedForms = () => {
     (async () => {
       try {
         const res = await getMyTeamLeaderApi();
-        if (active) setIsTeamLead(Boolean(res?.isTeamLead));
+        if (active) {
+          setMyTeamLeaders(Array.isArray(res?.data) ? res.data : []);
+        }
       } catch {
-        if (active) setIsTeamLead(false);
+        if (active) setMyTeamLeaders([]);
       }
     })();
     return () => {
@@ -399,6 +501,8 @@ const QcSubmittedForms = () => {
             startDate: formFilters.startDate,
             endDate: formFilters.endDate,
             lowScoreOnly: formFilters.lowScoreOnly ? "1" : "",
+            forwardedOnly: formFilters.forwardedFlaggedOnly ? "1" : "",
+            flaggedStatus: formFilters.flaggedStatus || "",
           });
           if (res?.success) {
             setForms(res.data || []);
@@ -463,6 +567,14 @@ const QcSubmittedForms = () => {
       startDate: "",
       endDate: "",
       lowScoreOnly: false,
+      forwardedFlaggedOnly: false,
+      flaggedStatus: flaggedQueue === "accepted"
+        ? "approved"
+        : flaggedQueue === "rejected"
+        ? "rejected"
+        : flaggedQueue === "forwarded"
+        ? ""
+        : "",
     });
     setFormsPage(1);
   };
@@ -483,7 +595,9 @@ const QcSubmittedForms = () => {
   // Clean up timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
-  const pageTitle = urlUserName
+  const pageTitle = flaggedQueue
+    ? FLAGGED_QUEUE_TITLES[flaggedQueue] || "Submitted Forms"
+    : urlUserName
     ? `${decodeURIComponent(urlUserName)}'s Submitted Forms`
     : isAdmin
     ? "All Submitted Forms"
@@ -502,6 +616,33 @@ const QcSubmittedForms = () => {
     return ownerId === actorId || (actorEmail && emails.includes(actorEmail));
   };
 
+  const isAssociatedTeamLeadFor = (row) => {
+    if (!row || !myTeamLeaders.length) return false;
+    const tlName = (
+      row.teamLeadReview?.teamLeaderName ||
+      row.teamleader ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+    const tlEmail = (row.teamLeadReview?.teamLeaderEmail || "")
+      .trim()
+      .toLowerCase();
+    return myTeamLeaders.some((leader) => {
+      const name = (leader.name || "").trim().toLowerCase();
+      const email = (leader.email || "").trim().toLowerCase();
+      return (tlName && name === tlName) || (tlEmail && email === tlEmail);
+    });
+  };
+
+  const canManageReview = (row) =>
+    isSuperAdmin(actorRole) || isAssociatedTeamLeadFor(row);
+
+  const openForm = (row) => {
+    setSelectedForm(row);
+    setShowDetail(true);
+  };
+
   const showingFrom = totalCount === 0 ? 0 : (formsPage - 1) * pageSize + 1;
   const showingTo   = Math.min(formsPage * pageSize, totalCount);
   const isLastPageDisabled = formsPage >= totalPages || formsLoading || totalCount === 0;
@@ -511,7 +652,9 @@ const QcSubmittedForms = () => {
       <div className="mb-4">
         <h1 className="fw-bold h4 mb-1">{pageTitle}</h1>
         <p className="text-muted mb-0 small">
-          Search and filter your submitted evaluation, escalation, and marketing forms
+          {flaggedQueue
+            ? "Forms with low rating forwarded from agent admin. Accepted and rejected are kept for 2 days."
+            : "Search and filter your submitted evaluation, escalation, and marketing forms"}
         </p>
       </div>
 
@@ -581,7 +724,8 @@ const QcSubmittedForms = () => {
                 </Col>
               )}
 
-              {(formsTab === "evaluations" || formsTab === "escalations") && (
+              {(formsTab === "evaluations" || formsTab === "escalations") &&
+                !flaggedQueue && (
                 <Col xs={12} className={isAdmin && !lockedUserId ? "mt-2" : ""}>
                   <Form.Check
                     type="switch"
@@ -589,7 +733,12 @@ const QcSubmittedForms = () => {
                     label="Show low score / team lead review only"
                     checked={formFilters.lowScoreOnly}
                     onChange={(e) =>
-                      updateFormFilters({ lowScoreOnly: e.target.checked })
+                      updateFormFilters({
+                        lowScoreOnly: e.target.checked,
+                        forwardedFlaggedOnly: e.target.checked
+                          ? false
+                          : formFilters.forwardedFlaggedOnly,
+                      })
                     }
                   />
                 </Col>
@@ -668,7 +817,14 @@ const QcSubmittedForms = () => {
                         )}
                       </td>
                       <td>
-                        <GradientButton size="sm" onClick={() => { setSelectedForm(row); setShowDetail(true); }}>View</GradientButton>
+                        <GradientButton
+                          size="sm"
+                          onClick={() => openForm(row)}
+                        >
+                          {row.teamLeadReview?.required && canManageReview(row)
+                            ? "Review"
+                            : "View"}
+                        </GradientButton>
                       </td>
                     </tr>
                   ))}
@@ -698,7 +854,14 @@ const QcSubmittedForms = () => {
                         )}
                       </td>
                       <td>
-                        <GradientButton size="sm" onClick={() => { setSelectedForm(row); setShowDetail(true); }}>View</GradientButton>
+                        <GradientButton
+                          size="sm"
+                          onClick={() => openForm(row)}
+                        >
+                          {row.teamLeadReview?.required && canManageReview(row)
+                            ? "Review"
+                            : "View"}
+                        </GradientButton>
                       </td>
                     </tr>
                   ))}
@@ -798,9 +961,14 @@ const QcSubmittedForms = () => {
         onHide={() => setShowDetail(false)}
         record={selectedForm}
         onRecordUpdated={handleRecordUpdated}
-        isTeamLeadView={isTeamLead}
+        isTeamLeadView={
+          selectedForm ? canManageReview(selectedForm) : false
+        }
         canAnswerReview={
           selectedForm ? isRecordSubmitter(selectedForm) : false
+        }
+        canResolveFlagged={
+          canResolveFlagged && flaggedQueue === "forwarded"
         }
         type={
           formsTab === "escalations" ? "escalation"

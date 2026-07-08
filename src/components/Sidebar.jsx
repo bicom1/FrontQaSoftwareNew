@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  AlertCircle,
   Briefcase,
   User,
   Menu,
@@ -17,20 +16,18 @@ import {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { normalizeRole, ROLES, isSuperAdmin, getModuleBasePath } from "../utils/roles";
 import { getQcModuleDashboardApi } from "../features/qcAnalytics";
-import { getMyTeamLeaderApi } from "../features/teamleadApi";
-import { getTeamLeadReviewCountApi } from "../features/teamLeadReviewApi";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [addFormExpanded, setAddFormExpanded] = useState(false);
   const [formsExpanded, setFormsExpanded] = useState(false);
+  const [lowRatingExpanded, setLowRatingExpanded] = useState(false);
   const [submittedFormsCount, setSubmittedFormsCount] = useState(null);
-  const [isTeamLead, setIsTeamLead] = useState(false);
-  const [teamLeadFormCount, setTeamLeadFormCount] = useState(null);
 
   const role = normalizeRole(profile?.role || "");
   const isQcRole = role === ROLES.QC_USER || role === ROLES.QC_ADMIN;
+  const isQcAdminRole = role === ROLES.QC_ADMIN;
 
   // Auto-expand "Add Form" when on evaluation/escalation routes
   useEffect(() => {
@@ -47,12 +44,16 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
     if (
       location.pathname.startsWith("/dashboard/submitted-forms") ||
       location.pathname.startsWith("/dashboard/qc-members") ||
-      location.pathname.startsWith("/dashboard/team-lead-forms") ||
-      location.pathname.startsWith("/admin/team-lead-forms")
+      location.pathname.startsWith("/admin/submitted-forms")
     ) {
       setFormsExpanded(true);
     }
-  }, [location.pathname]);
+    const flaggedQueue = new URLSearchParams(location.search).get("flaggedQueue");
+    if (flaggedQueue) {
+      setFormsExpanded(true);
+      setLowRatingExpanded(true);
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (!isQcRole) return;
@@ -76,31 +77,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
   }, [isQcRole, location.pathname]);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const res = await getMyTeamLeaderApi();
-        if (!active) return;
-        setIsTeamLead(Boolean(res?.isTeamLead));
-        if (res?.isTeamLead) {
-          const countRes = await getTeamLeadReviewCountApi();
-          if (active) setTeamLeadFormCount(countRes?.count ?? 0);
-        } else if (active) {
-          setTeamLeadFormCount(null);
-        }
-      } catch {
-        if (active) {
-          setIsTeamLead(false);
-          setTeamLeadFormCount(null);
-        }
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [location.pathname]);
-
-  useEffect(() => {
     if (!profile?.role) return;
     const userRole = normalizeRole(profile.role);
     if (
@@ -114,6 +90,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const handleAddFormClick = () => setAddFormExpanded(!addFormExpanded);
   const handleFormsClick = () => setFormsExpanded(!formsExpanded);
+  const handleLowRatingClick = () => setLowRatingExpanded(!lowRatingExpanded);
   const isActive = (path) =>
     location.pathname === path || location.pathname.startsWith(path);
   const isExactActive = (path) => location.pathname === path;
@@ -296,30 +273,61 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
                     </NavIcon>
                     <span>QC Team</span>
                   </Link>
+
+                  {isQcAdminRole && (
+                    <div className="sidebar-nav-group mt-1">
+                      <button
+                        type="button"
+                        className={navLinkClass(
+                          location.search.includes("flaggedQueue=")
+                        )}
+                        onClick={handleLowRatingClick}
+                      >
+                        <NavIcon>
+                          <ArrowUp size={16} />
+                        </NavIcon>
+                        <span className="flex-grow-1 text-start">Low Rating</span>
+                        <span className="sidebar-chevron">
+                          {lowRatingExpanded ? (
+                            <ChevronDown size={14} />
+                          ) : (
+                            <ChevronRight size={14} />
+                          )}
+                        </span>
+                      </button>
+                      {lowRatingExpanded && (
+                        <div className="sidebar-nav-sub ms-2">
+                          <Link
+                            to="/dashboard/submitted-forms?flaggedQueue=forwarded"
+                            className={navLinkClass(
+                              location.search.includes("flaggedQueue=forwarded")
+                            )}
+                          >
+                            <span>Pending Review</span>
+                          </Link>
+                          <Link
+                            to="/dashboard/submitted-forms?flaggedQueue=accepted"
+                            className={navLinkClass(
+                              location.search.includes("flaggedQueue=accepted")
+                            )}
+                          >
+                            <span>Accepted</span>
+                          </Link>
+                          <Link
+                            to="/dashboard/submitted-forms?flaggedQueue=rejected"
+                            className={navLinkClass(
+                              location.search.includes("flaggedQueue=rejected")
+                            )}
+                          >
+                            <span>Rejected</span>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-
-            {isTeamLead && (
-              <Link
-                to="/dashboard/team-lead-forms"
-                className={navLinkClass(
-                  isActive("/dashboard/team-lead-forms")
-                )}
-              >
-                <NavIcon>
-                  <AlertCircle size={18} />
-                </NavIcon>
-                {sidebarOpen && (
-                  <>
-                    <span className="flex-grow-1 text-start">
-                      Low Score QC Forms
-                    </span>
-                    <CountBadge count={teamLeadFormCount} />
-                  </>
-                )}
-              </Link>
-            )}
 
             {sidebarOpen && (
               <div className="sidebar-section-label mt-2"></div>
@@ -425,28 +433,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, profile }) => {
               </NavIcon>
               {sidebarOpen && <span>Add Team Lead</span>}
             </Link>
-
-            {isTeamLead && (
-              <Link
-                to={`${moduleBase}/team-lead-forms`}
-                className={navLinkClass(
-                  isActive(`${moduleBase}/team-lead-forms`) ||
-                    isActive("/dashboard/team-lead-forms")
-                )}
-              >
-                <NavIcon>
-                  <AlertCircle size={18} />
-                </NavIcon>
-                {sidebarOpen && (
-                  <>
-                    <span className="flex-grow-1 text-start">
-                      Low Score QC Forms
-                    </span>
-                    <CountBadge count={teamLeadFormCount} />
-                  </>
-                )}
-              </Link>
-            )}
 
             <div className="sidebar-nav-group">
               <button

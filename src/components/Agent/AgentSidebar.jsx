@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { BarChart2, Activity, Menu, X, FileText, Users, AlertCircle } from "lucide-react";
+import { BarChart2, Activity, Menu, X, FileText, Users } from "lucide-react";
 import { getProfileApi } from "../../features/userApis";
-import { getMyTeamLeaderApi } from "../../features/teamleadApi";
-import { getTeamLeadReviewCountApi } from "../../features/teamLeadReviewApi";
 import { isAgentAdmin } from "../../utils/roles";
 
 const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
   const [profile, setProfile] = useState(null);
-  const [isTeamLead, setIsTeamLead] = useState(false);
-  const [teamLeadFormCount, setTeamLeadFormCount] = useState(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -20,29 +16,6 @@ const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
       }
     };
     fetchProfile();
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const res = await getMyTeamLeaderApi();
-        if (!active) return;
-        setIsTeamLead(Boolean(res?.isTeamLead));
-        if (res?.isTeamLead) {
-          const countRes = await getTeamLeadReviewCountApi();
-          if (active) setTeamLeadFormCount(countRes?.count ?? 0);
-        }
-      } catch {
-        if (active) {
-          setIsTeamLead(false);
-          setTeamLeadFormCount(null);
-        }
-      }
-    })();
-    return () => {
-      active = false;
-    };
   }, []);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -64,7 +37,6 @@ const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
         zIndex: 1030,
       }}
     >
-      {/* Brand + Toggle */}
       <div className="d-flex align-items-center mb-4 p-3">
         {sidebarOpen && <h4 className="mb-0 flex-grow-1">Bicomm</h4>}
         <button
@@ -76,7 +48,6 @@ const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
         </button>
       </div>
 
-      {/* Nav */}
       <nav className="nav flex-column nav-pills px-2 flex-grow-1 overflow-auto">
         <button
           className={btnCls(activeTab === "agent")}
@@ -108,27 +79,8 @@ const AgentSidebar = ({ sidebarOpen, setSidebarOpen, activeTab, onNav }) => {
             {sidebarOpen && <span className="ms-2">Team Users</span>}
           </button>
         )}
-        {isTeamLead && (
-          <button
-            className={btnCls(activeTab === "team-lead-forms")}
-            onClick={() => onNav("/team-lead-forms")}
-          >
-            <AlertCircle size={20} />
-            {sidebarOpen && (
-              <span className="ms-2 d-flex align-items-center gap-2 flex-grow-1">
-                Low Score QC Forms
-                {teamLeadFormCount > 0 && (
-                  <span className="badge bg-danger rounded-pill ms-auto">
-                    {teamLeadFormCount}
-                  </span>
-                )}
-              </span>
-            )}
-          </button>
-        )}
       </nav>
 
-      {/* Profile footer */}
       <div className="mt-auto w-100 p-3 border-top border-secondary">
         {sidebarOpen ? (
           <div className="d-flex align-items-center">

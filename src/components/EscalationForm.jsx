@@ -977,14 +977,19 @@ const EscalationForm = ({ escalationId }) => {
 
     setLoading(true);
     try {
-      await createEscalationApi(escalation, otherReason);
+      const res = await createEscalationApi(escalation, otherReason);
 
-      toast.success("Escalation submitted successfully!", {
+      toast.success(
+        res?.teamLeadReviewRouted
+          ? "Escalation submitted. Sent to team lead for review."
+          : "Escalation submitted successfully!",
+        {
         position: "top-right",
         autoClose: 3000,
         theme: "colored",
         style: { background: "#10b981", color: "#ffffff", fontWeight: "600" },
-      });
+      }
+      );
 
       // Reset — keep owner & email from localStorage
       let parsedUser = { _id: "", email: "" };

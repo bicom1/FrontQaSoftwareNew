@@ -21,6 +21,8 @@ import {
   getEscalationsByUserEmailApi,
 } from "../../features/escalationsApi";
 import { createAppealApi, getMyAppealsApi } from "../../features/feedback";
+import { isAgentAdminSession } from "../../utils/agentSubmissions";
+import FlaggedChatsPanel from "./FlaggedChatsPanel";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_FILES = 5;
@@ -50,6 +52,8 @@ const AgentFeedbackBox = () => {
   const [appeals, setAppeals] = useState([]);
   const [appealText, setAppealText] = useState({});
   const [appealFiles, setAppealFiles] = useState({});
+
+  const isAgentAdmin = isAgentAdminSession();
 
   // Pagination state
   const [formsVisibleCount, setFormsVisibleCount] = useState(PAGE_SIZE);
@@ -242,15 +246,24 @@ const AgentFeedbackBox = () => {
   }
 
   return (
-    <div className="container-fluid px-4 py-4">
-      <div className="mb-4">
-        <h1 className="fw-bold mb-1">Form Appeals & Feedback</h1>
-        <p className="text-muted mb-0">
-          Review QC on your submitted forms and appeal if you believe the evaluation was incorrect.
-          Attach images, PDF, or ZIP evidence (max 5 files, 5MB each).
-        </p>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-[1400px] mx-auto px-4 py-5">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">
+            {isAgentAdmin ? "Flagged Chats" : "Form Appeals & Feedback"}
+          </h1>
+          {!isAgentAdmin && (
+            <p className="text-slate-500 text-sm mb-0">
+              Review QC on your submitted forms and appeal if you believe the
+              evaluation was incorrect.
+            </p>
+          )}
+        </div>
 
+        {isAgentAdmin && <FlaggedChatsPanel />}
+
+      {!isAgentAdmin && (
+      <>
       <div className="row g-3 mb-4">
         <div className="col-md-4">
           <div className="card border-0 shadow-sm h-100">
@@ -558,7 +571,10 @@ const AgentFeedbackBox = () => {
           </div>
         </div>
       )}
+      </>
+      )}
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+      </div>
     </div>
   );
 };

@@ -1,8 +1,5 @@
 import axios from "axios";
-
-const baseUrl = import.meta.env.VITE_API_BASE_URL;
-
-const getToken = () => localStorage.getItem("token");
+import { baseUrl, getToken } from "./config";
 
 const authHeaders = () => ({
   Authorization: `Bearer ${getToken()}`,

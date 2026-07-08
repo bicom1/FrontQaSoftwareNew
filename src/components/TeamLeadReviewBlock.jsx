@@ -7,17 +7,8 @@ import {
   answerTeamLeadQuestionApi,
   resolveTeamLeadReviewApi,
 } from "../features/teamLeadReviewApi";
-import {
-  isQcRole,
-  isQcAdmin,
-  normalizeRole,
-  ROLES,
-} from "../utils/roles";
+import { isQcRole, normalizeRole, ROLES } from "../utils/roles";
 
-/**
- * Inline Q&A for low-score evaluations — embed inside existing form detail views.
- * Team lead (agent admin) asks; QC submitter answers.
- */
 const TeamLeadReviewBlock = ({
   evaluationId,
   initialReview,
@@ -26,17 +17,13 @@ const TeamLeadReviewBlock = ({
   canAnswerReview = false,
 }) => {
   const role = normalizeRole(localStorage.getItem("userRole"));
-  const canAsk = isTeamLeadView;
+  const canAsk = Boolean(isTeamLeadView);
   const canAnswer =
-    !isTeamLeadView &&
+    !canAsk &&
     (canAnswerReview ||
       isQcRole(role) ||
-      isQcAdmin(role) ||
-      normalizeRole(role) === ROLES.SUPER_ADMIN);
-  const canResolve =
-    canAsk ||
-    isQcAdmin(role) ||
-    normalizeRole(role) === ROLES.SUPER_ADMIN;
+      role === ROLES.SUPER_ADMIN);
+  const canResolveRole = canAsk;
 
   const [review, setReview] = useState(initialReview);
   const [loading, setLoading] = useState(false);
@@ -64,10 +51,19 @@ const TeamLeadReviewBlock = ({
     if (evaluationId) load();
   }, [evaluationId]);
 
+  useEffect(() => {
+    setReview(initialReview);
+  }, [initialReview]);
+
   if (!review?.required) return null;
 
   const threads = review.threads || [];
   const status = review.status || "pending";
+  const isResolved = status === "resolved";
+  const discussionComplete =
+    threads.length > 0 &&
+    threads.every((t) => t.question?.trim() && t.answer?.trim());
+  const canShowResolve = canResolveRole && discussionComplete;
 
   const handleAsk = async (e) => {
     e.preventDefault();
@@ -105,7 +101,7 @@ const TeamLeadReviewBlock = ({
       setAnswers((prev) => ({ ...prev, [threadId]: "" }));
       if (res?.data) onReviewUpdated?.(res.data);
       await load();
-      toast.success("Answer submitted");
+      toast.success("Answer sent");
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to submit answer");
     } finally {
@@ -114,12 +110,16 @@ const TeamLeadReviewBlock = ({
   };
 
   const handleResolve = async () => {
+    if (!discussionComplete) {
+      toast.info("Ask a question and wait for an answer first");
+      return;
+    }
     try {
       setSubmitting(true);
       const res = await resolveTeamLeadReviewApi(evaluationId);
       if (res?.data) onReviewUpdated?.(res.data);
       await load();
-      toast.success("Marked as resolved");
+      toast.success("The issue is resolved", { autoClose: 4000 });
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to resolve");
     } finally {
@@ -127,19 +127,37 @@ const TeamLeadReviewBlock = ({
     }
   };
 
-  return (
-    <div className="border-top bg-warning-subtle px-3 py-3 mt-0">
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-        <div>
-          <span className="fw-semibold small text-danger">
-            Low score — team lead review
-          </span>
-          <span className="badge bg-secondary ms-2 text-capitalize">{status}</span>
+  if (isResolved) {
+    return (
+      <div className="border rounded border-success bg-success-subtle px-3 py-3">
+        <div className="d-flex align-items-center gap-2 text-success fw-semibold">
+          <CheckCircle2 size={20} />
+          The issue is resolved
         </div>
-        {canResolve && status !== "resolved" && (
+        {threads.length > 0 && (
+          <div className="mt-3 d-flex flex-column gap-2">
+            {threads.map((t) => (
+              <div key={t._id} className="bg-white border rounded p-2 small">
+                <div className="text-primary fw-semibold">Q: {t.question}</div>
+                {t.answer && (
+                  <div className="text-success mt-1">A: {t.answer}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="border rounded bg-warning-subtle px-3 py-3">
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <span className="fw-semibold text-danger">Low score review</span>
+        {canShowResolve && (
           <button
             type="button"
-            className="btn btn-sm btn-outline-success"
+            className="btn btn-sm btn-success"
             disabled={submitting}
             onClick={handleResolve}
           >
@@ -152,34 +170,29 @@ const TeamLeadReviewBlock = ({
       {loading ? (
         <div className="text-muted small py-2">
           <Loader2 size={14} className="me-1 spin" />
-          Loading review...
+          Loading...
         </div>
       ) : (
         <>
-          {threads.length === 0 ? (
-            <p className="text-muted small mb-2">
-              {canAsk
-                ? "Ask the QC reviewer about this low score below."
-                : "Waiting for team lead questions."}
-            </p>
-          ) : (
+          {threads.length > 0 && (
             <div className="d-flex flex-column gap-2 mb-3">
               {threads.map((t) => (
                 <div key={t._id} className="bg-white border rounded p-2 small">
                   <div className="fw-semibold text-primary">
-                    {t.askedByName || "Team lead"} asked:
+                    {t.askedByName || "Team lead"}:
                   </div>
                   <div className="mb-2">{t.question}</div>
                   {t.answer ? (
                     <div className="border-start border-success ps-2 text-success">
-                      <strong>{t.answeredByName || "QC"}:</strong> {t.answer}
+                      <strong>{t.answeredByName || "Submitter"}:</strong>{" "}
+                      {t.answer}
                     </div>
                   ) : canAnswer ? (
                     <div className="mt-2">
                       <textarea
                         className="form-control form-control-sm mb-1"
                         rows={2}
-                        placeholder="Your answer (min 10 chars)..."
+                        placeholder="Your answer..."
                         value={answers[t._id] || ""}
                         onChange={(e) =>
                           setAnswers((p) => ({
@@ -194,26 +207,23 @@ const TeamLeadReviewBlock = ({
                         disabled={submitting}
                         onClick={() => handleAnswer(t._id)}
                       >
-                        Submit answer
+                        Send answer
                       </button>
                     </div>
                   ) : (
-                    <span className="text-warning">Awaiting QC answer</span>
+                    <span className="text-warning">Waiting for answer...</span>
                   )}
                 </div>
               ))}
             </div>
           )}
 
-          {canAsk && status !== "resolved" && (
+          {canAsk && (
             <form onSubmit={handleAsk} className="mt-2">
-              <label className="form-label small fw-semibold mb-1">
-                Ask QC reviewer
-              </label>
               <textarea
                 className="form-control form-control-sm mb-2"
                 rows={2}
-                placeholder="e.g. Why was greeting marked down on this call?"
+                placeholder="Ask a question..."
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 required

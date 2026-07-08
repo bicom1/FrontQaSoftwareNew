@@ -151,6 +151,25 @@ const DomainUserManagement = ({
   const [deletingId, setDeletingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const emptyFormData = () => ({
+    name: "",
+    email: "",
+    password: "",
+    role: defaultRole,
+  });
+
+  const openAddModal = () => {
+    setFormData(emptyFormData());
+    setAlert({ type: "", message: "" });
+    setShowModal(true);
+  };
+
+  const closeAddModal = () => {
+    setShowModal(false);
+    setFormData(emptyFormData());
+    setAlert({ type: "", message: "" });
+  };
+
   const mountedRef = useRef(true);
   const fetchIdRef = useRef(0);
 
@@ -199,13 +218,14 @@ const DomainUserManagement = ({
       const roleLabel =
         ROLE_LABELS[normalizeRole(formData.role || defaultRole)] ||
         formData.role;
+      const createdEmail = formData.email.trim();
       setAlert({
         type: "success",
-        message: `${roleLabel} created successfully.`,
+        message: `${roleLabel} created. Welcome email sent to ${createdEmail}.`,
       });
-      setFormData({ name: "", email: "", password: "", role: defaultRole });
+      setFormData(emptyFormData());
       await loadUsers();
-      setTimeout(() => setShowModal(false), 1500);
+      setTimeout(() => closeAddModal(), 1500);
     } catch (err) {
       setAlert({
         type: "danger",
@@ -308,7 +328,7 @@ const DomainUserManagement = ({
         {analyticsLayout ? (
           <div className="flex items-stretch gap-3 flex-wrap">
             {canAddUsers && (
-              <GradientButton onClick={() => setShowModal(true)} size="sm">
+              <GradientButton onClick={openAddModal} size="sm">
                 <UserPlus size={16} className="flex-shrink-0" />
                 <span>Add User</span>
               </GradientButton>
@@ -324,7 +344,7 @@ const DomainUserManagement = ({
           </div>
         ) : (
           canAddUsers && (
-            <GradientButton onClick={() => setShowModal(true)} size="sm">
+            <GradientButton onClick={openAddModal} size="sm">
               <UserPlus size={16} className="flex-shrink-0" />
               <span>Add {ROLE_LABELS[defaultRole]}</span>
             </GradientButton>
@@ -510,13 +530,14 @@ const DomainUserManagement = ({
 
       {/* Add User modal */}
       {canAddUsers && (
-        <Modal show={showModal} onClose={() => setShowModal(false)} title="Add User">
+        <Modal show={showModal} onClose={closeAddModal} title="Add User">
           {alert.message && <Banner variant={alert.type}>{alert.message}</Banner>}
-          <form onSubmit={handleSubmit}>
+          <form key={showModal ? "add-user-open" : "add-user-closed"} onSubmit={handleSubmit}>
             <Field label="Name">
               <input
                 required
                 className={inputClasses}
+                autoComplete="off"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, name: e.target.value }))
@@ -527,7 +548,10 @@ const DomainUserManagement = ({
               <input
                 type="email"
                 required
+                name="new-qc-user-email"
+                autoComplete="off"
                 className={inputClasses}
+                placeholder="Enter new user's email"
                 value={formData.email}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, email: e.target.value }))
@@ -539,6 +563,7 @@ const DomainUserManagement = ({
                 type="password"
                 required
                 minLength={8}
+                autoComplete="new-password"
                 className={inputClasses}
                 value={formData.password}
                 onChange={(e) =>
