@@ -1768,25 +1768,39 @@ const Overview = () => {
   };
 
   // Handle modal open/close for Add User
-  const handleShowModal = () => setShowModal(true);
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setFormData({
-      name: "",
-      email: "",
-      password: "",
-      role: ROLES.AGENT_USER,
-    });
-    setAlertMessage({ type: "", message: "" });
-  };
+ const handleShowModal = () => {
+  setFormData({
+    name: "",
+    email: "",
+    password: "",
+    role: ROLES.AGENT_USER,
+  });
+
+  setAlertMessage({ type: "", message: "" });
+
+  setShowModal(true);
+};
+
+const handleCloseModal = () => {
+  setShowModal(false);
+
+  setFormData({
+    name: "",
+    email: "",
+    password: "",
+    role: ROLES.AGENT_USER,
+  });
+
+  setAlertMessage({ type: "", message: "" });
+};
 
   // Handle form input changes
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    // const { name, value } = e.target;
+    // setFormData((prev) => ({
+    //   ...prev,
+    //   [name]: value,
+    // }));
   };
 
   // Handle form submission
