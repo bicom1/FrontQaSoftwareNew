@@ -1796,11 +1796,11 @@ const handleCloseModal = () => {
 
   // Handle form input changes
   const handleInputChange = (e) => {
-    // const { name, value } = e.target;
-    // setFormData((prev) => ({
-    //   ...prev,
-    //   [name]: value,
-    // }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   // Handle form submission
@@ -1971,7 +1971,7 @@ const handleCloseModal = () => {
             </Alert>
           )}
 
-          <Form onSubmit={handleEditSubmit}>
+          <Form onSubmit={handleEditSubmit} autoComplete="off">
             <Form.Group className="mb-3">
               <Form.Label>Name *</Form.Label>
               <Form.Control
@@ -1980,6 +1980,7 @@ const handleCloseModal = () => {
                 value={editFormData.name}
                 onChange={handleEditInputChange}
                 placeholder="Enter full name"
+                autoComplete="off"
                 required
               />
             </Form.Group>
@@ -1992,6 +1993,7 @@ const handleCloseModal = () => {
                 value={editFormData.email}
                 onChange={handleEditInputChange}
                 placeholder="Enter email address"
+                autoComplete="off"
                 required
               />
             </Form.Group>
@@ -2141,7 +2143,32 @@ const handleCloseModal = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+          {/*
+            Decoy fields: Chrome/Edge ignore autoComplete="off" on real
+            login-shaped forms and will still autofill the first saved
+            credential into the visible name/email/password inputs below.
+            Placing hidden bait inputs before the real ones (with the
+            attribute names browsers look for) absorbs that autofill
+            instead, so the real fields stay empty on open.
+          */}
+          <input
+            type="text"
+            name="fakeusernameremembered"
+            autoComplete="username"
+            style={{ display: "none" }}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+          <input
+            type="password"
+            name="fakepasswordremembered"
+            autoComplete="new-password"
+            style={{ display: "none" }}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Name *
@@ -2152,6 +2179,7 @@ const handleCloseModal = () => {
               value={formData.name}
               onChange={handleInputChange}
               placeholder="Enter full name"
+              autoComplete="off"
               required
               className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             />
@@ -2167,6 +2195,7 @@ const handleCloseModal = () => {
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Enter email address"
+              autoComplete="off"
               required
               className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             />
@@ -2182,6 +2211,7 @@ const handleCloseModal = () => {
               value={formData.password}
               onChange={handleInputChange}
               placeholder="Enter password"
+              autoComplete="new-password"
               required
               className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             />
